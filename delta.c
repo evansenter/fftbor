@@ -3,7 +3,6 @@
  * for different values of k
  */
 
-
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -15,6 +14,7 @@
 /* Vienna RNA h-files */
 #include "energy_const.h"
 #include "energy_par.h"
+#include <iostream>
 #define ZZ(k,i,j) Z[i][j][k]
 #define ZZb(k,i,j) Zb[i][j][k]
 #define ZZm(k,i,j) Zm[i][j][k]
@@ -25,6 +25,16 @@
 #endif
 #define NNB(k,i,j) NB[i][j][k]
 #define Linterior 30
+
+// Stuff pulled over from rnaborcpp
+#define STRUCTURE_COUNT 0
+#define MIN_PAIR_DIST 3
+#define MAX_INTERIOR_DIST 30
+#define ZERO_C dcomplex(0.0, 0.0)
+#define ONE_C dcomplex(1.0, 0.0)
+#define PRECISION 4
+#define FFTW_REAL 0
+#define FFTW_IMAG 1
 
 /* Some Vienna RNA things */
 extern void  read_parameter_file(const char fname[]);
@@ -55,33 +65,16 @@ void backtrackb(struct index, struct index ***, struct index ***, struct index *
 void backtrackm(struct index, struct index ***, struct index ***, struct index ***, int *);
 
 void neighbours(char *a,int *bps) {
-  int i,j,d,delta;
+  int i, j, k, l, d, delta;
   int n = strlen(a);
-  int k, l, e, f;
-  int bpdiff;
-  double ***Z = (double ***) xcalloc(n+1,sizeof(double **));
-  double ***Zb = (double ***) xcalloc(n+1,sizeof(double **));
-  double ***Zm = (double ***) xcalloc(n+1,sizeof(double **));
   /* Backtrack */
-  struct index ***T = (struct index ***) xcalloc(n+1,sizeof(struct index **));
-  struct index ***Tb = (struct index ***) xcalloc(n+1,sizeof(struct index **));
-  struct index ***Tm = (struct index ***) xcalloc(n+1,sizeof(struct index **));
-  double ***NB = (double ***) xcalloc(n+1,sizeof(double **));
   double RT = 0.0019872370936902486 * (temperature + 273.15) * 100; // 0.01 * (kcal K)/mol
   double energy;
-  double expE = 0.0;
-  double tempZ = 0.0, tempN, tempMFE;
-  struct index tempT, tempt;
-  double temp1, temp2;
   int IJ, JI;
-  int zero_count;
 
-  int *seq = xcalloc(n+1,sizeof(int));
+  int *seq = (int *)xcalloc(n+1,sizeof(int));
   static int PN[5][5];
   static int **NumBP;
-
-  struct index curr;
-  int *bps_delta;
 
   const char *fname = ENERGY;
   N=n;
@@ -94,459 +87,208 @@ void neighbours(char *a,int *bps) {
   for (i=1;i<=n;i++)
     NumBP[i] = (int *) xcalloc(n+1,sizeof(int));
   initialize_NumBP(NumBP, bps, n);
-
-  N = n;
-  for (i=0;i<=N;i++) {
-    Z[i] = (double **) xcalloc(N+1,sizeof(double *));
-    Zb[i] = (double **) xcalloc(N+1,sizeof(double *));
-    Zm[i] = (double **) xcalloc(N+1,sizeof(double *));
-    T[i] = (struct index **) xcalloc(N+1,sizeof(struct index *));
-    Tb[i] = (struct index **) xcalloc(N+1,sizeof(struct index *));
-    Tm[i] = (struct index **) xcalloc(N+1,sizeof(struct index *));
-    if (NUMBER)
-      NB[i] = (double **) xcalloc(N+1,sizeof(double *));
-    for (j=0;j<=N;j++) {
-      Z[i][j] = (double *) xcalloc(DELTA+1,sizeof(double));
-      Zb[i][j] = (double *) xcalloc(DELTA+1,sizeof(double));
-      Zm[i][j] = (double *) xcalloc(DELTA+1,sizeof(double));
-      if (j>=i) {
-	T[i][j] = (struct index *) xcalloc(DELTA+1,sizeof(struct index));
-	Tb[i][j] = (struct index *) xcalloc(DELTA+1,sizeof(struct index));
-	Tm[i][j] = (struct index *) xcalloc(DELTA+1,sizeof(struct index));
-	if (NUMBER)
-	  NB[i][j] = (double *) xcalloc(DELTA+1,sizeof(double));
-      }
-    }
-  }
-
-
-  /* Backtrack */
-  bps_delta = (int *) xcalloc(N+1, sizeof(int));
-  curr.type = 0;
-  curr.i = 1;
-  curr.j = N;
-
- /* Initialize Sequences of lengths shorter than or equal to THRESHOLD=3
-  * will have no delta-neighbours, except 0-neighbours */
-  for (d = 0; d <= THRESHOLD; d++) {
-    for (i = 1; i <= n - d; i++) {
-      j = i + d;
-      delta = 0;
-      if (NUMBER)
-	NNB(delta,i,j) = 1.0;
-      ZZ(delta,i,j) = 1.0;
-      ZZb(delta,i,j) = 0.0;
-      ZZm(delta,i,j) = 0.0;
-#ifdef COMPUTEMFE
-      MFEMFE(delta,i,j) = 0.0;
-      MFEMFEb(delta,i,j) = INF;
-      MFEMFEm(delta,i,j) = INF;
-#endif
-      T[i][j][delta].delta = 0; T[i][j][delta].i = 0; T[i][j][delta].j = 0;
-      Tb[i][j][delta].delta = 0; Tb[i][j][delta].i = 0; Tb[i][j][delta].j = 0;
-      Tm[i][j][delta].delta = 0; Tm[i][j][delta].i = 0; Tm[i][j][delta].j = 0;
-      for (delta = 1; delta <= DELTA; delta++) {
-	if (NUMBER)
-	  NNB(delta,i,j) = 0.0;
-	ZZ(delta,i,j) = 0.0;
-	ZZb(delta,i,j) = 0.0;
-	ZZm(delta,i,j) = 0.0;
-#ifdef COMPUTEMFE
-	MFEMFE(delta,i,j) = INF;
-	MFEMFEb(delta,i,j) = INF;
-	MFEMFEm(delta,i,j) = INF;
-#endif
-	T[i][j][delta].type = Tb[i][j][delta].type = Tm[i][j][delta].type = 0;
-      }
-    }
-  }
-
-  zero_count = 0; /* Count number of zeros in a row in Z[][1][n]*/
   
-  for (delta = 0;delta <= DELTA; delta++) {
-    if (zero_count>=STOP)
-      break;
+  // ****************************************************************************
+  // FFTbor code starts
+  // ****************************************************************************
+  // Variable declarations.
+  int root, *basePairs, **bpCounts;
+  double scalingFactor;
+  dcomplex x;
+  
+  char *sequence     = a;
+  int sequenceLength = strlen(sequence) - 1;
+  char *structure    = new char[sequenceLength];
+  
+  for (i = 0; i < sequenceLength; i++) {
+    structure[i] = '.';
+  }
+  
+  dcomplex **Z            = new dcomplex*[sequenceLength + 1];
+  dcomplex **ZB           = new dcomplex*[sequenceLength + 1];
+  dcomplex **ZM           = new dcomplex*[sequenceLength + 1];
+  dcomplex **rootsOfUnity = new dcomplex*[sequenceLength + 1];
+  double    *coefficients = new double[sequenceLength + 1];
+  
+  // Matrix allocation.
+  for (i = 0; i <= sequenceLength; ++i) {
+    Z[i]               = new dcomplex[sequenceLength + 1];
+    ZB[i]              = new dcomplex[sequenceLength + 1];
+    ZM[i]              = new dcomplex[sequenceLength + 1];
+    rootsOfUnity[i]    = new dcomplex[2];
+    rootsOfUnity[i][0] = dcomplex(cos(2 * M_PI * i / (sequenceLength + 1)), sin(2 * M_PI * i / (sequenceLength + 1)));
+  }
+  
+  basePairs = getBasePairList(structure);
+  bpCounts  = fillBasePairCounts(basePairs, sequenceLength);
+  
+  // Start main recursions (root <= round(sequenceLength / 2.0) is an optimization for roots of unity).
+  for (root = 0; root <= round(sequenceLength / 2.0); ++root) {
+    // Flush the matrices.
+    for (i = 0; i <= sequenceLength; ++i) {
+      for (j = 0; j <= sequenceLength; ++j) {
+        Z[i][j]  = ZERO_C;
+        ZB[i][j] = ZERO_C;
+        ZM[i][j] = ZERO_C;
+      }
+    }
+    
+    for (d = 0; d <= MIN_PAIR_DIST; ++d) {
+      for (i = 1; i <= sequenceLength - d; ++i) {
+        j = i + d;
+        
+        Z[i][j] = ONE_C;
+        
+        if (STRUCTURE_COUNT && i != j) {
+          Z[j][i] = ONE_C;
+        }
+      }
+    }
+    
+    x = rootsOfUnity[root][0];
+    
+    // ****************************************************************************
+    // Main recursions
+    // ****************************************************************************
+    for (d = MIN_PAIR_DIST + 1; d < sequenceLength; ++d) {
+      for (i = 1; i <= sequenceLength - d; ++i) {
+        j = i + d;
       
-    for (d = THRESHOLD+1; d <= n-1; d++) {
-      for (i = 1; i <= n - d; i++) {
-	      j = i + d;
-	      
-	      if (NUMBER)
-	        NNB(delta,i,j) = 0.0;
-	        
-	      ZZ(delta,i,j) = 0.0;
-  	    ZZb(delta,i,j) = 0.0;
-  	    ZZm(delta,i,j) = 0.0;
+        if (canBasePair(i, j, sequence)) {
+          // ****************************************************************************
+          // Solve ZB 
+          // ****************************************************************************
+          // In a hairpin, [i + 1, j - 1] unpaired.
+          energy    = hairpinloop(i, j, IJ, seq, a);
+          delta     = bpCounts[i][j] + jPairedTo(i, j, basePairs);
+          ZB[i][j] += pow(x, delta) * exp(-energy / RT);
 
-        #ifdef COMPUTEMFE
-  	      MFEMFE(delta,i,j) = INF;
-  	      MFEMFEb(delta,i,j) = INF;
-  	      MFEMFEm(delta,i,j) = INF;
-        #endif
+          if (STRUCTURE_COUNT) {
+            ZB[j][i] += 1;
+          }
 
-	      T[i][j][delta].type = Tb[i][j][delta].type = Tm[i][j][delta].type = 0;
-	      IJ = PN[seq[i]][seq[j]];
-	      JI = PN[seq[j]][seq[i]];
+          // Interior loop / bulge / stack / multiloop.
+          for (k = i + 1; k <= j - MIN_PAIR_DIST - 2; ++k) {
+            for (l = k + MIN_PAIR_DIST + 1; l < j; ++l) {
+              if (canBasePair(k, l, sequence)) {
+                if (k - i + j - l - 2 <= MAX_INTERIOR_DIST) {
+                  // In interior loop / bulge / stack with (i, j) and (k, l), (i + 1, k - 1) and (l + 1, j - 1) are all unpaired.
+                  energy    = interiorloop(i, j, k, l, IJ, PN[seq[l]][seq[k]], seq);
+                  delta     = bpCounts[i][j] - bpCounts[k][l] + jPairedTo(i, j, basePairs);
+                  ZB[i][j] += (ZB[k][l] * pow(x, delta) * exp(-energy / RT));
 
-	      /* Start by filling in Zb, this might be needed for Zm or Z */
-	      /* Start by filling in MFEb, this might be needed for MFEm or MFE */
-	      if (IJ) {
-	        tempZ = 0.0;
-	        tempMFE = INF;
-	        tempT.type = 0;
-	        
-	        /* (i,j) forms a base pair */
-	        if ( delta == (NumBP[i][j] + ((bps[i]==j) ? -1 : 1)) ) {
-	          /* Hairpin loop */
-	          tempMFE = hairpinloop(i,j,IJ,seq,a);
-	          tempZ += exp(-tempMFE/RT);
-	          tempT.type = 0;
-	        }
+                  if (STRUCTURE_COUNT) {
+                    ZB[j][i] += ZB[l][k];
+                  }
+                }
 
-	        for (k = i+1; k < j - THRESHOLD ; k++)
-	          for (l = max2(k + THRESHOLD + 1,j-Linterior-1); l < j; l++) {
-	            if (PN[seq[k]][seq[l]]) {
-		            /* In the neighbour (k,l) is the right-most base pair in 
-		             * the region from i+1 to j-1. */
-		            bpdiff = NumBP[i][j] - NumBP[k][l] + ((bps[i]==j) ? -1:1);
-		            
-		            if (bpdiff <= delta) {
-		              /* Interior loop, bulge or stack? */
-		              energy = interiorloop(i, j, k, l, IJ, PN[seq[l]][seq[k]], seq);
-		              tempZ += ZZb(delta - bpdiff,k,l) * exp(-energy/RT);
-                  
-                  #ifdef COMPUTEMFE
-		                if (MFEMFEb(delta - bpdiff,k,l)<INF && mindouble(MFEMFEb(delta - bpdiff,k,l) + energy,&tempMFE)) {
-		                  tempT.type = 1;
-		                  tempT.delta = delta - bpdiff;
-		                  tempT.i=k;
-		                  tempT.j=l;
-		                }
-                  #endif
-		            }
+                if (k > i + MIN_PAIR_DIST + 2) {
+                  // If (i, j) is the closing b.p. of a multiloop, and (k, l) is the rightmost base pair, there is at least one hairpin between (i + 1, k - 1).
+                  energy    = multiloop_closing(i, j, k, l, JI, PN[seq[k]][seq[l]], seq);
+                  delta     = bpCounts[i][j] - bpCounts[i + 1][k - 1] - bpCounts[k][l] + jPairedTo(i, j, basePairs);
+                  ZB[i][j] += ZM[i + 1][k - 1] * ZB[k][l] * pow(x, delta) * exp(-energy / RT);;
 
-		            /* Multi loop, where (i,j) is the closing base pair. */
-		            if (k>i+THRESHOLD+2) {
-		              /* If there is a multiloop with (i,j) as the closing
-		               * base pair and (k,l) as the right-most base pair
-		               * inside i..j, then there will be at least one
-		               * 'hairpin' in the region i+1..k-1, or else it is
-		               * not a multloop, but rather an interior loop. 
-		               */
-		              bpdiff -= NumBP[i+1][k-1];
-		              
-		              if (bpdiff <= delta){
-		                energy = multiloop_closing(i,j,k,l,JI, PN[seq[k]][seq[l]],seq);
-		                
-		                for (e=0;e<=delta-bpdiff;e++) {
-		                  f = delta -bpdiff -e;
-		                  tempZ += ZZb(e,k,l) * ZZm(f,i+1,k-1) * exp(-energy/RT);
-                    
-                      #ifdef COMPUTEMFE
-		                    if (MFEMFEb(e,k,l)<INF && MFEMFEm(f,i+1,k-1)<INF && mindouble(MFEMFEb(e,k,l) + MFEMFEm(f,i+1,k-1) + energy,&tempMFE)) {
-			                    tempT.type = 2;
-			                    tempT.delta = (f<<8) | e;
-			                    tempT.i=k;
-			                    tempT.j=l;
-		                    }
-                      #endif
-		                } /* for e */
-		              } /* if (bpdiff <= delta) */
-		            }
-	            }
-	          } /* for l */
-	          
-	          ZZb(delta,i,j) = tempZ;
+                  if (STRUCTURE_COUNT) {
+                    ZB[j][i] += ZM[k - 1][i + 1] * ZB[l][k];
+                  }
+                }
+              }
+            }
+          }
+        }
+        
+        // ****************************************************************************
+        // Solve ZM
+        // ****************************************************************************
+        energy    = P->MLbase;
+        delta     = jPairedIn(i, j, basePairs);
+        ZM[i][j] += ZM[i][j - 1] * pow(x, delta) * exp(-energy / RT);
+
+        if (STRUCTURE_COUNT) {
+          ZM[j][i] += ZM[j - 1][i];
+        }
+
+        for (k = i; k <= j - MIN_PAIR_DIST - 1; ++k) {
+          if (canBasePair(k, j, sequence)) {
+            // Only one stem.
+            energy    = P->MLintern[PN[seq[k]][seq[j]]] + P->MLbase * (k - i);
+            delta     = bpCounts[i][j] - bpCounts[k][j];
+            ZM[i][j] += ZB[k][j] * pow(x, delta) * exp(-energy / RT);
+
+            if (STRUCTURE_COUNT) {
+              ZM[j][i] += ZB[j][k];
+            }
+
+            // More than one stem.
+            if (k > i + MIN_PAIR_DIST + 2) {
+              energy    = P->MLintern[PN[seq[k]][seq[j]]];
+              delta     = bpCounts[i][j] - bpCounts[i][k - 1] - bpCounts[k][j];
+              ZM[i][j] += ZM[i][k - 1] * ZB[k][j] * pow(x, delta) * exp(-energy / RT);
+
+              if (STRUCTURE_COUNT) {
+                ZM[j][i] += ZM[k - 1][i] * ZB[j][k];
+              }
+            }
+          }
+        }
+        
+        // **************************************************************************
+        // Solve Z
+        // **************************************************************************
+        delta    = jPairedIn(i, j, basePairs);
+        Z[i][j] += Z[i][j - 1] * pow(x, delta);
+
+        if (STRUCTURE_COUNT) {
+          Z[j][i] += Z[j - 1][i];
+        }
+
+        for (k = i; k <= j - MIN_PAIR_DIST - 1; ++k) { 
+          // (k, j) is the rightmost base pair in (i, j).
+          if (canBasePair(k, j, sequence)) {
+            energy = PN[seq[k]][seq[j]] > 2 ? TerminalAU : 0;
             
-            #ifdef COMPUTEMFE
-	            MFEMFEb(delta,i,j) = tempMFE;
-            #endif
+            if (k == i) {
+              delta    = bpCounts[i][j] - bpCounts[k][j];
+              Z[i][j] += ZB[k][j] * pow(x, delta) * exp(-energy / RT);
 
-	          Tb[i][j][delta] = tempT;
-	        } /* if IJ */
-	
-	        /* Multi loop, Zm */
-	        tempZ = 0.0;
-	        tempMFE = INF;
-          
-          /* j form no base pair */
-          if ((bps[j]>=i) & (bps[j]<j))
-            bpdiff = 1;
-          else
-            bpdiff = 0;
-            
-          if (delta>=bpdiff) {
-	          tempZ = ZZm(delta-bpdiff,i,j-1)*exp(-P->MLbase/RT);
-	          
-            #ifdef COMPUTEMFE
-	            if (MFEMFEm(delta-bpdiff,i,j-1) < INF) {
-	              tempMFE = MFEMFEm(delta-bpdiff,i,j-1)+P->MLbase;
-	              tempT.type=5; /* Godtyckligt nummer */
-	              tempT.i=i;
-	              tempT.j=j-1;
-	              tempT.delta=delta-bpdiff;
-	            }
-            #endif
-	        }
-	        
-	        for (k = i; k < j - THRESHOLD ; k++) {
-	          if (PN[seq[k]][seq[j]]) {
-	            /* (k,j) is the right-most base pair in the region from i to j */
-	            /* One stem */
-	            bpdiff = NumBP[i][j] - NumBP[k][j];
+              if (STRUCTURE_COUNT) {
+                Z[j][i] += ZB[j][k];
+              }
+            } else {
+              delta    = bpCounts[i][j] - bpCounts[i][k - 1] - bpCounts[k][j];
+              Z[i][j] += Z[i][k - 1] * ZB[k][j] * pow(x, delta) * exp(-energy / RT);
 
-	            if (bpdiff <=delta) {
-	              energy = P->MLintern[PN[seq[k]][seq[j]]] + P->MLbase*(k-i);
-	              /* Dangles */
-	              if (DANGLE) {
-		              if (k>1)
-		                /* Dangle between (k,j) and k-1 */
-		                energy += P->dangle5[PN[seq[k]][seq[j]]][seq[k-1]];
-		              if (j<N)
-		                /* Dangle between (k,j) and j+1 */
-		                energy += P->dangle3[PN[seq[k]][seq[j]]][seq[j+1]];
-	              }
-	              
-	              tempZ += ZZb(delta - bpdiff,k,j) * exp(-energy/RT);
-                
-                #ifdef COMPUTEMFE
-	                if (MFEMFEb(delta - bpdiff,k,j)<INF && mindouble(MFEMFEb(delta - bpdiff,k,j) + energy, &tempMFE)) {
-		                tempT.type = 1;
-		                tempT.delta = delta - bpdiff;
-		                tempT.i=k;
-		                tempT.j=j;
-	                }
-                #endif
-	            }
-	            
-	            /* More than one stem */
-	            if (k>i+THRESHOLD+2) {
-	              /* If k is closer to i than this, there is not room
-	               * for another stem */
-	              bpdiff -= NumBP[i][k-1];
-	              
-	              if (bpdiff <= delta) {
-		              energy = P->MLintern[PN[seq[k]][seq[j]]];
-		              /* Dangles */
-		              
-		              if (DANGLE) {
-		                /* Between (k,j) and k-1 */
-		                energy += P->dangle5[PN[seq[k]][seq[j]]][seq[k-1]];
-		                
-		                /* Between (k,j) and j+1 */
-		                if (j<N)
-		                  energy += P->dangle3[PN[seq[k]][seq[j]]][seq[j+1]];
-		              }
-
-		              expE = exp(-energy/RT);
-		              
-		              for (e=0;e<=delta-bpdiff;e++) {
-		                f = delta - bpdiff -e;
-		                tempZ += ZZb(e,k,j) *  ZZm(f,i,k-1) * expE;
-                    
-                    #ifdef COMPUTEMFE
-		                  if (MFEMFEb(e,k,j)<INF && MFEMFEm(f,i,k-1)<INF && mindouble(MFEMFEb(e,k,j) + MFEMFEm(f,i,k-1) + energy, &tempMFE)) {
-		                    tempT.type = 2;
-		                    tempT.delta = (f<<8) | e;
-		                    tempT.i=k;
-		                    tempT.j=j;
-		                  }
-                    #endif
-		              } /* for e */
-	              }	      
-	            }
-	          }
-	        } /* for k */
-	        
-	        ZZm(delta,i,j) = tempZ;
-
-          #ifdef COMPUTEMFE
-	          MFEMFEm(delta,i,j) = tempMFE;
-          #endif
-	        
-	        Tm[i][j][delta] = tempT;
-	
-	        /* Z and NB */
-	        tempZ = 0.0;
-	        tempMFE = INF;
-	        tempN = 0.0;
-
-	        /* j forms no base pair */
-	        if ((bps[j]>=i) & (bps[j]<j))
-	          bpdiff = 1;
-	        else
-	          bpdiff = 0;
-	          
-	        if (delta>=bpdiff) {
-	          tempZ = ZZ(delta-bpdiff,i,j-1);
-            
-            #ifdef COMPUTEMFE
-	            tempMFE = MFEMFE(delta-bpdiff,i,j-1);
-	            tempT.type=5; /* Godtyckligt nummer */
-	            tempT.i=i;
-	            tempT.j=j-1;
-	            tempT.delta=delta-bpdiff;
-            #endif
-            
-	          if (NUMBER)
-	            tempN = NNB(delta-bpdiff,i,j-1);
-	        }
-	        
-	        for (k = i; k < j - THRESHOLD ; k++) {
-	          if (PN[seq[k]][seq[j]]) {
-	            /* (k,j) is the right-most base pair in the region from i to j*/
-	            /* Compute Z */
-	            if (i<k-1)
-		            bpdiff = NumBP[i][j] - NumBP[i][k-1] - NumBP[k][j];
-	            else
-		            bpdiff = NumBP[i][j] - NumBP[k][j];
-		            
-	            if (bpdiff <= delta) {
-		            energy = 0.0;
-
-		            /* dangle */
-		            if (DANGLE) {
-		              if (k>1)
-		                energy += P->dangle5[PN[seq[k]][seq[j]]][seq[k-1]];
-		              if (j<n)
-		                energy += P->dangle3[PN[seq[k]][seq[j]]][seq[j+1]];
-		            }
-
-		            /* terminalAU */
-		            if (PN[seq[k]][seq[j]]>2)
-		              energy += TerminalAU;
-
-		            expE = exp(-energy/RT);
-		            temp1 = 0.0;
-		            temp2 = INF;
-		            tempt.type = 0;
-
-		            if (k==i) {
-		              temp1 += ZZb(delta - bpdiff,k,j);
-                  
-                  #ifdef COMPUTEMFE
-		                if (mindouble(MFEMFEb(delta - bpdiff,k,j), &temp2)) {
-		                  tempt.type = 1;
-		                  tempt.delta = delta - bpdiff;
-		                  tempt.i=k;
-		                  tempt.j=j;
-		                }
-                  #endif
-		            } else {
-		              for (e=0;e<=delta - bpdiff; e++) {
-		                temp1 += ZZ(e,i,k-1) * ZZb(delta - bpdiff -e,k,j);
-                    
-                    #ifdef COMPUTEMFE
-		                  if (MFEMFE(e,i,k-1)<INF && MFEMFEb(delta - bpdiff -e,k,j)<INF && mindouble(MFEMFE(e,i,k-1) + MFEMFEb(delta - bpdiff -e,k,j),&temp2)) {
-		                    tempt.type = 2;
-		                    tempt.delta = (e<<8)|(delta-bpdiff-e);
-		                    tempt.i=k;
-		                    tempt.j=j;
-		                  }
-                    #endif
-		              }
-		            }
-		            
-		            tempZ += temp1 * expE;
-		            
-		            if (temp2<INF && mindouble(temp2 + energy, &tempMFE))
-		              tempT = tempt;
-	            } /* if (bpdiff <= delta */ 
-
-	            /* Compute NB */
-	            if (NUMBER) {
-		            if (bps[k]!=j)
-		              bpdiff = NumBP[i][j] - NumBP[i][k-1] - NumBP[k+1][j-1] + 1;
-		              
-		            if (bpdiff <= delta) {
-		              if (k==i) {
-		                tempN += NNB(delta - bpdiff,k+1,j-1);
-		              } else
-		                for (e=0;e<=delta - bpdiff;e++) {
-		                  tempN += NNB(e,i,k-1) * NNB(delta - bpdiff -e,k+1,j-1);
-		                }
-		            } /* if (bpdiff <= delta */
-	            }
-	          } /* if (PN[seq[k]][seq[l]]) */
-	        } /* for */
-
-	        ZZ(delta,i,j) = tempZ;
-          
-          #ifdef COMPUTEMFE
-	          MFEMFE(delta,i,j) = tempMFE;
-          #endif
-
-	        T[i][j][delta] = tempT;
-	        NNB(delta,i,j) = tempN;
-        } /* for i */
-      } /* for d */
-    
-    printf("%d",delta);
-    printf("\t%.12g",ZZ(delta,1,N));
-    
-    if (NUMBER)
-      printf("\t%0.12g",NNB(delta,1,n));
-
-    #ifdef COMPUTEMFE
-      if (MFEMFE(delta,1,n)<INF) {
-        /* Backtrack */
-        for (i=0;i<=N;i++) 
-          bps_delta[i]=0;
-
-        curr.delta = delta;
-        backtrack(curr,T,Tb,Tm,bps_delta);
-        printf("\t%.12g\t",MFEMFE(delta,1,n)/100);
-        printbpsstring(bps_delta);
-        printf("\t%.12g\n",exp(-MFEMFE(delta,1,n)/RT)/ZZ(delta,1,n));
-        zero_count = 0;
-      } else {
-        printf("\t-\t-\n");
-        zero_count++;
+              if (STRUCTURE_COUNT) {
+                Z[j][i] += Z[k - 1][i] * ZB[j][k];
+              }
+            }
+          }
+        }
       }
-    #else
-      if (ZZ(delta,1,n)>0)
-        zero_count = 0;
-      else
-        zero_count++;
-      printf("\n");
-    #endif
-    
-    fflush(stdout);
-  }  /* for delta */
-
-  free(bps_delta);
-
-  for (i=1;i<=N;i++) {
-    for (j=i;j<=N;j++) {
-      free(Z[i][j]);
-      free(Zb[i][j]);
-      free(Zm[i][j]);
-      free(T[i][j]);
-      free(Tb[i][j]);
-      free(Tm[i][j]);
-      if (NUMBER)
-	      free(NB[i][j]);
     }
     
-    free(Z[i]);
-    free(Zb[i]);
-    free(Zm[i]);
-    free(T[i]);
-    free(Tb[i]);
-    free(Tm[i]);
-    if (NUMBER)
-      free(NB[i]);
+    rootsOfUnity[root][1] = Z[1][sequenceLength];
+    
+    if (!root) {
+      scalingFactor = Z[1][sequenceLength].real();
+    }
   }
   
-  free(Z);
-  free(Zb);
-  free(Zm);
-  free(T);
-  free(Tb);
-  free(Tm);
+  // Optimization leveraging complementarity of roots of unity.
+  if (sequenceLength % 2) {
+    i = root - 2;
+  } else {
+    i = root - 1;
+  }
   
-  if (NUMBER)
-    free(NB);
+  for (; root <= sequenceLength && i > 0; --i, ++root) {
+    rootsOfUnity[root][1] = dcomplex(rootsOfUnity[i][1].real(), -rootsOfUnity[i][1].imag());
+  }
+  
+  solveSystem(sequenceLength, rootsOfUnity, coefficients, scalingFactor);
+  // ****************************************************************************
+  // FFTbor code ends
+  // ****************************************************************************
   
   free(seq);
 }
@@ -628,7 +370,7 @@ void pf(char *a) {
   int IJ, JI;
 
   static int PN[5][5];
-  int *seq = xcalloc(n+1,sizeof(int));
+  int *seq = (int *)xcalloc(n+1,sizeof(int));
 
   const char *fname = "energy.par";
   read_parameter_file(fname);
@@ -979,4 +721,106 @@ double multiloop_closing(int i, int j, int k, int l, int bp_type1, int bp_type2,
   return energy;
 }
 
+// ****************************************************************************
+// FFTbor functions
+// ****************************************************************************
 
+void solveSystem(int sequenceLength, dcomplex **rootsOfUnity, double *coefficients, double scalingFactor) {
+  int i;
+  dcomplex sum = ZERO_C;
+  
+  if (DEBUG) {
+    printMatrix(rootsOfUnity, (char *)"START ROOTS AND SOLUTIONS", 0, sequenceLength, 0, 1);
+    std::cout << "END ROOTS AND SOLUTIONS" << std::endl << std::endl;
+    std::cout << "Scaling factor (Z{1, n}): " << scalingFactor << std::endl;
+  }
+
+  fftw_complex signal[sequenceLength + 1];
+  fftw_complex result[sequenceLength + 1];
+  
+  for (i = 0; i <= sequenceLength; i++) {
+    signal[i][FFTW_REAL] = (pow(10, PRECISION) * rootsOfUnity[i][1].real()) / scalingFactor;
+    signal[i][FFTW_IMAG] = (pow(10, PRECISION) * rootsOfUnity[i][1].imag()) / scalingFactor;
+  }
+  
+  fftw_plan plan = fftw_plan_dft_1d(sequenceLength + 1, signal, result, FFTW_FORWARD, FFTW_ESTIMATE);
+  fftw_execute(plan);
+  fftw_destroy_plan(plan);
+  
+  std::cout << "START DISTRIBUTION" << std::endl;
+  for (i = 0; i <= sequenceLength; i++) {
+    coefficients[i] = PRECISION == 0 ? result[i][FFTW_REAL] / (sequenceLength + 1) : pow(10.0, -PRECISION) * static_cast<int>(result[i][FFTW_REAL] / (sequenceLength + 1));
+    sum            += coefficients[i];
+    
+    std::cout << i << ": " << coefficients[i] << std::endl;
+  }
+  std::cout << "END DISTRIBUTION" << std::endl << std::endl;
+  
+  std::cout << "Sum: " << sum << std::endl;
+}
+
+/* Number of base pairs in the region i to j in basePairs */
+int numberOfBasePairs(int i, int j, int *basePairs) {
+  int n = 0;
+  int k;
+  for (k = i; k <= j; ++k) {
+    // If position k opens a b.p. '(' and is closed within the range [i, j], increment n
+    if (k < basePairs[k] && basePairs[k] <= j) {
+      n++;
+    }
+  }
+  
+  return n;
+}
+
+int** fillBasePairCounts(int *basePairs, int n) {
+  int i, d, **bpCounts;
+  
+  bpCounts = (int **) calloc(n + 1, sizeof(int *));
+  for (i = 1; i <= n; ++i) {
+    bpCounts[i] = (int *) calloc(n + 1, sizeof(int));
+  }
+  
+  for (d = MIN_PAIR_DIST + 1; d < n; ++d) {
+    for (i = 1; i <= n - d; ++i) {
+      bpCounts[i][i + d] = numberOfBasePairs(i, i + d, basePairs);
+    }
+  }
+  
+  return bpCounts;
+}
+
+int jPairedTo(int i, int j, int *basePairs) {
+  return basePairs[i] == j ? -1 : 1;
+}
+
+int jPairedIn(int i, int j, int *basePairs) {
+  return basePairs[j] >= i && basePairs[j] < j ? 1 : 0;
+}
+
+/* Checks if the i-th and j-th positions in the sequence can base pair */
+int canBasePair(int i, int j, char *sequence) {
+  if (j - i <= THRESHOLD)
+    return 0;
+  else if ((sequence[i] == 'A'&& sequence[j] == 'U') || (sequence[i] == 'U' && sequence[j] == 'A'))
+    return 1;
+  else if ((sequence[i] == 'C'&& sequence[j] == 'G') || (sequence[i] == 'G' && sequence[j] == 'C'))
+    return 1;
+  else if ((sequence[i] == 'U'&& sequence[j] == 'G') || (sequence[i] == 'G' && sequence[j] == 'U'))
+    return 1;
+  else
+    return 0;
+}
+
+void printMatrix(dcomplex **matrix, char *title, int iStart, int iStop, int jStart, int jStop) {
+  int i, j;
+  
+  printf("%s\n", title);
+      
+  for (i = iStart; i <= iStop; ++i) {
+    for (j = jStart; j <= jStop; ++j) {
+      printf("%+.15f, %-+25.15f", matrix[i][j].real(), matrix[i][j].imag());
+    }
+    std::cout << std::endl;
+  }
+}

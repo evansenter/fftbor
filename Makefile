@@ -1,29 +1,26 @@
-#Makefile for computing number of delta neighbours
+# Makefile for computing FFTbor
 
-
-CFLAGS = -c -O3 # -O0
-#LDFLAGS = -lm -L/usr/src/ViennaRNA-1.6.1/lib #Change this to where libRNA.a is
-#LDFLAGS = -lm -L/usr/local/lib #Change this to where libRNA.a is
+CFLAGS = -c -O0 # -O3
 LDFLAGS = -lfftw3 -lm -L.
 PG = #-pg
-BINDIR = /usr/local/bin                      #Change this to BINDIR
-CC = gcc
-#VAR = -DCOMPUTEMFE #Comment out this line if you don't want to compute MFE^delta
+BINDIR = /usr/local/bin
+CC = g++
 
-RNAbor : delta.o misc.o main.o
-	 $(CC) $(VAR) $(PG) $(LDFLAGS) -g delta.o misc.o main.o -lRNA -o RNAbor
-main.o : main.c delta.h
-	   $(CC) $(VAR) -Wall -W $(PG) $(CFLAGS) $(H) main.c
+RNAbor: delta.o misc.o main.o
+	 $(CC) $(PG) $(LDFLAGS) -g delta.o misc.o main.o -lRNA -o RNAbor
+	 
+main.o: main.c delta.h
+	   $(CC) -Wall -W $(PG) $(CFLAGS) $(H) main.c
 
-misc.o : misc.c misc.h
-	 $(CC) $(VAR) -Wall -W $(PG) -g $(CFLAGS) $(H) misc.c
+misc.o: misc.c misc.h
+	 $(CC) -Wall -W $(PG) -g $(CFLAGS) $(H) misc.c
 
 delta.o: delta.c delta.h
-	$(CC) $(VAR) -Wall -W $(PG) -g $(CFLAGS) $(H) delta.c
+	$(CC) -Wall -W $(PG) -g $(CFLAGS) $(H) delta.c
 
 clean:
 	rm -f *.o RNAbor
 
 install:
-	cp RNAbor  $(BINDIR)
-	cp energy.par  $(BINDIR)
+	cp RNAbor $(BINDIR)
+	cp energy.par $(BINDIR)

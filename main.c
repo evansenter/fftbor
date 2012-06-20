@@ -113,7 +113,7 @@ void read_input(int argc,char *argv[],char **maina, int **bps){
   STRUCTURE = 0;
   PARTITION = 1;
   STOP = 5;
-  ENERGY = "energy.par";
+  ENERGY = (char *)"energy.par";
 
   /* Function to retrieve RNA sequence and structure and delta, 
    * either input in command line or in a file, where the first
