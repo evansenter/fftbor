@@ -27,6 +27,6 @@ typedef struct {
   double temperature;
 }  paramT;
 
-extern paramT *scale_parameters(void);
+extern "C" paramT *scale_parameters(void);
 extern paramT *copy_parameters(void);
 extern paramT *set_parameters(paramT *dest);

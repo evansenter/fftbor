@@ -1,24 +1,13 @@
+#ifndef DELTA_H
+#define DELTA_H
+
 #include "params.h"
 #include <complex>
 
 typedef std::complex<double> dcomplex;
 
-#ifndef DELTA_H
-#define DELTA_H
-
 /* To avoid computing MFE structures if this is not wanted. */
 //#define COMPUTEMFE
-
-int DELTA;
-int PF;
-int DANGLE;
-int NUMBER;
-char *ENERGY;
-int STRUCTURE;
-int PARTITION;
-int STOP;
-int N;
-extern double temperature;
 
 /* Returns 1 if the two input characters are complementary bases */
 int basepair(char , char );
@@ -37,7 +26,5 @@ int jPairedTo(int i, int j, int *basePairs);
 int jPairedIn(int i, int j, int *basePairs);
 int canBasePair(int i, int j, char *sequence);
 void printMatrix(dcomplex **matrix, char *title, int iStart, int iStop, int jStart, int jStop);
-
-paramT *P;
 
 #endif

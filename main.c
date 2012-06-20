@@ -9,7 +9,6 @@
  * Or RNAbor [options] sequence structure [options]
  */
 
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -19,7 +18,17 @@
 #include "delta.h"
 #include "misc.h"
 
-//#define MAXD
+int DELTA;
+int PF;
+int DANGLE;
+int NUMBER;
+char *ENERGY;
+int STRUCTURE;
+int PARTITION;
+int STOP;
+int N;
+double userTemperature;
+paramT *P;
 
 /* Function that reformates the input */
 void read_input(int ,char **, char **, int**);
@@ -140,7 +149,7 @@ void read_input(int argc,char *argv[],char **maina, int **bps){
       }
       else if (strcmp(argv[i],"-T")==0) {
 	if (i==argc-1) usage();
-	else if (!sscanf(argv[++i],"%lf", &temperature)) usage();
+	else if (!sscanf(argv[++i],"%lf", &userTemperature)) usage();
       }
       else if (strcmp(argv[i],"-N")==0) {
 	if (i==argc-1) usage();

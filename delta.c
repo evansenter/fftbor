@@ -36,8 +36,21 @@
 #define FFTW_REAL 0
 #define FFTW_IMAG 1
 
+extern int DELTA;
+extern int PF;
+extern int DANGLE;
+extern int NUMBER;
+extern char *ENERGY;
+extern int STRUCTURE;
+extern int PARTITION;
+extern int STOP;
+extern int N;
+extern double userTemperature;
+extern paramT *P;
+
 /* Some Vienna RNA things */
-extern void  read_parameter_file(const char fname[]);
+
+extern "C" void read_parameter_file(const char fname[]);
 
 void neighbours(char *,int *);
 void pf(char *);
@@ -68,7 +81,7 @@ void neighbours(char *a,int *bps) {
   int i, j, k, l, d, delta;
   int n = strlen(a);
   /* Backtrack */
-  double RT = 0.0019872370936902486 * (temperature + 273.15) * 100; // 0.01 * (kcal K)/mol
+  double RT = 0.0019872370936902486 * (userTemperature + 273.15) * 100; // 0.01 * (kcal K)/mol
   double energy;
   int IJ, JI;
 

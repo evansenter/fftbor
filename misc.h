@@ -16,8 +16,6 @@
 
 #include <stdbool.h>
 
-int PRINT;
-
 void *xcalloc(size_t , size_t );
 int *getBasePairList(char *);
 int mindouble(double, double *);
