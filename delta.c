@@ -27,7 +27,7 @@
 #define Linterior 30
 
 // Stuff pulled over from rnaborcpp
-#define STRUCTURE_COUNT 0
+#define STRUCTURE_COUNT 1
 #define MIN_PAIR_DIST 3
 #define MAX_INTERIOR_DIST 30
 #define ZERO_C dcomplex(0.0, 0.0)
@@ -109,10 +109,13 @@ void neighbours(char *a,int *bps) {
   double scalingFactor;
   dcomplex x;
   
-  char *sequence     = a;
-  int sequenceLength = strlen(sequence) - 1;
+  int sequenceLength = strlen(a);
+  char *sequence     = new char[sequenceLength + 1];
   char *structure    = new char[sequenceLength];
-  
+
+	sequence[0] = '@';
+  strncpy(sequence + 1, a, sequenceLength);
+
   for (i = 0; i < sequenceLength; i++) {
     structure[i] = '.';
   }
@@ -233,7 +236,7 @@ void neighbours(char *a,int *bps) {
             }
 
             // More than one stem.
-            if (k > i + MIN_PAIR_DIST + 2) {
+            if (k > i) {
               energy    = P->MLintern[PN[seq[k]][seq[j]]];
               delta     = bpCounts[i][j] - bpCounts[i][k - 1] - bpCounts[k][j];
               ZM[i][j] += ZM[i][k - 1] * ZB[k][j] * pow(x, delta) * exp(-energy / RT);
@@ -284,9 +287,21 @@ void neighbours(char *a,int *bps) {
     
     if (!root) {
       scalingFactor = Z[1][sequenceLength].real();
+
+			for (k = 0; k <= sequenceLength; ++k) {
+				for (l = 0; l <= sequenceLength; ++l) {
+					printf("%+9.2f, ", Z[k][l].real());
+				}
+				printf("\n");
+			}
+			printf("\n\n");
     }
+
+		std::cout << "." << std::flush;
   }
   
+	std::cout << std::endl;
+
   // Optimization leveraging complementarity of roots of unity.
   if (sequenceLength % 2) {
     i = root - 2;
@@ -297,7 +312,7 @@ void neighbours(char *a,int *bps) {
   for (; root <= sequenceLength && i > 0; --i, ++root) {
     rootsOfUnity[root][1] = dcomplex(rootsOfUnity[i][1].real(), -rootsOfUnity[i][1].imag());
   }
-  
+
   solveSystem(sequenceLength, rootsOfUnity, coefficients, scalingFactor);
   // ****************************************************************************
   // FFTbor code ends
@@ -742,11 +757,9 @@ void solveSystem(int sequenceLength, dcomplex **rootsOfUnity, double *coefficien
   int i;
   dcomplex sum = ZERO_C;
   
-  if (DEBUG) {
-    printMatrix(rootsOfUnity, (char *)"START ROOTS AND SOLUTIONS", 0, sequenceLength, 0, 1);
-    std::cout << "END ROOTS AND SOLUTIONS" << std::endl << std::endl;
-    std::cout << "Scaling factor (Z{1, n}): " << scalingFactor << std::endl;
-  }
+   printMatrix(rootsOfUnity, (char *)"START ROOTS AND SOLUTIONS", 0, sequenceLength, 0, 1);
+   std::cout << "END ROOTS AND SOLUTIONS" << std::endl << std::endl;
+   std::cout << "Scaling factor (Z{1, n}): " << scalingFactor << std::endl;
 
   fftw_complex signal[sequenceLength + 1];
   fftw_complex result[sequenceLength + 1];
@@ -811,15 +824,15 @@ int jPairedIn(int i, int j, int *basePairs) {
   return basePairs[j] >= i && basePairs[j] < j ? 1 : 0;
 }
 
-/* Checks if the i-th and j-th positions in the sequence can base pair */
-int canBasePair(int i, int j, char *sequence) {
-  if (j - i <= THRESHOLD)
+/* Checks if the i-th and j-th positions in the sequence (1-indexed!) can base pair */
+int canBasePair(int i, int j, char *sequence) {	
+  if (j - i <= MIN_PAIR_DIST)
     return 0;
-  else if ((sequence[i] == 'A'&& sequence[j] == 'U') || (sequence[i] == 'U' && sequence[j] == 'A'))
+  else if ((sequence[i] == 'A' && sequence[j] == 'U') || (sequence[i] == 'U' && sequence[j] == 'A'))
     return 1;
-  else if ((sequence[i] == 'C'&& sequence[j] == 'G') || (sequence[i] == 'G' && sequence[j] == 'C'))
+  else if ((sequence[i] == 'C' && sequence[j] == 'G') || (sequence[i] == 'G' && sequence[j] == 'C'))
     return 1;
-  else if ((sequence[i] == 'U'&& sequence[j] == 'G') || (sequence[i] == 'G' && sequence[j] == 'U'))
+  else if ((sequence[i] == 'U' && sequence[j] == 'G') || (sequence[i] == 'G' && sequence[j] == 'U'))
     return 1;
   else
     return 0;
