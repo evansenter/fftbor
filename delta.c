@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include "delta.h"
 #include "misc.h"
+#include <fftw3.h>
 /* Vienna RNA h-files */
 #include "energy_const.h"
 #include "energy_par.h"

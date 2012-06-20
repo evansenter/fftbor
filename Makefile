@@ -4,7 +4,7 @@
 CFLAGS = -c -O3 # -O0
 #LDFLAGS = -lm -L/usr/src/ViennaRNA-1.6.1/lib #Change this to where libRNA.a is
 #LDFLAGS = -lm -L/usr/local/lib #Change this to where libRNA.a is
-LDFLAGS = -lm -L.
+LDFLAGS = -lfftw3 -lm -L.
 PG = #-pg
 BINDIR = /usr/local/bin                      #Change this to BINDIR
 CC = gcc
