@@ -1,0 +1,29 @@
+RNAbor computes number of delta-neighbours and the partition function
+of delta-neighbours.
+
+Type 'RNAbor --help' for help on the input format.
+
+To compile the program run 'make' and then 'make install', but before
+doing so modify two lines in the Makefile. Change LDFLAGS to the
+directory where you have libRNA.a and change BINDIR to the directory
+where you want the RNAbor to be installed.
+
+Files:
+
+main.c - the main program file, reads input and prints output
+
+delta.c, delta.h - the algorithm implementation
+
+misc.c, misc.h - a few additional functions and global variables
+
+energy_const.h,
+energy_par.h,
+params.h        - three h-files from Vienna RNA, these define energy 
+                  parameters.
+
+energy.par - The energy parameters.
+
+libRNA.a - Vienna RNA library file, this file is not included in this
+           tar-ball, but is included in the Vienna RNA package.
+
+Makefile - The makefile
