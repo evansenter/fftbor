@@ -35,6 +35,7 @@
 #define PRECISION 4
 #define FFTW_REAL 0
 #define FFTW_IMAG 1
+#define FFTBOR_DEBUG 0
 
 extern int DELTA;
 extern int PF;
@@ -83,7 +84,6 @@ void neighbours(char *a,int *bps) {
   /* Backtrack */
   double RT = 0.0019872370936902486 * (userTemperature + 273.15) * 100; // 0.01 * (kcal K)/mol
   double energy;
-  int IJ, JI;
 
   int *seq = (int *)xcalloc(n+1,sizeof(int));
   static int PN[5][5];
@@ -175,7 +175,9 @@ void neighbours(char *a,int *bps) {
           // Solve ZB 
           // ****************************************************************************
           // In a hairpin, [i + 1, j - 1] unpaired.
-          energy=0;//hairpinloop(i, j, IJ, seq, a);
+          energy    = hairpinloop(i, j, PN[seq[i]][seq[j]], seq, a);
+					//printf("hairpinloop(i, j, PN[seq[i]][seq[j]], seq, a) %d %d %.15f\n", i, j, energy);
+					//printf("\texp(-E/RT) %.15f\n", exp(-energy / RT));
           delta     = bpCounts[i][j] + jPairedTo(i, j, basePairs);
           ZB[i][j] += pow(x, delta) * exp(-energy / RT);
 
@@ -189,7 +191,9 @@ void neighbours(char *a,int *bps) {
               if (canBasePair(k, l, sequence)) {
                 if (k - i + j - l - 2 <= MAX_INTERIOR_DIST) {
                   // In interior loop / bulge / stack with (i, j) and (k, l), (i + 1, k - 1) and (l + 1, j - 1) are all unpaired.
-                  energy=0;//interiorloop(i, j, k, l, IJ, PN[seq[l]][seq[k]], seq);
+                  energy    = interiorloop(i, j, k, l, PN[seq[i]][seq[j]], PN[seq[l]][seq[k]], seq);
+									//printf("interiorloop(i, j, k, l, PN[seq[i]][seq[j]], PN[seq[l]][seq[k]], seq) %d %d %d %d %.15f\n", i, j, k, l, energy);
+									//printf("\texp(-E/RT) %.15f\n", exp(-energy / RT));
                   delta     = bpCounts[i][j] - bpCounts[k][l] + jPairedTo(i, j, basePairs);
                   ZB[i][j] += (ZB[k][l] * pow(x, delta) * exp(-energy / RT));
 
@@ -200,7 +204,9 @@ void neighbours(char *a,int *bps) {
 
                 if (k > i + MIN_PAIR_DIST + 2) {
                   // If (i, j) is the closing b.p. of a multiloop, and (k, l) is the rightmost base pair, there is at least one hairpin between (i + 1, k - 1).
-                  energy=0;//multiloop_closing(i, j, k, l, JI, PN[seq[k]][seq[l]], seq);
+                  energy    = multiloop_closing(i, j, k, l, PN[seq[j]][seq[i]], PN[seq[k]][seq[l]], seq);
+									//printf("multiloop_closing(i, j, k, l, PN[seq[j]][seq[i]], PN[seq[k]][seq[l]], seq) %d %d %d %d %.15f\n", i, j, k, l, energy);
+									//printf("\texp(-E/RT) %.15f\n", exp(-energy / RT));
                   delta     = bpCounts[i][j] - bpCounts[i + 1][k - 1] - bpCounts[k][l] + jPairedTo(i, j, basePairs);
                   ZB[i][j] += ZM[i + 1][k - 1] * ZB[k][l] * pow(x, delta) * exp(-energy / RT);;
 
@@ -216,7 +222,9 @@ void neighbours(char *a,int *bps) {
         // ****************************************************************************
         // Solve ZM
         // ****************************************************************************
-        energy=0;//P->MLbase;
+        energy    = P->MLbase;
+				//printf("P->MLbase %.15f\n", energy);
+				//printf("\texp(-E/RT) %.15f\n", exp(-energy / RT));
         delta     = jPairedIn(i, j, basePairs);
         ZM[i][j] += ZM[i][j - 1] * pow(x, delta) * exp(-energy / RT);
 
@@ -227,7 +235,9 @@ void neighbours(char *a,int *bps) {
         for (k = i; k <= j - MIN_PAIR_DIST - 1; ++k) {
           if (canBasePair(k, j, sequence)) {
             // Only one stem.
-            energy=0;//P->MLintern[PN[seq[k]][seq[j]]] + P->MLbase * (k - i);
+            energy    = P->MLintern[PN[seq[k]][seq[j]]] + P->MLbase * (k - i);
+						//printf("P->MLintern[PN[seq[k]][seq[j]]] + P->MLbase * (k - i) %d %d %d %.15f\n", i, j, k, energy);
+						//printf("\texp(-E/RT) %.15f\n", exp(-energy / RT));
             delta     = bpCounts[i][j] - bpCounts[k][j];
             ZM[i][j] += ZB[k][j] * pow(x, delta) * exp(-energy / RT);
 
@@ -237,7 +247,9 @@ void neighbours(char *a,int *bps) {
 
             // More than one stem.
             if (k > i) {
-              energy=0;//P->MLintern[PN[seq[k]][seq[j]]];
+              energy    = P->MLintern[PN[seq[k]][seq[j]]];
+							//printf("P->MLintern[PN[seq[k]][seq[j]]] %d %d %.15f\n", j, k, energy);
+							//printf("\texp(-E/RT) %.15f\n", exp(-energy / RT));
               delta     = bpCounts[i][j] - bpCounts[i][k - 1] - bpCounts[k][j];
               ZM[i][j] += ZM[i][k - 1] * ZB[k][j] * pow(x, delta) * exp(-energy / RT);
 
@@ -261,7 +273,9 @@ void neighbours(char *a,int *bps) {
         for (k = i; k <= j - MIN_PAIR_DIST - 1; ++k) { 
           // (k, j) is the rightmost base pair in (i, j).
           if (canBasePair(k, j, sequence)) {
-            energy=0;//PN[seq[k]][seq[j]] > 2 ? TerminalAU : 0;
+            energy = PN[seq[k]][seq[j]] > 2 ? TerminalAU : 0;
+						//printf("PN[seq[k]][seq[j]] > 2 ? TerminalAU : 0 %d %d %.15f\n", k, j, energy);
+						//printf("\texp(-E/RT) %.15f\n", exp(-energy / RT));
             
             if (k == i) {
               delta    = bpCounts[i][j] - bpCounts[k][j];
@@ -287,20 +301,22 @@ void neighbours(char *a,int *bps) {
     
     if (!root) {
       scalingFactor = Z[1][sequenceLength].real();
-
-			for (k = 0; k <= sequenceLength; ++k) {
-				for (l = 0; l <= sequenceLength; ++l) {
-					printf("%+9.2f, ", Z[k][l].real());
+			
+			if (FFTBOR_DEBUG) {
+				for (k = 0; k <= sequenceLength; ++k) {
+					for (l = 0; l <= sequenceLength; ++l) {
+						printf("%+9.2f, ", Z[k][l].real());
+					}
+					printf("\n");
 				}
-				printf("\n");
+				printf("\n\n");
 			}
-			printf("\n\n");
     }
 
-		std::cout << "." << std::flush;
+		if (FFTBOR_DEBUG) {
+			std::cout << "." << std::flush;
+		}
   }
-  
-	std::cout << std::endl;
 
   // Optimization leveraging complementarity of roots of unity.
   if (sequenceLength % 2) {
@@ -757,9 +773,10 @@ void solveSystem(int sequenceLength, dcomplex **rootsOfUnity, double *coefficien
   int i;
   dcomplex sum = ZERO_C;
   
-   printMatrix(rootsOfUnity, (char *)"START ROOTS AND SOLUTIONS", 0, sequenceLength, 0, 1);
-   std::cout << "END ROOTS AND SOLUTIONS" << std::endl << std::endl;
-   std::cout << "Scaling factor (Z{1, n}): " << scalingFactor << std::endl;
+	if (FFTBOR_DEBUG) {
+		printMatrix(rootsOfUnity, (char *)"START ROOTS AND SOLUTIONS", 0, sequenceLength, 0, 1);
+	  std::cout << "END ROOTS AND SOLUTIONS" << std::endl << std::endl;
+	}
 
   fftw_complex signal[sequenceLength + 1];
   fftw_complex result[sequenceLength + 1];
@@ -773,15 +790,14 @@ void solveSystem(int sequenceLength, dcomplex **rootsOfUnity, double *coefficien
   fftw_execute(plan);
   fftw_destroy_plan(plan);
   
-  std::cout << "START DISTRIBUTION" << std::endl;
   for (i = 0; i <= sequenceLength; i++) {
     coefficients[i] = PRECISION == 0 ? result[i][FFTW_REAL] / (sequenceLength + 1) : pow(10.0, -PRECISION) * static_cast<int>(result[i][FFTW_REAL] / (sequenceLength + 1));
     sum            += coefficients[i];
     
-    std::cout << i << ": " << coefficients[i] << std::endl;
+    std::cout << i << "\t" << coefficients[i] << std::endl;
   }
-  std::cout << "END DISTRIBUTION" << std::endl << std::endl;
   
+	std::cout << "Scaling factor (Z{1, n}): " << scalingFactor << std::endl;
   std::cout << "Sum: " << sum << std::endl;
 }
 
