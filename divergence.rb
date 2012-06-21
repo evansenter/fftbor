@@ -6,6 +6,7 @@ require "vienna_rna"
 require "diverge"
 
 class Object; def this; self; end; end
+module Enumerable; def sum; inject(&:+); end; end
 
 ActiveRecord::Base.establish_connection(config = { adapter: "mysql2", username: "root", reconnect: true })
 
@@ -24,6 +25,8 @@ class BuildRun < ActiveRecord::Migration
       table.float   :js_divergence
       table.float   :fftbor_time
       table.float   :rnabor_time
+      table.float   :fftbor_partition
+      table.float   :rnabor_partition
       table.timestamps
     end 
   end
@@ -41,23 +44,33 @@ class Run < ActiveRecord::Base
   end
 end
 
-40.step(200, 20).each do |size|
+def normalize(array)
+  array.map { |i| i + ((1 - array.sum) / array.length) }
+end
+
+ViennaRna.debug = false
+
+20.step(300, 10).each do |size|
   sequence = Run.generate_sequence(size)
          
   ["." * sequence.length, ViennaRna::Fold.new(sequence).run.structure].each do |structure|
     fftbor = ViennaRna::Fftbor.new(sequence: sequence, structure: structure).run
     rnabor = ViennaRna::Rnabor.new(sequence: sequence, structure: structure).run
     
-    puts (fftbor_distribution = fftbor.parse_distribution).inspect
-    puts (rnabor_distribution = rnabor.parse_distribution.map { |i| (i * 10 ** 6).truncate / 10.0 ** 6 }).inspect
+    puts (fftbor_distribution = normalize(fftbor.distribution)).inspect
+    puts (rnabor_distribution = normalize(rnabor.distribution)).inspect
     
-    Run.create({
-      sequence:        sequence, 
-      sequence_length: size, 
-      structure:       structure, 
-      js_divergence:   Diverge.new(fftbor_distribution, rnabor_distribution).js,
-      fftbor_time:     fftbor.runtime.real,
-      rnabor_time:     rnabor.runtime.real
-    })
+    attributes = {
+      sequence:         sequence, 
+      sequence_length:  size, 
+      structure:        structure, 
+      js_divergence:    Diverge.new(fftbor_distribution, rnabor_distribution).js,
+      fftbor_time:      fftbor.runtime.real,
+      rnabor_time:      rnabor.runtime.real,
+      fftbor_partition: fftbor.partition,
+      rnabor_partition: rnabor.partition,
+    }
+    
+    ARGV.last == "save" ? Run.create(attributes) : ap(attributes)
   end
 end

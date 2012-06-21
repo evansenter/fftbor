@@ -1,5 +1,6 @@
 FFTbor
 RNAbor
+rna.ps
 *.a
 *.o
 test*.txt

@@ -106,7 +106,7 @@ void neighbours(char *a,int *bps) {
   // FFTbor code starts
   // ****************************************************************************
   // Variable declarations.
-  int root, **bpCounts;
+  int root;
   double scalingFactor;
   dcomplex x;
   
@@ -130,8 +130,6 @@ void neighbours(char *a,int *bps) {
     rootsOfUnity[i]    = new dcomplex[2];
     rootsOfUnity[i][0] = dcomplex(cos(2 * M_PI * i / (sequenceLength + 1)), sin(2 * M_PI * i / (sequenceLength + 1)));
   }
-	
-  bpCounts = fillBasePairCounts(bps, sequenceLength);
   
   // Start main recursions (root <= round(sequenceLength / 2.0) is an optimization for roots of unity).
   for (root = 0; root <= round(sequenceLength / 2.0); ++root) {
@@ -171,7 +169,7 @@ void neighbours(char *a,int *bps) {
           // ****************************************************************************
           // In a hairpin, [i + 1, j - 1] unpaired.
           energy    = hairpinloop(i, j, PN[seq[i]][seq[j]], seq, a);
-          delta     = bpCounts[i][j] + jPairedTo(i, j, bps);
+          delta     = NumBP[i][j] + jPairedTo(i, j, bps);
           ZB[i][j] += pow(x, delta) * exp(-energy / RT);
 
           if (STRUCTURE_COUNT) {
@@ -184,7 +182,7 @@ void neighbours(char *a,int *bps) {
               if (PN[seq[k]][seq[l]]) {
                  // In interior loop / bulge / stack with (i, j) and (k, l), (i + 1, k - 1) and (l + 1, j - 1) are all unpaired.
                  energy    = interiorloop(i, j, k, l, PN[seq[i]][seq[j]], PN[seq[l]][seq[k]], seq);
-                 delta     = bpCounts[i][j] - bpCounts[k][l] + jPairedTo(i, j, bps);
+                 delta     = NumBP[i][j] - NumBP[k][l] + jPairedTo(i, j, bps);
                  ZB[i][j] += (ZB[k][l] * pow(x, delta) * exp(-energy / RT));
 
                  if (STRUCTURE_COUNT) {
@@ -194,7 +192,7 @@ void neighbours(char *a,int *bps) {
                 if (k > i + MIN_PAIR_DIST + 2) {
                   // If (i, j) is the closing b.p. of a multiloop, and (k, l) is the rightmost base pair, there is at least one hairpin between (i + 1, k - 1).
                   energy    = multiloop_closing(i, j, k, l, PN[seq[j]][seq[i]], PN[seq[k]][seq[l]], seq);
-                  delta     = bpCounts[i][j] - bpCounts[i + 1][k - 1] - bpCounts[k][l] + jPairedTo(i, j, bps);
+                  delta     = NumBP[i][j] - NumBP[i + 1][k - 1] - NumBP[k][l] + jPairedTo(i, j, bps);
                   ZB[i][j] += ZM[i + 1][k - 1] * ZB[k][l] * pow(x, delta) * exp(-energy / RT);;
 
                   if (STRUCTURE_COUNT) {
@@ -221,7 +219,7 @@ void neighbours(char *a,int *bps) {
           if (PN[seq[k]][seq[j]]) {
             // Only one stem.
             energy    = P->MLintern[PN[seq[k]][seq[j]]] + P->MLbase * (k - i);
-            delta     = bpCounts[i][j] - bpCounts[k][j];
+            delta     = NumBP[i][j] - NumBP[k][j];
             ZM[i][j] += ZB[k][j] * pow(x, delta) * exp(-energy / RT);
 
             if (STRUCTURE_COUNT) {
@@ -231,7 +229,7 @@ void neighbours(char *a,int *bps) {
             // More than one stem.
             if (k > i + THRESHOLD + 2) {
               energy    = P->MLintern[PN[seq[k]][seq[j]]];
-              delta     = bpCounts[i][j] - bpCounts[i][k - 1] - bpCounts[k][j];
+              delta     = NumBP[i][j] - NumBP[i][k - 1] - NumBP[k][j];
               ZM[i][j] += ZM[i][k - 1] * ZB[k][j] * pow(x, delta) * exp(-energy / RT);
 
               if (STRUCTURE_COUNT) {
@@ -257,14 +255,14 @@ void neighbours(char *a,int *bps) {
             energy = PN[seq[k]][seq[j]] > 2 ? TerminalAU : 0;
             
             if (k == i) {
-              delta    = bpCounts[i][j] - bpCounts[k][j];
+              delta    = NumBP[i][j] - NumBP[k][j];
               Z[i][j] += ZB[k][j] * pow(x, delta) * exp(-energy / RT);
 
               if (STRUCTURE_COUNT) {
                 Z[j][i] += ZB[j][k];
               }
             } else {
-              delta    = bpCounts[i][j] - bpCounts[i][k - 1] - bpCounts[k][j];
+              delta    = NumBP[i][j] - NumBP[i][k - 1] - NumBP[k][j];
               Z[i][j] += Z[i][k - 1] * ZB[k][j] * pow(x, delta) * exp(-energy / RT);
 
               if (STRUCTURE_COUNT) {
@@ -778,39 +776,8 @@ void solveSystem(int sequenceLength, dcomplex **rootsOfUnity, double *coefficien
     std::cout << i << "\t" << coefficients[i] << std::endl;
   }
   
-	std::cout << "Scaling factor (Z{1, n}): " << scalingFactor << std::endl;
+	printf("Scaling factor (Z{1, n}): %.15f\n", scalingFactor);
   std::cout << "Sum: " << sum << std::endl;
-}
-
-/* Number of base pairs in the region i to j in basePairs */
-int numberOfBasePairs(int i, int j, int *basePairs) {
-  int n = 0;
-  int k;
-  for (k = i; k <= j; ++k) {
-    // If position k opens a b.p. '(' and is closed within the range [i, j], increment n
-    if (k < basePairs[k] && basePairs[k] <= j) {
-      n++;
-    }
-  }
-  
-  return n;
-}
-
-int** fillBasePairCounts(int *basePairs, int n) {
-  int i, d, **bpCounts;
-  
-  bpCounts = (int **) calloc(n + 1, sizeof(int *));
-  for (i = 1; i <= n; ++i) {
-    bpCounts[i] = (int *) calloc(n + 1, sizeof(int));
-  }
-  
-  for (d = MIN_PAIR_DIST + 1; d < n; ++d) {
-    for (i = 1; i <= n - d; ++i) {
-      bpCounts[i][i + d] = numberOfBasePairs(i, i + d, basePairs);
-    }
-  }
-  
-  return bpCounts;
 }
 
 int jPairedTo(int i, int j, int *basePairs) {
