@@ -5,8 +5,8 @@ LDFLAGS = -lfftw3 -lm -L.
 BINDIR  = /usr/local/bin # Change this to the BINDIR
 CC      = g++
 
-RNAbor : delta.o misc.o main.o
-	 $(CC) -g delta.o misc.o main.o $(LDFLAGS) -lRNA -o RNAbor
+FFTbor : delta.o misc.o main.o
+	 $(CC) -g delta.o misc.o main.o $(LDFLAGS) -lRNA -o FFTbor
 	
 main.o : main.c delta.h
 	   $(CC) -Wall -W $(CFLAGS) main.c
@@ -18,8 +18,8 @@ delta.o: delta.c delta.h
 	$(CC) -Wall -W -g $(CFLAGS) delta.c
 
 clean:
-	rm -f *.o RNAbor
+	rm -f *.o FFTbor
 
 install:
-	cp RNAbor $(BINDIR)
+	cp FFTbor $(BINDIR)
 	cp energy.par $(BINDIR)

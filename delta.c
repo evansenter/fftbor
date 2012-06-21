@@ -329,6 +329,8 @@ void neighbours(char *a,int *bps) {
     rootsOfUnity[root][1] = dcomplex(rootsOfUnity[i][1].real(), -rootsOfUnity[i][1].imag());
   }
 
+	printf("Number of structures: %.0f\n", Z[sequenceLength][1].real());
+
   solveSystem(sequenceLength, rootsOfUnity, coefficients, scalingFactor);
   // ****************************************************************************
   // FFTbor code ends
