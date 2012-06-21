@@ -82,7 +82,9 @@ void neighbours(char *a,int *bps) {
   int i, j, k, l, d, delta;
   int n = strlen(a);
   /* Backtrack */
+	userTemperature = 37;
   double RT = 0.0019872370936902486 * (userTemperature + 273.15) * 100; // 0.01 * (kcal K)/mol
+
   double energy;
 
   int *seq = (int *)xcalloc(n+1,sizeof(int));
@@ -184,19 +186,17 @@ void neighbours(char *a,int *bps) {
           }
 
           // Interior loop / bulge / stack / multiloop.
-          for (k = i + 1; k <= j - MIN_PAIR_DIST - 2; ++k) {
-            for (l = k + MIN_PAIR_DIST + 1; l < j; ++l) {
+          for (k = i + 1; k < j - MIN_PAIR_DIST; ++k) {
+            for (l = max2(k + MIN_PAIR_DIST + 1, j - MAX_INTERIOR_DIST - 1); l < j; ++l) {
               if (canBasePair(k, l, sequence)) {
-                if (k - i + j - l - 2 <= MAX_INTERIOR_DIST) {
-                  // In interior loop / bulge / stack with (i, j) and (k, l), (i + 1, k - 1) and (l + 1, j - 1) are all unpaired.
-                  energy    = interiorloop(i, j, k, l, PN[seq[i]][seq[j]], PN[seq[l]][seq[k]], seq);
-                  delta     = bpCounts[i][j] - bpCounts[k][l] + jPairedTo(i, j, basePairs);
-                  ZB[i][j] += (ZB[k][l] * pow(x, delta) * exp(-energy / RT));
+                 // In interior loop / bulge / stack with (i, j) and (k, l), (i + 1, k - 1) and (l + 1, j - 1) are all unpaired.
+                 energy    = interiorloop(i, j, k, l, PN[seq[i]][seq[j]], PN[seq[l]][seq[k]], seq);
+                 delta     = bpCounts[i][j] - bpCounts[k][l] + jPairedTo(i, j, basePairs);
+                 ZB[i][j] += (ZB[k][l] * pow(x, delta) * exp(-energy / RT));
 
-                  if (STRUCTURE_COUNT) {
-                    ZB[j][i] += ZB[l][k];
-                  }
-                }
+                 if (STRUCTURE_COUNT) {
+                   ZB[j][i] += ZB[l][k];
+                 }
 
                 if (k > i + MIN_PAIR_DIST + 2) {
                   // If (i, j) is the closing b.p. of a multiloop, and (k, l) is the rightmost base pair, there is at least one hairpin between (i + 1, k - 1).
@@ -224,7 +224,7 @@ void neighbours(char *a,int *bps) {
           ZM[j][i] += ZM[j - 1][i];
         }
 
-        for (k = i; k <= j - MIN_PAIR_DIST - 1; ++k) {
+        for (k = i; k < j - MIN_PAIR_DIST; ++k) {
           if (canBasePair(k, j, sequence)) {
             // Only one stem.
             energy    = P->MLintern[PN[seq[k]][seq[j]]] + P->MLbase * (k - i);
@@ -236,7 +236,7 @@ void neighbours(char *a,int *bps) {
             }
 
             // More than one stem.
-            if (k > i) {
+            if (k > i + THRESHOLD + 2) {
               energy    = P->MLintern[PN[seq[k]][seq[j]]];
               delta     = bpCounts[i][j] - bpCounts[i][k - 1] - bpCounts[k][j];
               ZM[i][j] += ZM[i][k - 1] * ZB[k][j] * pow(x, delta) * exp(-energy / RT);
@@ -258,7 +258,7 @@ void neighbours(char *a,int *bps) {
           Z[j][i] += Z[j - 1][i];
         }
 
-        for (k = i; k <= j - MIN_PAIR_DIST - 1; ++k) { 
+        for (k = i; k < j - MIN_PAIR_DIST; ++k) { 
           // (k, j) is the rightmost base pair in (i, j).
           if (canBasePair(k, j, sequence)) {
             energy = PN[seq[k]][seq[j]] > 2 ? TerminalAU : 0;
