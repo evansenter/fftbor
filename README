@@ -1,7 +1,7 @@
-RNAbor computes number of delta-neighbours and the partition function
+FFTbor computes number of delta-neighbours and the partition function
 of delta-neighbours.
 
-Type 'RNAbor --help' for help on the input format.
+Type 'FFTbor --help' for help on the input format.
 
 To compile the program run 'make' and then 'make install', but before
 doing so modify two lines in the Makefile. Change LDFLAGS to the
