@@ -24,7 +24,6 @@ int numberOfBasePairs(int i, int j, int *basePairs);
 int** fillBasePairCounts(int *basePairs, int n);
 int jPairedTo(int i, int j, int *basePairs);
 int jPairedIn(int i, int j, int *basePairs);
-int canBasePair(int i, int j, char *sequence);
 void printMatrix(dcomplex **matrix, char *title, int iStart, int iStop, int jStart, int jStop);
 
 #endif

@@ -131,12 +131,6 @@ void neighbours(char *a,int *bps) {
     rootsOfUnity[i][0] = dcomplex(cos(2 * M_PI * i / (sequenceLength + 1)), sin(2 * M_PI * i / (sequenceLength + 1)));
   }
 	
-	for (i = 1; i <= sequenceLength; ++i) {
-		for (j = 1; j <= sequenceLength; ++j) {
-			printf("%d %d: %d\n", i, j, PN[seq[i]][seq[j]]);
-		}
-	}
-	
   bpCounts = fillBasePairCounts(bps, sequenceLength);
   
   // Start main recursions (root <= round(sequenceLength / 2.0) is an optimization for roots of unity).
@@ -171,7 +165,7 @@ void neighbours(char *a,int *bps) {
       for (i = 1; i <= sequenceLength - d; ++i) {
         j = i + d;
       
-        if (canBasePair(i, j, sequence)) {
+        if (PN[seq[i]][seq[j]]) {
           // ****************************************************************************
           // Solve ZB 
           // ****************************************************************************
@@ -187,7 +181,7 @@ void neighbours(char *a,int *bps) {
           // Interior loop / bulge / stack / multiloop.
           for (k = i + 1; k < j - MIN_PAIR_DIST; ++k) {
             for (l = max2(k + MIN_PAIR_DIST + 1, j - MAX_INTERIOR_DIST - 1); l < j; ++l) {
-              if (canBasePair(k, l, sequence)) {
+              if (PN[seq[k]][seq[l]]) {
                  // In interior loop / bulge / stack with (i, j) and (k, l), (i + 1, k - 1) and (l + 1, j - 1) are all unpaired.
                  energy    = interiorloop(i, j, k, l, PN[seq[i]][seq[j]], PN[seq[l]][seq[k]], seq);
                  delta     = bpCounts[i][j] - bpCounts[k][l] + jPairedTo(i, j, bps);
@@ -224,7 +218,7 @@ void neighbours(char *a,int *bps) {
         }
 
         for (k = i; k < j - MIN_PAIR_DIST; ++k) {
-          if (canBasePair(k, j, sequence)) {
+          if (PN[seq[k]][seq[j]]) {
             // Only one stem.
             energy    = P->MLintern[PN[seq[k]][seq[j]]] + P->MLbase * (k - i);
             delta     = bpCounts[i][j] - bpCounts[k][j];
@@ -259,7 +253,7 @@ void neighbours(char *a,int *bps) {
 
         for (k = i; k < j - MIN_PAIR_DIST; ++k) { 
           // (k, j) is the rightmost base pair in (i, j).
-          if (canBasePair(k, j, sequence)) {
+          if (PN[seq[k]][seq[j]]) {
             energy = PN[seq[k]][seq[j]] > 2 ? TerminalAU : 0;
             
             if (k == i) {
@@ -825,20 +819,6 @@ int jPairedTo(int i, int j, int *basePairs) {
 
 int jPairedIn(int i, int j, int *basePairs) {
   return basePairs[j] >= i && basePairs[j] < j ? 1 : 0;
-}
-
-/* Checks if the i-th and j-th positions in the sequence (1-indexed!) can base pair */
-int canBasePair(int i, int j, char *sequence) {	
-  if (j - i <= MIN_PAIR_DIST)
-    return 0;
-  else if ((sequence[i] == 'A' && sequence[j] == 'U') || (sequence[i] == 'U' && sequence[j] == 'A'))
-    return 1;
-  else if ((sequence[i] == 'C' && sequence[j] == 'G') || (sequence[i] == 'G' && sequence[j] == 'C'))
-    return 1;
-  else if ((sequence[i] == 'U' && sequence[j] == 'G') || (sequence[i] == 'G' && sequence[j] == 'U'))
-    return 1;
-  else
-    return 0;
 }
 
 void printMatrix(dcomplex **matrix, char *title, int iStart, int iStop, int jStart, int jStop) {
