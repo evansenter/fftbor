@@ -46,7 +46,7 @@ extern int STRUCTURE;
 extern int PARTITION;
 extern int STOP;
 extern int N;
-extern double userTemperature;
+extern double temperature;
 extern paramT *P;
 
 /* Some Vienna RNA things */
@@ -82,8 +82,7 @@ void neighbours(char *a,int *bps) {
   int i, j, k, l, d, delta;
   int n = strlen(a);
   /* Backtrack */
-	userTemperature = 37;
-  double RT = 0.0019872370936902486 * (userTemperature + 273.15) * 100; // 0.01 * (kcal K)/mol
+  double RT = 0.0019872370936902486 * (temperature + 273.15) * 100; // 0.01 * (kcal K)/mol
 
   double energy;
 
