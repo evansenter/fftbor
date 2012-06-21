@@ -106,20 +106,15 @@ void neighbours(char *a,int *bps) {
   // FFTbor code starts
   // ****************************************************************************
   // Variable declarations.
-  int root, *basePairs, **bpCounts;
+  int root, **bpCounts;
   double scalingFactor;
   dcomplex x;
   
   int sequenceLength = strlen(a);
   char *sequence     = new char[sequenceLength + 1];
-  char *structure    = new char[sequenceLength];
 
 	sequence[0] = '@';
   strncpy(sequence + 1, a, sequenceLength);
-
-  for (i = 0; i < sequenceLength; i++) {
-    structure[i] = '.';
-  }
   
   dcomplex **Z            = new dcomplex*[sequenceLength + 1];
   dcomplex **ZB           = new dcomplex*[sequenceLength + 1];
@@ -135,9 +130,14 @@ void neighbours(char *a,int *bps) {
     rootsOfUnity[i]    = new dcomplex[2];
     rootsOfUnity[i][0] = dcomplex(cos(2 * M_PI * i / (sequenceLength + 1)), sin(2 * M_PI * i / (sequenceLength + 1)));
   }
-  
-  basePairs = getBasePairList(structure);
-  bpCounts  = fillBasePairCounts(basePairs, sequenceLength);
+	
+	for (i = 1; i <= sequenceLength; ++i) {
+		for (j = 1; j <= sequenceLength; ++j) {
+			printf("%d %d: %d\n", i, j, PN[seq[i]][seq[j]]);
+		}
+	}
+	
+  bpCounts = fillBasePairCounts(bps, sequenceLength);
   
   // Start main recursions (root <= round(sequenceLength / 2.0) is an optimization for roots of unity).
   for (root = 0; root <= round(sequenceLength / 2.0); ++root) {
@@ -177,7 +177,7 @@ void neighbours(char *a,int *bps) {
           // ****************************************************************************
           // In a hairpin, [i + 1, j - 1] unpaired.
           energy    = hairpinloop(i, j, PN[seq[i]][seq[j]], seq, a);
-          delta     = bpCounts[i][j] + jPairedTo(i, j, basePairs);
+          delta     = bpCounts[i][j] + jPairedTo(i, j, bps);
           ZB[i][j] += pow(x, delta) * exp(-energy / RT);
 
           if (STRUCTURE_COUNT) {
@@ -190,7 +190,7 @@ void neighbours(char *a,int *bps) {
               if (canBasePair(k, l, sequence)) {
                  // In interior loop / bulge / stack with (i, j) and (k, l), (i + 1, k - 1) and (l + 1, j - 1) are all unpaired.
                  energy    = interiorloop(i, j, k, l, PN[seq[i]][seq[j]], PN[seq[l]][seq[k]], seq);
-                 delta     = bpCounts[i][j] - bpCounts[k][l] + jPairedTo(i, j, basePairs);
+                 delta     = bpCounts[i][j] - bpCounts[k][l] + jPairedTo(i, j, bps);
                  ZB[i][j] += (ZB[k][l] * pow(x, delta) * exp(-energy / RT));
 
                  if (STRUCTURE_COUNT) {
@@ -200,7 +200,7 @@ void neighbours(char *a,int *bps) {
                 if (k > i + MIN_PAIR_DIST + 2) {
                   // If (i, j) is the closing b.p. of a multiloop, and (k, l) is the rightmost base pair, there is at least one hairpin between (i + 1, k - 1).
                   energy    = multiloop_closing(i, j, k, l, PN[seq[j]][seq[i]], PN[seq[k]][seq[l]], seq);
-                  delta     = bpCounts[i][j] - bpCounts[i + 1][k - 1] - bpCounts[k][l] + jPairedTo(i, j, basePairs);
+                  delta     = bpCounts[i][j] - bpCounts[i + 1][k - 1] - bpCounts[k][l] + jPairedTo(i, j, bps);
                   ZB[i][j] += ZM[i + 1][k - 1] * ZB[k][l] * pow(x, delta) * exp(-energy / RT);;
 
                   if (STRUCTURE_COUNT) {
@@ -216,7 +216,7 @@ void neighbours(char *a,int *bps) {
         // Solve ZM
         // ****************************************************************************
         energy    = P->MLbase;
-        delta     = jPairedIn(i, j, basePairs);
+        delta     = jPairedIn(i, j, bps);
         ZM[i][j] += ZM[i][j - 1] * pow(x, delta) * exp(-energy / RT);
 
         if (STRUCTURE_COUNT) {
@@ -250,7 +250,7 @@ void neighbours(char *a,int *bps) {
         // **************************************************************************
         // Solve Z
         // **************************************************************************
-        delta    = jPairedIn(i, j, basePairs);
+        delta    = jPairedIn(i, j, bps);
         Z[i][j] += Z[i][j - 1] * pow(x, delta);
 
         if (STRUCTURE_COUNT) {
