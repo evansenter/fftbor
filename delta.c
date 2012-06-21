@@ -176,8 +176,6 @@ void neighbours(char *a,int *bps) {
           // ****************************************************************************
           // In a hairpin, [i + 1, j - 1] unpaired.
           energy    = hairpinloop(i, j, PN[seq[i]][seq[j]], seq, a);
-					//printf("hairpinloop(i, j, PN[seq[i]][seq[j]], seq, a) %d %d %.15f\n", i, j, energy);
-					//printf("\texp(-E/RT) %.15f\n", exp(-energy / RT));
           delta     = bpCounts[i][j] + jPairedTo(i, j, basePairs);
           ZB[i][j] += pow(x, delta) * exp(-energy / RT);
 
@@ -192,8 +190,6 @@ void neighbours(char *a,int *bps) {
                 if (k - i + j - l - 2 <= MAX_INTERIOR_DIST) {
                   // In interior loop / bulge / stack with (i, j) and (k, l), (i + 1, k - 1) and (l + 1, j - 1) are all unpaired.
                   energy    = interiorloop(i, j, k, l, PN[seq[i]][seq[j]], PN[seq[l]][seq[k]], seq);
-									//printf("interiorloop(i, j, k, l, PN[seq[i]][seq[j]], PN[seq[l]][seq[k]], seq) %d %d %d %d %.15f\n", i, j, k, l, energy);
-									//printf("\texp(-E/RT) %.15f\n", exp(-energy / RT));
                   delta     = bpCounts[i][j] - bpCounts[k][l] + jPairedTo(i, j, basePairs);
                   ZB[i][j] += (ZB[k][l] * pow(x, delta) * exp(-energy / RT));
 
@@ -205,8 +201,6 @@ void neighbours(char *a,int *bps) {
                 if (k > i + MIN_PAIR_DIST + 2) {
                   // If (i, j) is the closing b.p. of a multiloop, and (k, l) is the rightmost base pair, there is at least one hairpin between (i + 1, k - 1).
                   energy    = multiloop_closing(i, j, k, l, PN[seq[j]][seq[i]], PN[seq[k]][seq[l]], seq);
-									//printf("multiloop_closing(i, j, k, l, PN[seq[j]][seq[i]], PN[seq[k]][seq[l]], seq) %d %d %d %d %.15f\n", i, j, k, l, energy);
-									//printf("\texp(-E/RT) %.15f\n", exp(-energy / RT));
                   delta     = bpCounts[i][j] - bpCounts[i + 1][k - 1] - bpCounts[k][l] + jPairedTo(i, j, basePairs);
                   ZB[i][j] += ZM[i + 1][k - 1] * ZB[k][l] * pow(x, delta) * exp(-energy / RT);;
 
@@ -223,8 +217,6 @@ void neighbours(char *a,int *bps) {
         // Solve ZM
         // ****************************************************************************
         energy    = P->MLbase;
-				//printf("P->MLbase %.15f\n", energy);
-				//printf("\texp(-E/RT) %.15f\n", exp(-energy / RT));
         delta     = jPairedIn(i, j, basePairs);
         ZM[i][j] += ZM[i][j - 1] * pow(x, delta) * exp(-energy / RT);
 
@@ -236,8 +228,6 @@ void neighbours(char *a,int *bps) {
           if (canBasePair(k, j, sequence)) {
             // Only one stem.
             energy    = P->MLintern[PN[seq[k]][seq[j]]] + P->MLbase * (k - i);
-						//printf("P->MLintern[PN[seq[k]][seq[j]]] + P->MLbase * (k - i) %d %d %d %.15f\n", i, j, k, energy);
-						//printf("\texp(-E/RT) %.15f\n", exp(-energy / RT));
             delta     = bpCounts[i][j] - bpCounts[k][j];
             ZM[i][j] += ZB[k][j] * pow(x, delta) * exp(-energy / RT);
 
@@ -248,8 +238,6 @@ void neighbours(char *a,int *bps) {
             // More than one stem.
             if (k > i) {
               energy    = P->MLintern[PN[seq[k]][seq[j]]];
-							//printf("P->MLintern[PN[seq[k]][seq[j]]] %d %d %.15f\n", j, k, energy);
-							//printf("\texp(-E/RT) %.15f\n", exp(-energy / RT));
               delta     = bpCounts[i][j] - bpCounts[i][k - 1] - bpCounts[k][j];
               ZM[i][j] += ZM[i][k - 1] * ZB[k][j] * pow(x, delta) * exp(-energy / RT);
 
@@ -274,8 +262,6 @@ void neighbours(char *a,int *bps) {
           // (k, j) is the rightmost base pair in (i, j).
           if (canBasePair(k, j, sequence)) {
             energy = PN[seq[k]][seq[j]] > 2 ? TerminalAU : 0;
-						//printf("PN[seq[k]][seq[j]] > 2 ? TerminalAU : 0 %d %d %.15f\n", k, j, energy);
-						//printf("\texp(-E/RT) %.15f\n", exp(-energy / RT));
             
             if (k == i) {
               delta    = bpCounts[i][j] - bpCounts[k][j];
