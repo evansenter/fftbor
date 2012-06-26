@@ -136,21 +136,14 @@ void neighbours(char *a,int *bps) {
     // Flush the matrices.
     for (i = 0; i <= sequenceLength; ++i) {
       for (j = 0; j <= sequenceLength; ++j) {
-        Z[i][j]  = ZERO_C;
+        if (i > 0 && j > 0 && abs(j - i) <= MIN_PAIR_DIST) {
+					Z[i][j] = ONE_C;
+				} else {
+					Z[i][j] = ZERO_C;
+				}
+				
         ZB[i][j] = ZERO_C;
         ZM[i][j] = ZERO_C;
-      }
-    }
-    
-    for (d = 0; d <= MIN_PAIR_DIST; ++d) {
-      for (i = 1; i <= sequenceLength - d; ++i) {
-        j = i + d;
-        
-        Z[i][j] = ONE_C;
-        
-        if (STRUCTURE_COUNT && i != j) {
-          Z[j][i] = ONE_C;
-        }
       }
     }
     
@@ -193,7 +186,7 @@ void neighbours(char *a,int *bps) {
                   // If (i, j) is the closing b.p. of a multiloop, and (k, l) is the rightmost base pair, there is at least one hairpin between (i + 1, k - 1).
                   energy    = multiloop_closing(i, j, k, l, PN[seq[j]][seq[i]], PN[seq[k]][seq[l]], seq);
                   delta     = NumBP[i][j] - NumBP[i + 1][k - 1] - NumBP[k][l] + jPairedTo(i, j, bps);
-                  ZB[i][j] += ZM[i + 1][k - 1] * ZB[k][l] * pow(x, delta) * exp(-energy / RT);;
+                  ZB[i][j] += ZM[i + 1][k - 1] * ZB[k][l] * pow(x, delta) * exp(-energy / RT);
 
                   if (STRUCTURE_COUNT) {
                     ZB[j][i] += ZM[k - 1][i + 1] * ZB[l][k];
