@@ -8,14 +8,14 @@ CC      = g++
 FFTbor : delta.o misc.o main.o
 	 $(CC) -g delta.o misc.o main.o $(LDFLAGS) -lRNA -o FFTbor
 	
-main.o : main.c delta.h
-	   $(CC) -Wall -W $(CFLAGS) main.c
+main.o : main.cpp delta.h
+	   $(CC) -Wall -W $(CFLAGS) main.cpp
 
-misc.o : misc.c misc.h
-	 $(CC) -Wall -W -g $(CFLAGS) misc.c
+misc.o : misc.cpp misc.h
+	 $(CC) -Wall -W -g $(CFLAGS) misc.cpp
 
-delta.o: delta.c delta.h
-	$(CC) -Wall -W -g $(CFLAGS) delta.c
+delta.o: delta.cpp delta.h
+	$(CC) -Wall -W -g $(CFLAGS) delta.cpp
 
 clean:
 	rm -f *.o FFTbor
