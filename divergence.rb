@@ -57,7 +57,7 @@ end
       sequence:        sequence, 
       sequence_length: size, 
       structure:       structure, 
-      algorithm:       "Structures per shell normalized", 
+      algorithm:       "Boltzmann probability distribution", 
       tvd:             Diverge.new(fftbor_distribution, rnabor_distribution).tvd,
       count:           rnabor.total_count,
       fftbor_time:     fftbor.runtime.real,
