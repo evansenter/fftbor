@@ -36,6 +36,7 @@
 #define FFTW_REAL 0
 #define FFTW_IMAG 1
 #define FFTBOR_DEBUG 0
+#define ENERGY_DEBUG (0 && !root)
 
 extern int DELTA;
 extern int PF;
@@ -149,6 +150,10 @@ void neighbours(char *a,int *bps) {
     
     x = rootsOfUnity[root][0];
     
+    if (ENERGY_DEBUG) {
+      printf("RT: %f\n", RT / 100);
+    }
+    
     // ****************************************************************************
     // Main recursions
     // ****************************************************************************
@@ -165,6 +170,10 @@ void neighbours(char *a,int *bps) {
           delta     = NumBP[i][j] + jPairedTo(i, j, bps);
           ZB[i][j] += pow(x, delta) * exp(-energy / RT);
 
+          if (ENERGY_DEBUG) {
+            printf("%+f: GetHairpinEnergy(%c (%d), %c (%d));\n", energy / 100, sequence[i], i, sequence[j], j);
+          }
+
           if (STRUCTURE_COUNT) {
             ZB[j][i] += 1;
           }
@@ -177,6 +186,10 @@ void neighbours(char *a,int *bps) {
                  energy    = interiorloop(i, j, k, l, PN[seq[i]][seq[j]], PN[seq[l]][seq[k]], seq);
                  delta     = NumBP[i][j] - NumBP[k][l] + jPairedTo(i, j, bps);
                  ZB[i][j] += (ZB[k][l] * pow(x, delta) * exp(-energy / RT));
+                 
+                 if (ENERGY_DEBUG) {
+                   printf("%+f: GetInteriorStackingAndBulgeEnergy(%c (%d), %c (%d), %c (%d), %c (%d));\n", energy / 100, sequence[i], i, sequence[j], j, sequence[k], k, sequence[l], l);
+                 }
 
                  if (STRUCTURE_COUNT) {
                    ZB[j][i] += ZB[l][k];
@@ -187,6 +200,10 @@ void neighbours(char *a,int *bps) {
                   energy    = multiloop_closing(i, j, k, l, PN[seq[j]][seq[i]], PN[seq[k]][seq[l]], seq);
                   delta     = NumBP[i][j] - NumBP[i + 1][k - 1] - NumBP[k][l] + jPairedTo(i, j, bps);
                   ZB[i][j] += ZM[i + 1][k - 1] * ZB[k][l] * pow(x, delta) * exp(-energy / RT);
+                  
+                  if (ENERGY_DEBUG) {
+                    printf("%+f: MultiloopA + 2 * MultiloopB + MultiloopC * (%d - %d - 1);\n", energy / 100, j, l);
+                  }
 
                   if (STRUCTURE_COUNT) {
                     ZB[j][i] += ZM[k - 1][i + 1] * ZB[l][k];
@@ -204,6 +221,10 @@ void neighbours(char *a,int *bps) {
         delta     = jPairedIn(i, j, bps);
         ZM[i][j] += ZM[i][j - 1] * pow(x, delta) * exp(-energy / RT);
 
+        if (ENERGY_DEBUG) {
+          printf("%+f: MultiloopC;\n", energy / 100);
+        }
+
         if (STRUCTURE_COUNT) {
           ZM[j][i] += ZM[j - 1][i];
         }
@@ -215,6 +236,10 @@ void neighbours(char *a,int *bps) {
             delta     = NumBP[i][j] - NumBP[k][j];
             ZM[i][j] += ZB[k][j] * pow(x, delta) * exp(-energy / RT);
 
+            if (ENERGY_DEBUG) {
+              printf("%+f: MultiloopB + MultiloopC * (%d - %d);\n", energy / 100, k, i);
+            }
+
             if (STRUCTURE_COUNT) {
               ZM[j][i] += ZB[j][k];
             }
@@ -224,6 +249,10 @@ void neighbours(char *a,int *bps) {
               energy    = P->MLintern[PN[seq[k]][seq[j]]];
               delta     = NumBP[i][j] - NumBP[i][k - 1] - NumBP[k][j];
               ZM[i][j] += ZM[i][k - 1] * ZB[k][j] * pow(x, delta) * exp(-energy / RT);
+
+              if (ENERGY_DEBUG) {
+                printf("%+f: MultiloopB;\n", energy / 100);
+              }
 
               if (STRUCTURE_COUNT) {
                 ZM[j][i] += ZM[k - 1][i] * ZB[j][k];
@@ -246,6 +275,10 @@ void neighbours(char *a,int *bps) {
           // (k, j) is the rightmost base pair in (i, j).
           if (PN[seq[k]][seq[j]]) {
             energy = PN[seq[k]][seq[j]] > 2 ? TerminalAU : 0;
+
+            if (ENERGY_DEBUG) {
+              printf("%+f: %c-%c == (2 || 3) ? 0 : GUAU_penalty;\n", energy / 100, sequence[k], sequence[j]);
+            }
             
             if (k == i) {
               delta    = NumBP[i][j] - NumBP[k][j];
@@ -600,6 +633,7 @@ void printbpsstring(int *bps){
 }
 
 void initialize_PN(int pn[5][5]) {
+  // A = 1  C = 2  G = 3  U = 4
   int i,j;
   for (i=0;i<5;i++)
     for (j=0;j<5;j++)

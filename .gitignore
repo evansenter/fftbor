@@ -1,6 +1,7 @@
 *.out
 FFTbor
 RNAbor
+TripletPF
 rna.ps
 *.a
 *.o

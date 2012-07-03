@@ -47,21 +47,21 @@ end
   sequence = Run.generate_sequence(size)
          
   ["." * sequence.length, ViennaRna::Fold.new(sequence).run.structure].each do |structure|
-    fftbor = ViennaRna::Fftbor.new(sequence: sequence, structure: structure).run
-    rnabor = ViennaRna::Rnabor.new(sequence: sequence, structure: structure).run
+    fftbor1 = ViennaRna::Fftbor.new(sequence: sequence, structure: structure).run(mode: :standalone)
+    fftbor2 = ViennaRna::Fftbor.new(sequence: sequence, structure: structure).run(mode: :dispatch)
     
-    fftbor_distribution = fftbor.distribution
-    rnabor_distribution = rnabor.distribution
+    fftbor1_distribution = fftbor1.distribution
+    fftbor2_distribution = fftbor2.distribution
     
     Run.create({
       sequence:        sequence, 
       sequence_length: size, 
       structure:       structure, 
-      algorithm:       "Boltzmann probability distribution", 
-      tvd:             Diverge.new(fftbor_distribution, rnabor_distribution).tvd,
-      count:           rnabor.total_count,
-      fftbor_time:     fftbor.runtime.real,
-      rnabor_time:     rnabor.runtime.real
+      algorithm:       "TripletPF (fftbor) vs. FFTbor (rnabor) Boltzmann distributions", 
+      tvd:             Diverge.new(fftbor1_distribution, fftbor2_distribution).tvd,
+      count:           -1,
+      fftbor_time:     fftbor2.runtime.real,
+      rnabor_time:     fftbor1.runtime.real
     })
   end
 end
