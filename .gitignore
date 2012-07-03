@@ -1,4 +1,5 @@
 *.out
+benchmarking/
 FFTbor
 RNAbor
 TripletPF

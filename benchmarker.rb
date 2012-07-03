@@ -40,10 +40,13 @@ end
 
 ViennaRna.debug = false
 
-20.step(260, 20).inject({}) { |hash, size| hash.merge(size => (case size; when 1..150 then 100; when 151..200 then 5; else 3; end)) }.each do |size, iterations|
-  iterations.times do
-    sequence = Run.generate_sequence(size)
-
+[20, 40, 60, 80, 100, 120, 140, 160, 200, 250, 300].inject({}) do |hash, size| 
+  hash.merge(size => (case size; when 1..160 then 100; else 3; end))
+end.each do |size, iterations|
+  iterations.times do |i|
+    GC.start if (i % 10).zero?
+    
+    sequence   = Run.generate_sequence(size)
     ap (fftbor = Run.create(sequence: sequence, sequence_length: size, algorithm: "fftbor", time: ViennaRna::Fftbor.new(sequence: sequence).run.runtime.real)).attributes
     ap (rnabor = Run.create(sequence: sequence, sequence_length: size, algorithm: "rnabor", time: ViennaRna::Rnabor.new(sequence: sequence).run.runtime.real)).attributes
   end
