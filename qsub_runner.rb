@@ -25,7 +25,7 @@ def run_job(action, prefix)
 end
 
 unless ARGV.length == 2
-  puts "Usage: ./run_on_cluster.rb [output_prefix] [command_file]"
+  puts "Usage: ./qsub_runner.rb [output_prefix] [command_file]"
 else
   puts "Add a command to (optionally) clean everything up first."
   
@@ -43,6 +43,9 @@ else
   end
 end
 
+# --------------------------------------------+
+# RNAbor / FFTbor time benchmarking functions |
+# --------------------------------------------+
 def make_command_file(algorithm, size, &block)
   content = <<-SH
     #!/bin/sh
@@ -61,23 +64,40 @@ def make_command_file(algorithm, size, &block)
 end
 
 def make_pbs_files
-  [20, 40, 60, 80, 100, 120, 140, 160, 200, 250, 300].inject({}) do |hash, size| 
-    hash.merge(size => (case size; when 1..160 then 100; else 3; end))
+  20.step(300, 20).inject({}) do |hash, size| 
+    hash.merge(size => (case size; when 1...200 then 100; else 10; end))
   end.each do |size, iterations|
     iterations.times do |i|
       sequence = size.times.inject("") { |string, _| string + %w[A U C G][rand(4)] }
-      content  = <<-STR
+      
+      mfe_content = <<-STR
         >
         #{sequence}
         #{ViennaRna::Fold.run(sequence).structure}
       STR
-
-      File.open("#{size}_%03d.fa" % (i + 1), "w") do |file|
-        file.write(content.gsub(/^\s*/, ""))
+    
+      File.open("mfe_size_#{size}_%03d.fa" % (i + 1), "w") do |file|
+        file.write(mfe_content.gsub(/^\s*/, ""))
+      end
+      
+      empty_content = <<-STR
+        >
+        #{sequence}
+        #{'.' * size}
+      STR
+    
+      File.open("empty_size_#{size}_%03d.fa" % (i + 1), "w") do |file|
+        file.write(empty_content.gsub(/^\s*/, ""))
       end
     end
 
-    make_command_file("rnabor", size) { Dir["#{size}_*.fa"].map { |file| "time ./RNAbor -nodangle #{file}" }.join("\n") }
-    make_command_file("fftbor", size) { Dir["#{size}_*.fa"].map { |file| "time ./FFTbor -nodangle #{file}" }.join("\n") }
+    # Run each experiment (.sh file) in triplicate
+    (1..3).each do |i|
+      make_command_file("rnabor_3_mfe", size)   { Dir["mfe_size_#{size}_*.fa"  ].map { |file| "time ./RNAbor -nodangle #{file}" }.join("\n") }
+      make_command_file("rnabor_3_empty", size) { Dir["empty_size_#{size}_*.fa"].map { |file| "time ./RNAbor -nodangle #{file}" }.join("\n") }
+      
+      make_command_file("fftbor_#{i}_mfe", size)   { Dir["mfe_size_#{size}_*.fa"  ].map { |file| "time ./FFTbor -nodangle #{file}" }.join("\n") }
+      make_command_file("fftbor_#{i}_empty", size) { Dir["empty_size_#{size}_*.fa"].map { |file| "time ./FFTbor -nodangle #{file}" }.join("\n") }
+    end
   end
 end
