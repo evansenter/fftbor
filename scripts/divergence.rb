@@ -37,31 +37,30 @@ end
 
 class Run < ActiveRecord::Base
   validates_presence_of :sequence, :sequence_length, :structure, :algorithm, :tvd, :count, :fftbor_time, :rnabor_time
-  
-  def self.generate_sequence(sequence_length)
-    sequence_length.times.inject("") { |string, _| string + %w[A U C G][rand(4)] }
-  end
 end
 
 20.step(300, 20).each do |size|
-  sequence = Run.generate_sequence(size)
+  3.times do
+    sequence = size.times.inject("") { |string, _| string + %w[A U C G][rand(4)] }
          
-  ["." * sequence.length, ViennaRna::Fold.new(sequence).run.structure].each do |structure|
-    fftbor1 = ViennaRna::Fftbor.new(sequence: sequence, structure: structure).run(mode: :standalone)
-    fftbor2 = ViennaRna::Fftbor.new(sequence: sequence, structure: structure).run(mode: :dispatch)
+    ["." * sequence.length, ViennaRna::Fold.new(sequence).run.structure].each do |structure|
+      rnabor = ViennaRna::Rnabor.run(sequence: sequence, structure: structure)
+      fftbor = ViennaRna::Fftbor.run(sequence: sequence, structure: structure)
     
-    fftbor1_distribution = fftbor1.distribution
-    fftbor2_distribution = fftbor2.distribution
+      rnabor_distribution = rnabor.distribution
+      fftbor_distribution = fftbor.distribution
     
-    Run.create({
-      sequence:        sequence, 
-      sequence_length: size, 
-      structure:       structure, 
-      algorithm:       "TripletPF (fftbor) vs. FFTbor (rnabor) Boltzmann distributions", 
-      tvd:             Diverge.new(fftbor1_distribution, fftbor2_distribution).tvd,
-      count:           -1,
-      fftbor_time:     fftbor2.runtime.real,
-      rnabor_time:     fftbor1.runtime.real
-    })
+      # Run.create({
+      ap({
+        sequence:        sequence, 
+        sequence_length: size, 
+        structure:       structure, 
+        algorithm:       "RNAbor vs. FFTbor (Z_k/Z)", 
+        tvd:             Diverge.new(rnabor_distribution, fftbor_distribution).tvd,
+        count:           -1,
+        fftbor_time:     fftbor.runtime.real,
+        rnabor_time:     rnabor.runtime.real
+      })
+    end
   end
 end
