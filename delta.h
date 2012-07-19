@@ -19,7 +19,7 @@ int basepaired_to(int ,int *);
 int bp_diff(int *, int, int , int);
 void print_bps(int *);
 
-void solveSystem(int sequenceLength, dcomplex **rootsOfUnity, double *coefficients, double scalingFactor);
+void solveSystem(dcomplex **rootsOfUnity, double *coefficients, double scalingFactor, int runLength);
 int jPairedTo(int i, int j, int *basePairs);
 int jPairedIn(int i, int j, int *basePairs);
 void printMatrix(dcomplex **matrix, char *title, int iStart, int iStop, int jStart, int jStop);

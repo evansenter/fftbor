@@ -1,0 +1,138 @@
+diff --git a/delta.cpp b/delta.cpp
+index 81c39d8..57554bd 100644
+--- a/delta.cpp
++++ b/delta.cpp
+@@ -107,7 +107,7 @@ void neighbours(char *a,int *bps) {
+   // FFTbor code starts
+   // ****************************************************************************
+   // Variable declarations.
+-  int root;
++  int root, runLength = 0;
+   double scalingFactor;
+   dcomplex x;
+   
+@@ -117,31 +117,40 @@ void neighbours(char *a,int *bps) {
+ 	sequence[0] = '@';
+   strncpy(sequence + 1, a, sequenceLength);
+   
++  for (i = 1; i <= n; ++i) {
++    runLength += (bps[i] > i ? 1 : 0);
++  }
++  
++  runLength += floor((sequenceLength - MIN_PAIR_DIST) / 2);
++  
+   dcomplex **Z            = new dcomplex*[sequenceLength + 1];
+   dcomplex **ZB           = new dcomplex*[sequenceLength + 1];
+   dcomplex **ZM           = new dcomplex*[sequenceLength + 1];
+-  dcomplex **rootsOfUnity = new dcomplex*[sequenceLength + 1];
+-  double    *coefficients = new double[sequenceLength + 1];
++  dcomplex **rootsOfUnity = new dcomplex*[runLength + 1];
++  double    *coefficients = new double[runLength + 1];
+   
+   // Matrix allocation.
+   for (i = 0; i <= sequenceLength; ++i) {
+     Z[i]               = new dcomplex[sequenceLength + 1];
+     ZB[i]              = new dcomplex[sequenceLength + 1];
+     ZM[i]              = new dcomplex[sequenceLength + 1];
+-    rootsOfUnity[i]    = new dcomplex[2];
+-    rootsOfUnity[i][0] = dcomplex(cos(2 * M_PI * i / (sequenceLength + 1)), sin(2 * M_PI * i / (sequenceLength + 1)));
++    
++    if (i <= runLength) {
++      rootsOfUnity[i]    = new dcomplex[2];
++      rootsOfUnity[i][0] = dcomplex(cos(2 * M_PI * i / (runLength + 1)), sin(2 * M_PI * i / (runLength + 1)));
++    }
+   }
+   
+-  // Start main recursions (root <= round(sequenceLength / 2.0) is an optimization for roots of unity).
+-  for (root = 0; root <= round(sequenceLength / 2.0); ++root) {
++  // Start main recursions (root <= round(runLength / 2.0) is an optimization for roots of unity).
++  for (root = 0; root <= round(runLength / 2.0); ++root) {
+     // Flush the matrices.
+     for (i = 0; i <= sequenceLength; ++i) {
+       for (j = 0; j <= sequenceLength; ++j) {
+         if (i > 0 && j > 0 && abs(j - i) <= MIN_PAIR_DIST) {
+-					Z[i][j] = ONE_C;
+-				} else {
+-					Z[i][j] = ZERO_C;
+-				}
++          Z[i][j] = ONE_C;
++        } else {
++          Z[i][j] = ZERO_C;
++        }
+ 				
+         ZB[i][j] = ZERO_C;
+         ZM[i][j] = ZERO_C;
+@@ -322,19 +331,19 @@ void neighbours(char *a,int *bps) {
+   }
+ 
+   // Optimization leveraging complementarity of roots of unity.
+-  if (sequenceLength % 2) {
++  if (runLength % 2) {
+     i = root - 2;
+   } else {
+     i = root - 1;
+   }
+   
+-  for (; root <= sequenceLength && i > 0; --i, ++root) {
++  for (; root <= runLength && i > 0; --i, ++root) {
+     rootsOfUnity[root][1] = dcomplex(rootsOfUnity[i][1].real(), -rootsOfUnity[i][1].imag());
+   }
+ 
+ 	printf("Number of structures: %.0f\n", Z[sequenceLength][1].real());
+ 
+-  solveSystem(sequenceLength, rootsOfUnity, coefficients, scalingFactor);
++  solveSystem(rootsOfUnity, coefficients, scalingFactor, runLength);
+   // ****************************************************************************
+   // FFTbor code ends
+   // ****************************************************************************
+@@ -775,29 +784,29 @@ double multiloop_closing(int i, int j, int k, int l, int bp_type1, int bp_type2,
+ // FFTbor functions
+ // ****************************************************************************
+ 
+-void solveSystem(int sequenceLength, dcomplex **rootsOfUnity, double *coefficients, double scalingFactor) {
++void solveSystem(dcomplex **rootsOfUnity, double *coefficients, double scalingFactor, int runLength) {
+   int i;
+   dcomplex sum = ZERO_C;
+   
+ 	if (FFTBOR_DEBUG) {
+-		printMatrix(rootsOfUnity, (char *)"START ROOTS AND SOLUTIONS", 0, sequenceLength, 0, 1);
++		printMatrix(rootsOfUnity, (char *)"START ROOTS AND SOLUTIONS", 0, runLength, 0, 1);
+ 	  std::cout << "END ROOTS AND SOLUTIONS" << std::endl << std::endl;
+ 	}
+ 
+-  fftw_complex signal[sequenceLength + 1];
+-  fftw_complex result[sequenceLength + 1];
++  fftw_complex signal[runLength + 1];
++  fftw_complex result[runLength + 1];
+   
+-  for (i = 0; i <= sequenceLength; i++) {
++  for (i = 0; i <= runLength; i++) {
+     signal[i][FFTW_REAL] = (pow(10, PRECISION) * rootsOfUnity[i][1].real()) / scalingFactor;
+     signal[i][FFTW_IMAG] = (pow(10, PRECISION) * rootsOfUnity[i][1].imag()) / scalingFactor;
+   }
+   
+-  fftw_plan plan = fftw_plan_dft_1d(sequenceLength + 1, signal, result, FFTW_FORWARD, FFTW_ESTIMATE);
++  fftw_plan plan = fftw_plan_dft_1d(runLength + 1, signal, result, FFTW_FORWARD, FFTW_ESTIMATE);
+   fftw_execute(plan);
+   fftw_destroy_plan(plan);
+   
+-  for (i = 0; i <= sequenceLength; i++) {
+-    coefficients[i] = PRECISION == 0 ? result[i][FFTW_REAL] / (sequenceLength + 1) : pow(10.0, -PRECISION) * static_cast<int>(result[i][FFTW_REAL] / (sequenceLength + 1));
++  for (i = 0; i <= runLength; i++) {
++    coefficients[i] = PRECISION == 0 ? result[i][FFTW_REAL] / (runLength + 1) : pow(10.0, -PRECISION) * static_cast<int>(result[i][FFTW_REAL] / (runLength + 1));
+     sum            += coefficients[i];
+     
+     std::cout << i << "\t" << coefficients[i] << std::endl;
+diff --git a/delta.h b/delta.h
+index e7437c7..7ed3595 100644
+--- a/delta.h
++++ b/delta.h
+@@ -19,7 +19,7 @@ int basepaired_to(int ,int *);
+ int bp_diff(int *, int, int , int);
+ void print_bps(int *);
+ 
+-void solveSystem(int sequenceLength, dcomplex **rootsOfUnity, double *coefficients, double scalingFactor);
++void solveSystem(dcomplex **rootsOfUnity, double *coefficients, double scalingFactor, int runLength);
+ int jPairedTo(int i, int j, int *basePairs);
+ int jPairedIn(int i, int j, int *basePairs);
+ void printMatrix(dcomplex **matrix, char *title, int iStart, int iStop, int jStart, int jStop);
