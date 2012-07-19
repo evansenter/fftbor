@@ -50,8 +50,7 @@ end
       rnabor_distribution = rnabor.distribution
       fftbor_distribution = fftbor.distribution
     
-      # Run.create({
-      ap({
+      Run.create({
         sequence:        sequence, 
         sequence_length: size, 
         structure:       structure, 
