@@ -38,14 +38,8 @@
 #define FFTBOR_DEBUG 0
 #define ENERGY_DEBUG (0 && !root)
 
-extern int DELTA;
 extern int PF;
-extern int DANGLE;
-extern int NUMBER;
 extern char *ENERGY;
-extern int STRUCTURE;
-extern int PARTITION;
-extern int STOP;
 extern int N;
 extern double temperature;
 extern paramT *P;
@@ -505,15 +499,6 @@ void pf(char *a) {
 	  if (PN[seq[k]][seq[l]]) {
 	    /* One stem */
 	    energy = P->MLintern[PN[seq[k]][seq[l]]] + P->MLbase*(k-i+j-l);
-	    /* Dangles */
-	    if (DANGLE) {
-	      if (k>1)
-		/* Dangle between (k,l) and k-1 */
-		energy += P->dangle5[PN[seq[k]][seq[l]]][seq[k-1]];
-	      if (l<N)
-		/* Dangle between (k,l) and l+1 */
-		energy += P->dangle3[PN[seq[k]][seq[l]]][seq[l+1]];
-	    }
 	    /* terminal base pair is not GC or CG */
 	    //if (PN[seq[k]][seq[l]]>2)
 	    //  energy += TerminalAU;
@@ -522,13 +507,6 @@ void pf(char *a) {
 	    /* More than one stem */
 	    if (k>i+THRESHOLD+2) {
 	      energy = P->MLintern[PN[seq[k]][seq[l]]] + P->MLbase*(j-l);
-	      /* Dangles */
-	      if (DANGLE) {
-		/* Between (k,l) and k-1 */
-		energy += P->dangle5[PN[seq[k]][seq[l]]][seq[k-1]];
-		/* Between (k,l) and l+1 */
-		energy += P->dangle3[PN[seq[k]][seq[l]]][seq[l+1]];
-	      }
 	      tempZ += Zb[k][l] * Zm[i][k-1] * exp(-energy/RT);
 	    }
 	  }
@@ -543,13 +521,6 @@ void pf(char *a) {
 	  if (PN[seq[k]][seq[l]]) {
 	    /* Compute Z */
 	    energy = 0.0; 
-	    /* dangle */
-	    if (DANGLE) {
-	      if (k>1)
-		energy += P->dangle5[PN[seq[k]][seq[l]]][seq[k-1]];
-	      if (l<n)
-		energy += P->dangle3[PN[seq[k]][seq[l]]][seq[l+1]];
-	    }
 	    /* Terminal AU */
 	    if (PN[seq[k]][seq[l]]>2)
 	    energy += TerminalAU;
@@ -760,23 +731,6 @@ double multiloop_closing(int i, int j, int k, int l, int bp_type1, int bp_type2,
   /* Multiloop where (i,j) is the closing base pair */
   double energy;
   energy = P->MLclosing + P->MLintern[bp_type1] + P->MLintern[bp_type2] + P->MLbase*(j-l-1);
-  /* Dangles */
-  if (DANGLE) {
-    /* Dangles might be counted twice and also a dangle
-     * between an outermost base pair might be counted also 
-     * if the neighbouring base is paired. This is a 
-     * simplified way to take dangles into account that is
-     * also used in RNAfold -p0 
-     */
-    /* (i,j) to i+1 */
-    energy += P->dangle3[bp_type1][seq[i+1]];
-    /* (k,l) to k-1 */
-    energy += P->dangle5[bp_type2][seq[k-1]];
-    /* (i,j) to j-1 */  
-    energy += P->dangle5[bp_type1][seq[j-1]];
-    /* (k,l) to l+1 */  
-    energy += P->dangle3[bp_type2][seq[l+1]];
-  }
   return energy;
 }
 
@@ -804,6 +758,8 @@ void solveSystem(dcomplex **rootsOfUnity, double *coefficients, double scalingFa
   fftw_plan plan = fftw_plan_dft_1d(runLength + 1, signal, result, FFTW_FORWARD, FFTW_ESTIMATE);
   fftw_execute(plan);
   fftw_destroy_plan(plan);
+  
+  printf("k\tp(k)\n");
   
   for (i = 0; i <= runLength; i++) {
     coefficients[i] = PRECISION == 0 ? result[i][FFTW_REAL] / (runLength + 1) : pow(10.0, -PRECISION) * static_cast<int>(result[i][FFTW_REAL] / (runLength + 1));
