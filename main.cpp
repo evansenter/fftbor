@@ -39,25 +39,21 @@ int main(int argc, char *argv[]) {
 }
 
 void usage() {
-  fprintf(stderr,"Usage:\nFFTbor [options] filename [options]\n");
-  fprintf(stderr,"where filename has the format\n");
-  fprintf(stderr,"\t>comment (optional line)\n");
-  fprintf(stderr,"\tsequence\n");
-  fprintf(stderr,"\tsecondary structure\n");
-  fprintf(stderr,"or\n");
-  fprintf(stderr,"RNAbor [options] sequence structure [options]\n\n");
-  fprintf(stderr,"the options are the following;\n");
-  fprintf(stderr,"-pf, compute the total partition function Z = sum_k(Zk)\n");
-  fprintf(stderr,"     This option can be useful if -d is used to stop the computation\n");
-  fprintf(stderr,"     before all neighbours are counted, since the full\n");
-  fprintf(stderr,"     partition function is necessary for computing probabilities.\n");
-  fprintf(stderr,"-E energyfile, where energyfile is the name of a file\n");
-  fprintf(stderr,"     with all energy parameters (in the same\n");
-  fprintf(stderr,"     format as used in Vienna RNA).\n");
-  fprintf(stderr,"-T temp, set the temperature,\n");
-  fprintf(stderr,"     the default is 37 degrees Celsius (unless an\n");
-  fprintf(stderr,"     energyfile with parameters for a different\n");
-  fprintf(stderr,"     temperature is used.\n");
+  fprintf(stderr, "Usage:\n\n");
+  
+  fprintf(stderr, "FFTbor [options] sequence structure [options]\n\n");
+  
+  fprintf(stderr, "FFTbor [options] filename [options]\n");
+  fprintf(stderr, "where filename is a file of the format:\n");
+  fprintf(stderr, "\t>comment (optional line)\n");
+  fprintf(stderr, "\tsequence\n");
+  fprintf(stderr, "\tsecondary structure\n\n");
+  
+  fprintf(stderr, "Options include the following:\n");
+  fprintf(stderr, "-pf\tcompute the total partition function Z.\n");
+  fprintf(stderr, "-E\tenergyfile, where energyfile is the name of a file with all energy parameters (in the same format as used in Vienna RNA).\n");
+  fprintf(stderr, "-T\ttemperature, the default is 37 degrees Celsius (unless an energyfile with parameters for a different temperature is used.\n");
+  
   exit(1);
 }
 
