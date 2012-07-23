@@ -74,6 +74,8 @@ void backtrackb(struct index, struct index ***, struct index ***, struct index *
 void backtrackm(struct index, struct index ***, struct index ***, struct index ***, int *);
 
 void neighbours(char *a,int *bps) {
+  printf("\nThis is the window branch. Also, clean up extraneous code?!\n\n");
+	
   int i, j, k, l, d, delta;
   int n = strlen(a);
   /* Backtrack */
