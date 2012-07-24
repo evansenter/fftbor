@@ -114,8 +114,7 @@ void neighbours(char *a, int *bps) {
   }
   
   // Start main recursions (root <= round(runLength / 2.0) is an optimization for roots of unity).
-  // for (root = 0; root <= round(runLength / 2.0); ++root) {
-  for (root = 0; root <= runLength; ++root) {
+  for (root = 0; root <= round(runLength / 2.0); ++root) {
     // Flush the matrices.
     for (i = 0; i <= sequenceLength; ++i) {
       for (j = 0; j <= sequenceLength; ++j) {
@@ -299,15 +298,21 @@ void neighbours(char *a, int *bps) {
 	}
 
   // Optimization leveraging complementarity of roots of unity.
-  // if (runLength % 2) {
-  //   i = root - 2;
-  // } else {
-  //   i = root - 1;
-  // }
-  // 
-  // for (; root <= runLength && i > 0; --i, ++root) {
-  //   rootsOfUnity[root][1] = dcomplex(rootsOfUnity[i][1].real(), -rootsOfUnity[i][1].imag());
-  // }
+  for (i = 0; i < NUM_WINDOWS; ++i) {
+    for (j = 1; j <= sequenceLength - WINDOW_SIZE(i) + 1; ++j) {
+      root = round(runLength / 2.0);
+  
+      if (runLength % 2) {
+        k = root - 1;
+      } else {
+        k = root;
+      }
+  
+      for (; root <= runLength && k > 0; --k, ++root) {
+        solutions[i][j][root] = dcomplex(solutions[i][j][k].real(), -solutions[i][j][k].imag());
+      }
+    }
+  }
 
   solveSystem(solutions, sequence, bps, sequenceLength, runLength);
   
