@@ -20,6 +20,7 @@
 #define FFTW_IMAG 1
 #define WINDOW_SIZE(i) (MIN_WINDOW_SIZE + i)
 #define NUM_WINDOWS (WINDOW_SIZE - MIN_WINDOW_SIZE + 1)
+#define ROOT_POW(i, pow, n) (rootsOfUnity[(i * pow) % (n + 1)])
 #define FFTBOR_DEBUG 0
 #define ENERGY_DEBUG (0 && !root)
 
@@ -147,7 +148,7 @@ void neighbours(char *a, int *bps) {
           // In a hairpin, [i + 1, j - 1] unpaired.
           energy    = hairpinloop(i, j, PN[seq[i]][seq[j]], seq, a);
           delta     = NumBP[i][j] + jPairedTo(i, j, bps);
-          ZB[i][j] += pow(x, delta) * exp(-energy / RT);
+          ZB[i][j] += ROOT_POW(root, delta, runLength) * exp(-energy / RT);
 
           if (ENERGY_DEBUG) {
             printf("%+f: GetHairpinEnergy(%c (%d), %c (%d));\n", energy / 100, sequence[i], i, sequence[j], j);
@@ -164,7 +165,7 @@ void neighbours(char *a, int *bps) {
                  // In interior loop / bulge / stack with (i, j) and (k, l), (i + 1, k - 1) and (l + 1, j - 1) are all unpaired.
                  energy    = interiorloop(i, j, k, l, PN[seq[i]][seq[j]], PN[seq[l]][seq[k]], seq);
                  delta     = NumBP[i][j] - NumBP[k][l] + jPairedTo(i, j, bps);
-                 ZB[i][j] += (ZB[k][l] * pow(x, delta) * exp(-energy / RT));
+                 ZB[i][j] += ZB[k][l] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
                  
                  if (ENERGY_DEBUG) {
                    printf("%+f: GetInteriorStackingAndBulgeEnergy(%c (%d), %c (%d), %c (%d), %c (%d));\n", energy / 100, sequence[i], i, sequence[j], j, sequence[k], k, sequence[l], l);
@@ -178,7 +179,7 @@ void neighbours(char *a, int *bps) {
                   // If (i, j) is the closing b.p. of a multiloop, and (k, l) is the rightmost base pair, there is at least one hairpin between (i + 1, k - 1).
                   energy    = multiloop_closing(i, j, k, l, PN[seq[j]][seq[i]], PN[seq[k]][seq[l]], seq);
                   delta     = NumBP[i][j] - NumBP[i + 1][k - 1] - NumBP[k][l] + jPairedTo(i, j, bps);
-                  ZB[i][j] += ZM[i + 1][k - 1] * ZB[k][l] * pow(x, delta) * exp(-energy / RT);
+                  ZB[i][j] += ZM[i + 1][k - 1] * ZB[k][l] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
                   
                   if (ENERGY_DEBUG) {
                     printf("%+f: MultiloopA + 2 * MultiloopB + MultiloopC * (%d - %d - 1);\n", energy / 100, j, l);
@@ -198,7 +199,7 @@ void neighbours(char *a, int *bps) {
         // ****************************************************************************
         energy    = P->MLbase;
         delta     = jPairedIn(i, j, bps);
-        ZM[i][j] += ZM[i][j - 1] * pow(x, delta) * exp(-energy / RT);
+        ZM[i][j] += ZM[i][j - 1] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
 
         if (ENERGY_DEBUG) {
           printf("%+f: MultiloopC;\n", energy / 100);
@@ -213,7 +214,7 @@ void neighbours(char *a, int *bps) {
             // Only one stem.
             energy    = P->MLintern[PN[seq[k]][seq[j]]] + P->MLbase * (k - i);
             delta     = NumBP[i][j] - NumBP[k][j];
-            ZM[i][j] += ZB[k][j] * pow(x, delta) * exp(-energy / RT);
+            ZM[i][j] += ZB[k][j] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
 
             if (ENERGY_DEBUG) {
               printf("%+f: MultiloopB + MultiloopC * (%d - %d);\n", energy / 100, k, i);
@@ -227,7 +228,7 @@ void neighbours(char *a, int *bps) {
             if (k > i + THRESHOLD + 2) {
               energy    = P->MLintern[PN[seq[k]][seq[j]]];
               delta     = NumBP[i][j] - NumBP[i][k - 1] - NumBP[k][j];
-              ZM[i][j] += ZM[i][k - 1] * ZB[k][j] * pow(x, delta) * exp(-energy / RT);
+              ZM[i][j] += ZM[i][k - 1] * ZB[k][j] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
 
               if (ENERGY_DEBUG) {
                 printf("%+f: MultiloopB;\n", energy / 100);
@@ -244,7 +245,7 @@ void neighbours(char *a, int *bps) {
         // Solve Z
         // **************************************************************************
         delta    = jPairedIn(i, j, bps);
-        Z[i][j] += Z[i][j - 1] * pow(x, delta);
+        Z[i][j] += Z[i][j - 1] * ROOT_POW(root, delta, runLength);
 
         if (STRUCTURE_COUNT) {
           Z[j][i] += Z[j - 1][i];
@@ -261,14 +262,14 @@ void neighbours(char *a, int *bps) {
             
             if (k == i) {
               delta    = NumBP[i][j] - NumBP[k][j];
-              Z[i][j] += ZB[k][j] * pow(x, delta) * exp(-energy / RT);
+              Z[i][j] += ZB[k][j] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
 
               if (STRUCTURE_COUNT) {
                 Z[j][i] += ZB[j][k];
               }
             } else {
               delta    = NumBP[i][j] - NumBP[i][k - 1] - NumBP[k][j];
-              Z[i][j] += Z[i][k - 1] * ZB[k][j] * pow(x, delta) * exp(-energy / RT);
+              Z[i][j] += Z[i][k - 1] * ZB[k][j] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
 
               if (STRUCTURE_COUNT) {
                 Z[j][i] += Z[k - 1][i] * ZB[j][k];
