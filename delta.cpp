@@ -59,7 +59,7 @@ void neighbours(char *a, int *bps) {
   // FFTbor code starts
   // ****************************************************************************
   // Variable declarations.
-  int root, runLength = 0;
+  int root, lastRoot, runLength = 0;
   dcomplex x;
   
   int sequenceLength = strlen(a);
@@ -298,14 +298,16 @@ void neighbours(char *a, int *bps) {
 	}
 
   // Optimization leveraging complementarity of roots of unity.
+  lastRoot = root;
+    
   for (i = 0; i < NUM_WINDOWS; ++i) {
     for (j = 1; j <= sequenceLength - WINDOW_SIZE(i) + 1; ++j) {
-      root = round(runLength / 2.0);
+      root = lastRoot;
   
       if (runLength % 2) {
-        k = root - 1;
+        k = root - 2;
       } else {
-        k = root;
+        k = root - 1;
       }
   
       for (; root <= runLength && k > 0; --k, ++root) {
@@ -320,8 +322,13 @@ void neighbours(char *a, int *bps) {
 }
 
 void solveSystem(dcomplex ***solutions, char *sequence, int *structure, int sequenceLength, int runLength) {
-  int i, j, k;
+  int i, j, k, count = 0;
   double scalingFactor, sum;
+  
+  fftw_complex signal[runLength + 1];
+  fftw_complex result[runLength + 1];
+  
+  fftw_plan plan = fftw_plan_dft_1d(runLength + 1, signal, result, FFTW_FORWARD, FFTW_ESTIMATE);
   
   for (i = 0; i < NUM_WINDOWS; ++i) {
     for (j = 1; j <= sequenceLength - WINDOW_SIZE(i) + 1; ++j) {
@@ -342,18 +349,13 @@ void solveSystem(dcomplex ***solutions, char *sequence, int *structure, int sequ
         printf("%c", structure[k] < 0 ? '.' : (structure[k] > k ? '(' : ')'));
       }
       printf("\n");
-      
-      fftw_complex signal[runLength + 1];
-      fftw_complex result[runLength + 1];
   
       for (k = 0; k <= runLength; k++) {
         signal[k][FFTW_REAL] = (pow(10, PRECISION) * solutions[i][j][k].real()) / scalingFactor;
         signal[k][FFTW_IMAG] = (pow(10, PRECISION) * solutions[i][j][k].imag()) / scalingFactor;
       }
   
-      fftw_plan plan = fftw_plan_dft_1d(runLength + 1, signal, result, FFTW_FORWARD, FFTW_ESTIMATE);
       fftw_execute(plan);
-      fftw_destroy_plan(plan);
   
       printf("k\tp(k)\n");
   
@@ -371,8 +373,13 @@ void solveSystem(dcomplex ***solutions, char *sequence, int *structure, int sequ
   
     	printf("Scaling factor (Z{%d, %d}): %.15f\n", j, j + WINDOW_SIZE(i) - 1, scalingFactor);
       std::cout << "Sum: " << sum << std::endl << std::endl;
+      ++count;
     }
   }
+  
+  printf("Total FFTs evaluated: %d\n", count);
+  
+  fftw_destroy_plan(plan);
 }
 
 void pf(char *a) {
