@@ -31,8 +31,6 @@ extern paramT *P;
 extern "C" void read_parameter_file(const char fname[]);
 
 void neighbours(char *a, int *bps) {
-  printf("\nThis is the window branch. Also, clean up extraneous code?!\n\n");
-	
   int i, j, k, l, d, delta;
   int n     = strlen(a);
   double RT = 0.0019872370936902486 * (temperature + 273.15) * 100; // 0.01 * (kcal K) / mol
