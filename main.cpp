@@ -6,10 +6,9 @@
 #include "delta.h"
 #include "misc.h"
 
-int           PF;
-char          *ENERGY;
-int           N;
+int           PF, N, WINDOW_SIZE, MIN_WINDOW_SIZE;
 extern double temperature;
+char          *ENERGY;
 paramT        *P;
 
 void read_input(int, char **, char **, int**);
@@ -39,8 +38,6 @@ int main(int argc, char *argv[]) {
 }
 
 void usage() {
-  fprintf(stderr, "Usage:\n\n");
-  
   fprintf(stderr, "FFTbor [options] sequence structure [options]\n\n");
   
   fprintf(stderr, "FFTbor [options] filename [options]\n");
@@ -51,20 +48,24 @@ void usage() {
   
   fprintf(stderr, "Options include the following:\n");
   fprintf(stderr, "-pf\tcompute the total partition function Z.\n");
-  fprintf(stderr, "-E\tenergyfile, where energyfile is the name of a file with all energy parameters (in the same format as used in Vienna RNA).\n");
-  fprintf(stderr, "-T\ttemperature, the default is 37 degrees Celsius (unless an energyfile with parameters for a different temperature is used.\n");
+  fprintf(stderr, "-E\tenergyfile,      the default is energy.par in this executable's directory. Must be the name of a file with all energy parameters (in the same format as used in Vienna RNA).\n");
+  fprintf(stderr, "-T\ttemperature,     the default is 37 degrees Celsius (unless an energyfile with parameters for a different temperature is used.\n");
+  fprintf(stderr, "-W\twindow size,     the default is the input sequence length. Will calculate FFTbor on a sliding window across the input sequence.\n");
+  fprintf(stderr, "-M\tmin window size, disabled by default. When provided in conjunction with the -W flag, will calculate FFTbor for all window sizes between the -M and -W value (inclusive).\n");
   
   exit(1);
 }
 
-void read_input(int argc,char *argv[],char **maina, int **bps){
+void read_input(int argc,char *argv[], char **maina, int **bps) {
   FILE *infile;
   char line[NN];
   int i, k;
   char *seq = NULL, *str = NULL;
   
-  PF     = 0;
-  ENERGY = (char *)"energy.par";
+  PF            = 0;
+  WINDOW_SIZE   = 0;
+  MIN_WINDOW_SIZE = 0;
+  ENERGY        = (char *)"energy.par";
 
   /* Function to retrieve RNA sequence and structure, when
    * either input in command line or in a file, where the first
@@ -72,19 +73,35 @@ void read_input(int argc,char *argv[],char **maina, int **bps){
  
   for (i = 1; i < argc; i++) {
     if (argv[i][0] == '-') {
-      if (strcmp(argv[i],"-pf") == 0) {
+      if (strcmp(argv[i], "-pf") == 0) {
         PF = 1;
       } else if (strcmp(argv[i], "-T") == 0) {
         if (i == argc - 1) {
           usage();
         } else if (!sscanf(argv[++i], "%lf", &temperature)) {
           usage();
-        } 
+        }
       } else if (strcmp(argv[i], "-E") == 0) {
-        if (i == argc-1) {
+        if (i == argc - 1) {
           usage();
         }
         ENERGY = argv[++i];
+      } else if (strcmp(argv[i], "-W") == 0) {
+        if (i == argc - 1) {
+          usage();
+        } else if (!sscanf(argv[++i], "%d", &WINDOW_SIZE)) {
+          usage();
+        } else if (WINDOW_SIZE < 0) {
+          usage();
+        }
+      } else if (strcmp(argv[i], "-M") == 0) {
+        if (i == argc - 1) {
+          usage();
+        } else if (!sscanf(argv[++i], "%d", &MIN_WINDOW_SIZE)) {
+          usage();
+        } else if (MIN_WINDOW_SIZE <= 0) {
+          usage();
+        }
       } else {
         usage();
       }
@@ -173,7 +190,28 @@ void read_input(int argc,char *argv[],char **maina, int **bps){
     }
   }
   
+  /* Post-sequence / structure validations */
   if (seq == NULL || str == NULL) {
+    usage();
+  }
+  
+  if (WINDOW_SIZE > N) {
+    printf("Error: the window size provided (%d) can't be longer than the input sequence length (%d).\n\n", WINDOW_SIZE, N);
+    usage();
+  } else if (WINDOW_SIZE == N) {
+    WINDOW_SIZE = 0;
+  }
+  
+  if (MIN_WINDOW_SIZE > WINDOW_SIZE) {
+    printf("Error: the minimum window size provided (%d) can't be larger than the window size provided (%d).\n\n", MIN_WINDOW_SIZE, WINDOW_SIZE);
+    usage();
+  } else if (MIN_WINDOW_SIZE == WINDOW_SIZE) {
+    MIN_WINDOW_SIZE = 0;
+  }
+  
+  
+  if (MIN_WINDOW_SIZE > N) {
+    printf("Error: the minimum window size provided (%d) can't be larger than the input sequence length (%d).\n\n", MIN_WINDOW_SIZE, N);
     usage();
   }
   

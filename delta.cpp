@@ -1,8 +1,3 @@
-/* delta.c
- * Compute number of delta neighbours and partition functions
- * for different values of k
- */
-
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -11,22 +6,10 @@
 #include "delta.h"
 #include "misc.h"
 #include <fftw3.h>
-/* Vienna RNA h-files */
 #include "energy_const.h"
 #include "energy_par.h"
 #include <iostream>
-#define ZZ(k,i,j) Z[i][j][k]
-#define ZZb(k,i,j) Zb[i][j][k]
-#define ZZm(k,i,j) Zm[i][j][k]
-#ifdef COMPUTEMFE
-#define MFEMFE(k,i,j) Z[j][i-1][k]
-#define MFEMFEb(k,i,j) Zb[j][i-1][k]
-#define MFEMFEm(k,i,j) Zm[j][i-1][k]
-#endif
-#define NNB(k,i,j) NB[i][j][k]
-#define Linterior 30
 
-// Stuff pulled over from rnaborcpp
 #define STRUCTURE_COUNT 1
 #define MIN_PAIR_DIST 3
 #define MAX_INTERIOR_DIST 30
@@ -35,51 +18,24 @@
 #define PRECISION 4
 #define FFTW_REAL 0
 #define FFTW_IMAG 1
-#define FFTBOR_DEBUG 0
+#define FFTBOR_DEBUG 1
 #define ENERGY_DEBUG (0 && !root)
 
-extern int PF;
-extern char *ENERGY;
-extern int N;
+extern int    PF, N, WINDOW_SIZE, MIN_WINDOW_SIZE;
 extern double temperature;
+extern char   *ENERGY;
 extern paramT *P;
-
-/* Some Vienna RNA things */
 
 extern "C" void read_parameter_file(const char fname[]);
 
-void neighbours(char *,int *);
-void pf(char *);
-void sub_structure(int , int , int *, int *);
-int numbp(int , int , int *);
-void print_bps(int *);
-void printbpsstring(int *);
-int bn(char );
-
-void initialize_PN(int[][5]);
-void translateseq(char *, int *);
-void initialize_NumBP(int **, int *, int );
-double hairpinloop(int, int, int, int *, char *);
-double interiorloop(int, int, int, int, int, int, int *);
-double multiloop_closing(int, int, int, int, int, int, int *);
-
-struct index {
-  short delta;
-  short i;
-  short j;
-  short type;
-};
-void backtrack(struct index, struct index ***, struct index ***, struct index ***, int *);
-void backtrackb(struct index, struct index ***, struct index ***, struct index ***, int *);
-void backtrackm(struct index, struct index ***, struct index ***, struct index ***, int *);
-
-void neighbours(char *a,int *bps) {
+void neighbours(char *a, int *bps) {
   printf("\nThis is the window branch. Also, clean up extraneous code?!\n\n");
+  printf("WINDOW_SIZE:   %d\n", WINDOW_SIZE);
+  printf("MIN_WINDOW_SIZE: %d\n", MIN_WINDOW_SIZE);
 	
   int i, j, k, l, d, delta;
-  int n = strlen(a);
-  /* Backtrack */
-  double RT = 0.0019872370936902486 * (temperature + 273.15) * 100; // 0.01 * (kcal K)/mol
+  int n     = strlen(a);
+  double RT = 0.0019872370936902486 * (temperature + 273.15) * 100; // 0.01 * (kcal K) / mol
 
   double energy;
 
@@ -88,7 +44,7 @@ void neighbours(char *a,int *bps) {
   static int **NumBP;
 
   const char *fname = ENERGY;
-  N=n;
+  N = n;
   read_parameter_file(fname);
   P = scale_parameters();
 
@@ -309,22 +265,16 @@ void neighbours(char *a,int *bps) {
     
     if (!root) {
       scalingFactor = Z[1][sequenceLength].real();
-			
-			if (FFTBOR_DEBUG) {
-				for (k = 0; k <= sequenceLength; ++k) {
-					for (l = 0; l <= sequenceLength; ++l) {
-						printf("%+9.2f, ", Z[k][l].real());
-					}
-					printf("\n");
-				}
-				printf("\n\n");
-			}
     }
 
 		if (FFTBOR_DEBUG) {
 			std::cout << "." << std::flush;
 		}
   }
+  
+	if (FFTBOR_DEBUG) {
+		std::cout << std::endl;
+	}
 
   // Optimization leveraging complementarity of roots of unity.
   if (runLength % 2) {
@@ -345,69 +295,6 @@ void neighbours(char *a,int *bps) {
   // ****************************************************************************
   
   free(seq);
-}
-
-void backtrack(struct index curr, struct index ***T,
-	       struct index ***Tb, struct index ***Tm, int *bps) {
-  struct index next = T[curr.i][curr.j][curr.delta];
-  int d1,d2;
-  if (next.type==1) {
-    backtrackb(next,T,Tb,Tm,bps);
-  }
-  else if (next.type==2) {
-    d1 = next.delta & 0xff, d2 = (next.delta>>8);
-    next.delta = d1;
-    backtrackb(next,T,Tb,Tm,bps);
-    next.j=next.i-1;
-    next.i=curr.i;
-    next.delta = d2;
-    backtrack(next,T,Tb,Tm,bps);
-  }
-  else if (next.type==5) {
-    backtrack(next,T,Tb,Tm,bps);
-  }
-}
-
-void backtrackb(struct index curr, struct index ***T, 
-		struct index ***Tb, struct index ***Tm, int *bps) {
-  struct index next = Tb[curr.i][curr.j][curr.delta];
-  int d1,d2;
-  bps[0]++;
-  bps[curr.i] = curr.j;
-  bps[curr.j] = curr.i;
-  if (next.type==1) {
-    backtrackb(next,T,Tb,Tm,bps);
-  }
-  else if (next.type==2) {
-    d1 = next.delta & 0xff, d2 = (next.delta>>8);
-    next.delta = d1;
-    backtrackb(next,T,Tb,Tm,bps);
-    next.delta = d2;
-    next.j=next.i-1;
-    next.i=curr.i+1;
-    backtrackm(next,T,Tb,Tm,bps);
-  }
-}
-
-void backtrackm(struct index curr, struct index ***T,
-		struct index ***Tb, struct index ***Tm, int *bps) {
-  struct index next = Tm[curr.i][curr.j][curr.delta];
-  int d1,d2;
-  if (next.type==1) {
-    backtrackb(next,T,Tb,Tm,bps);
-  }
-  if (next.type==2) {
-    d1 = next.delta & 0xff, d2 = (next.delta>>8);
-    next.delta = d1;
-    backtrackb(next,T,Tb,Tm,bps);
-    next.delta = d2;
-    next.j = next.i-1;
-    next.i = curr.i;
-    backtrackm(next,T,Tb,Tm,bps);
-  }
-  else if (next.type==5) {
-    backtrackm(next,T,Tb,Tm,bps);
-  }
 }
 
 void pf(char *a) {
@@ -549,22 +436,6 @@ void pf(char *a) {
   free(Zm); 
 }
 
-void sub_structure(int i, int j, int *bps, int *sub_bps) {
-  int k;
-  sub_bps[0]=0;
-  for (k = 1; k<i; k++)
-    sub_bps[k] = -1;
-  for (k = j+1; k<=N; k++)
-    sub_bps[k] = -1;
-  for (k = i; k<=j; k++) {
-    if ( k<bps[k] && bps[k]<=j) {
-      sub_bps[k] = bps[k];
-      sub_bps[bps[k]] = k;
-      sub_bps[0]++;
-    }
-  }
-}
-
 /* Number of base pairs in the region i to j in bps */
 int numbp(int i, int j, int *bps) {
   int n=0;
@@ -588,30 +459,6 @@ int bn(char A) {
     return 4;
   else
     return 0;
-}
-
-/* A function for printing all base pairs in a base pair list. This
- * can be used for debugging. */
-void print_bps(int *bps) {
-  int k;
-  printf("basepairs:\n");
-  for (k = 1;k<=N;k++)
-    if ( k<bps[k] )
-      printf("(%u,%u)\n",k,bps[k]);
-  printf("\n");
-}
-
-void printbpsstring(int *bps){
-  /* Print the secondary structure as a string */
-  int i;
-  for (i=1;i<=N;i++)
-    if (bps[i]==0)
-      printf(".");
-    else if (i<bps[i])
-      printf("(");
-    else
-      printf(")");
-  //printf("\n");
 }
 
 void initialize_PN(int pn[5][5]) {
@@ -736,17 +583,19 @@ double multiloop_closing(int i, int j, int k, int l, int bp_type1, int bp_type2,
   return energy;
 }
 
-// ****************************************************************************
-// FFTbor functions
-// ****************************************************************************
-
 void solveSystem(dcomplex **rootsOfUnity, double *coefficients, double scalingFactor, int runLength) {
-  int i;
+  int i, j;
   dcomplex sum = ZERO_C;
   
 	if (FFTBOR_DEBUG) {
-		printMatrix(rootsOfUnity, (char *)"START ROOTS AND SOLUTIONS", 0, runLength, 0, 1);
-	  std::cout << "END ROOTS AND SOLUTIONS" << std::endl << std::endl;
+    std::cout << "Roots and corresponding solutions:" << std::endl;
+    
+    for (i = 0; i <= runLength; ++i) {
+      for (j = 0; j <= 1; ++j) {
+        printf("%+.15f, %-+25.15f", rootsOfUnity[i][j].real(), rootsOfUnity[i][j].imag());
+      }
+      std::cout << std::endl;
+    }
 	}
 
   fftw_complex signal[runLength + 1];
@@ -780,17 +629,4 @@ int jPairedTo(int i, int j, int *basePairs) {
 
 int jPairedIn(int i, int j, int *basePairs) {
   return basePairs[j] >= i && basePairs[j] < j ? 1 : 0;
-}
-
-void printMatrix(dcomplex **matrix, char *title, int iStart, int iStop, int jStart, int jStop) {
-  int i, j;
-  
-  printf("%s\n", title);
-      
-  for (i = iStart; i <= iStop; ++i) {
-    for (j = jStart; j <= jStop; ++j) {
-      printf("%+.15f, %-+25.15f", matrix[i][j].real(), matrix[i][j].imag());
-    }
-    std::cout << std::endl;
-  }
 }

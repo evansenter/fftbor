@@ -6,22 +6,18 @@
 
 typedef std::complex<double> dcomplex;
 
-/* To avoid computing MFE structures if this is not wanted. */
-//#define COMPUTEMFE
-
-/* Returns 1 if the two input characters are complementary bases */
-int basepair(char , char );
-
-void sub_structure(int , int , int *, int *);
-void neighbours(char *,int *);
-void pf(char *);
-int basepaired_to(int ,int *);
-int bp_diff(int *, int, int , int);
-void print_bps(int *);
-
-void solveSystem(dcomplex **rootsOfUnity, double *coefficients, double scalingFactor, int runLength);
-int jPairedTo(int i, int j, int *basePairs);
-int jPairedIn(int i, int j, int *basePairs);
-void printMatrix(dcomplex **matrix, char *title, int iStart, int iStop, int jStart, int jStop);
+void   neighbours(char *, int *);
+void   pf(char *);
+int    numbp(int, int, int *);
+int    bn(char);
+void   initialize_PN(int[][5]);
+void   translateseq(char *, int *);
+void   initialize_NumBP(int **, int *, int );
+double hairpinloop(int, int, int, int *, char *);
+double interiorloop(int, int, int, int, int, int, int *);
+double multiloop_closing(int, int, int, int, int, int, int *);
+void   solveSystem(dcomplex **, double *, double, int);
+int    jPairedTo(int, int, int *);
+int    jPairedIn(int, int, int *);
 
 #endif
