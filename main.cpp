@@ -62,10 +62,10 @@ void read_input(int argc,char *argv[], char **maina, int **bps) {
   int i, k;
   char *seq = NULL, *str = NULL;
   
-  PF            = 0;
-  WINDOW_SIZE   = 0;
+  PF              = 0;
+  WINDOW_SIZE     = 0;
   MIN_WINDOW_SIZE = 0;
-  ENERGY        = (char *)"energy.par";
+  ENERGY          = (char *)"energy.par";
 
   /* Function to retrieve RNA sequence and structure, when
    * either input in command line or in a file, where the first
@@ -198,17 +198,12 @@ void read_input(int argc,char *argv[], char **maina, int **bps) {
   if (WINDOW_SIZE > N) {
     printf("Error: the window size provided (%d) can't be longer than the input sequence length (%d).\n\n", WINDOW_SIZE, N);
     usage();
-  } else if (WINDOW_SIZE == N) {
-    WINDOW_SIZE = 0;
   }
   
   if (MIN_WINDOW_SIZE > WINDOW_SIZE) {
     printf("Error: the minimum window size provided (%d) can't be larger than the window size provided (%d).\n\n", MIN_WINDOW_SIZE, WINDOW_SIZE);
     usage();
-  } else if (MIN_WINDOW_SIZE == WINDOW_SIZE) {
-    MIN_WINDOW_SIZE = 0;
   }
-  
   
   if (MIN_WINDOW_SIZE > N) {
     printf("Error: the minimum window size provided (%d) can't be larger than the input sequence length (%d).\n\n", MIN_WINDOW_SIZE, N);
