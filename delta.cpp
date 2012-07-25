@@ -15,7 +15,6 @@
 #define MAX_INTERIOR_DIST 30
 #define ZERO_C dcomplex(0.0, 0.0)
 #define ONE_C dcomplex(1.0, 0.0)
-#define PRECISION 4
 #define FFTW_REAL 0
 #define FFTW_IMAG 1
 #define WINDOW_SIZE(i) (MIN_WINDOW_SIZE + i)
@@ -24,7 +23,7 @@
 #define FFTBOR_DEBUG 0
 #define ENERGY_DEBUG (0 && !root)
 
-extern int    PF, N, WINDOW_SIZE, MIN_WINDOW_SIZE;
+extern int    PF, N, PRECISION, WINDOW_SIZE, MIN_WINDOW_SIZE;
 extern double temperature;
 extern char   *ENERGY;
 extern paramT *P;
