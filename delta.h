@@ -10,7 +10,7 @@ void   neighbours(char *, int *);
 void   pf(char *);
 int    numbp(int, int, int *);
 int    bn(char);
-void   initializeCanBasePair(int[][5]);
+void   initializeCanBasePair(int **);
 void   translateToIntSequence(char *, int *);
 void   initializeBasePairCounts(int **, int *, int );
 double hairpinloop(int, int, int, int *, char *);
@@ -22,6 +22,6 @@ int    jPairedIn(int, int, int *);
 void   populateRemainingRoots(dcomplex ***, int, int, int);
 void   populateMatrices(dcomplex **, dcomplex **, dcomplex **, dcomplex ***, dcomplex *, int, int);
 void   flushMatrices(dcomplex **, dcomplex **, dcomplex **, int);
-void   evaluateZ(dcomplex **, dcomplex **, dcomplex **, dcomplex ***, dcomplex *, int, int);
+void   evaluateZ(int, dcomplex **, dcomplex **, dcomplex **, dcomplex ***, dcomplex *, char *, char *, int *, int *, int **, int **, int, int, double);
 
 #endif

@@ -203,6 +203,16 @@ void read_input(int argc,char *argv[], char **maina, int **bps) {
     usage();
   }
   
+  N = (int)strlen(seq);
+  
+  if (!WINDOW_SIZE) {
+    WINDOW_SIZE = N;
+  }
+  
+  if (!MIN_WINDOW_SIZE) {
+    MIN_WINDOW_SIZE = WINDOW_SIZE;
+  }
+  
   if (WINDOW_SIZE > N) {
     printf("Error: the window size provided (%d) can't be longer than the input sequence length (%d).\n\n", WINDOW_SIZE, N);
     usage();
@@ -217,8 +227,6 @@ void read_input(int argc,char *argv[], char **maina, int **bps) {
     printf("Error: the minimum window size provided (%d) can't be larger than the input sequence length (%d).\n\n", MIN_WINDOW_SIZE, N);
     usage();
   }
-  
-  N = (int)strlen(seq);
   
   /* Print sequence length, sequence and starting structure */
   printf("%d %s %s\n", N, seq, str);
