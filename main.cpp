@@ -50,7 +50,7 @@ void usage() {
   fprintf(stderr, "-pf\tcompute the total partition function Z.\n");
   fprintf(stderr, "-E\tenergyfile,      the default is energy.par in this executable's directory. Must be the name of a file with all energy parameters (in the same format as used in Vienna RNA).\n");
   fprintf(stderr, "-T\ttemperature,     the default is 37 degrees Celsius (unless an energyfile with parameters for a different temperature is used.\n");
-  fprintf(stderr, "-P\tprecision,       the default is 4, indicates the precision of the probabilities Z_k / Z to be returned (higher can be more unstable, we don't recommend above 6).\n");
+  fprintf(stderr, "-P\tprecision,       the default is 4, indicates the precision of the probabilities Z_k / Z to be returned (0-9, 0 disables precision handling).\n");
   fprintf(stderr, "-W\twindow size,     the default is the input sequence length. Will calculate FFTbor on a sliding window across the input sequence.\n");
   fprintf(stderr, "-M\tmin window size, disabled by default. When provided in conjunction with the -W flag, will calculate FFTbor for all window sizes between the -M and -W value (inclusive).\n");
   
@@ -93,7 +93,7 @@ void read_input(int argc,char *argv[], char **maina, int **bps) {
           usage();
         } else if (!sscanf(argv[++i], "%d", &PRECISION)) {
           usage();
-        } else if (PRECISION < 0) {
+        } else if (PRECISION < 0 || PRECISION > 9) {
           usage();
         }
       } else if (strcmp(argv[i], "-W") == 0) {

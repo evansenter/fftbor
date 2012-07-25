@@ -9,6 +9,7 @@
 #include "energy_const.h"
 #include "energy_par.h"
 #include <iostream>
+#include <limits>
 
 #define STRUCTURE_COUNT 1
 #define MIN_PAIR_DIST 3
@@ -320,8 +321,11 @@ void neighbours(char *a, int *bps) {
 }
 
 void solveSystem(dcomplex ***solutions, char *sequence, int *structure, int sequenceLength, int runLength) {
+  char precisionFormat[20];
   int i, j, k;
   double scalingFactor, sum;
+  
+  sprintf(precisionFormat, "%%d\t%%.0%df\n", PRECISION ? PRECISION : std::numeric_limits<double>::digits10);
   
   fftw_complex signal[runLength + 1];
   fftw_complex result[runLength + 1];
@@ -365,8 +369,8 @@ void solveSystem(dcomplex ***solutions, char *sequence, int *structure, int sequ
         }
         
         sum += solutions[i][j][k].real();
-    
-        std::cout << k << "\t" << solutions[i][j][k].real() << std::endl;
+        
+        printf(precisionFormat, k, solutions[i][j][k].real());
       }
   
     	printf("Scaling factor (Z{%d, %d}): %.15f\n", j, j + WINDOW_SIZE(i) - 1, scalingFactor);
