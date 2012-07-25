@@ -87,21 +87,9 @@ void neighbours(char *inputSequence, int *bpList) {
   // ****************************************************************************
   // Iterate over roots of unity
   // ****************************************************************************
-  // Start main recursions (root <= round(runLength / 2.0) is an optimization for roots of unity).
+  // Start main recursions (root <= ceil(runLength / 2.0) is an optimization for roots of unity).
   for (root = 0; root <= ceil(runLength / 2.0); ++root) {
-    // Flush the matrices.
-    for (i = 0; i <= sequenceLength; ++i) {
-      for (j = 0; j <= sequenceLength; ++j) {
-        if (i > 0 && j > 0 && abs(j - i) <= MIN_PAIR_DIST) {
-          Z[i][j] = ONE_C;
-        } else {
-          Z[i][j] = ZERO_C;
-        }
-				
-        ZB[i][j] = ZERO_C;
-        ZM[i][j] = ZERO_C;
-      }
-    }
+    flushMatrices(Z, ZB, ZM, sequenceLength);
     
     if (ENERGY_DEBUG) {
       printf("RT: %f\n", RT / 100);
@@ -682,6 +670,23 @@ void populateMatrices(dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex ***so
     
     if (i <= runLength) {
       rootsOfUnity[i] = dcomplex(cos(2 * M_PI * i / (runLength + 1)), sin(2 * M_PI * i / (runLength + 1)));
+    }
+  }
+}
+
+void flushMatrices(dcomplex **Z, dcomplex **ZB, dcomplex **ZM, int sequenceLength) {
+  int i, j;
+  
+  for (i = 0; i <= sequenceLength; ++i) {
+    for (j = 0; j <= sequenceLength; ++j) {
+      if (i > 0 && j > 0 && abs(j - i) <= MIN_PAIR_DIST) {
+        Z[i][j] = ONE_C;
+      } else {
+        Z[i][j] = ZERO_C;
+      }
+				
+      ZB[i][j] = ZERO_C;
+      ZM[i][j] = ZERO_C;
     }
   }
 }
