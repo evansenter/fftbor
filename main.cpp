@@ -218,8 +218,10 @@ void read_input(int argc,char *argv[], char **maina, int **bps) {
     usage();
   }
   
+  N = (int)strlen(seq);
+  
   /* Print sequence length, sequence and starting structure */
-  printf("%d %s %s\n", (int)strlen(seq), seq, str);
+  printf("%d %s %s\n", N, seq, str);
 
   *bps = getBasePairList(str);
   free(str);

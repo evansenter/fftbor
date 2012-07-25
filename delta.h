@@ -10,14 +10,16 @@ void   neighbours(char *, int *);
 void   pf(char *);
 int    numbp(int, int, int *);
 int    bn(char);
-void   initialize_PN(int[][5]);
-void   translateseq(char *, int *);
-void   initialize_NumBP(int **, int *, int );
+void   initializeCanBasePair(int[][5]);
+void   translateToIntSequence(char *, int *);
+void   initializeBasePairCounts(int **, int *, int );
 double hairpinloop(int, int, int, int *, char *);
 double interiorloop(int, int, int, int, int, int, int *);
 double multiloop_closing(int, int, int, int, int, int, int *);
 void   solveSystem(dcomplex ***, char *, int *, int, int);
 int    jPairedTo(int, int, int *);
 int    jPairedIn(int, int, int *);
+void   populateRemainingRoots(dcomplex ***, int, int, int);
+void   populateMatrices(dcomplex **, dcomplex **, dcomplex **, dcomplex ***, dcomplex *, int, int);
 
 #endif
