@@ -321,7 +321,7 @@ void neighbours(char *a, int *bps) {
 }
 
 void solveSystem(dcomplex ***solutions, char *sequence, int *structure, int sequenceLength, int runLength) {
-  int i, j, k, count = 0;
+  int i, j, k;
   double scalingFactor, sum;
   
   fftw_complex signal[runLength + 1];
@@ -372,11 +372,8 @@ void solveSystem(dcomplex ***solutions, char *sequence, int *structure, int sequ
   
     	printf("Scaling factor (Z{%d, %d}): %.15f\n", j, j + WINDOW_SIZE(i) - 1, scalingFactor);
       std::cout << "Sum: " << sum << std::endl << std::endl;
-      ++count;
     }
   }
-  
-  printf("Total FFTs evaluated: %d\n", count);
   
   fftw_destroy_plan(plan);
 }
