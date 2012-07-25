@@ -81,12 +81,6 @@ void neighbours(char *a, int *bps) {
     MIN_WINDOW_SIZE = WINDOW_SIZE;
   }
   
-  if (FFTBOR_DEBUG) {
-    printf("runLength:       %d\n", runLength);
-    printf("WINDOW_SIZE:     %d\n", WINDOW_SIZE);
-    printf("MIN_WINDOW_SIZE: %d\n", MIN_WINDOW_SIZE);
-  }
-  
   dcomplex **Z            = new dcomplex*[sequenceLength + 1];
   dcomplex **ZB           = new dcomplex*[sequenceLength + 1];
   dcomplex **ZM           = new dcomplex*[sequenceLength + 1];
@@ -337,20 +331,22 @@ void solveSystem(dcomplex ***solutions, char *sequence, int *structure, int sequ
       sum           = 0;
       scalingFactor = solutions[i][j][0].real();
       
-      printf("Window size:           %d\n", WINDOW_SIZE(i));
-      printf("Window starting index: %d\n", j);
+      if (!(MIN_WINDOW_SIZE == WINDOW_SIZE && WINDOW_SIZE == N)) {
+        printf("Window size:           %d\n", WINDOW_SIZE(i));
+        printf("Window starting index: %d\n", j);
       
-      printf("Sequence  (%d, %d): ", j, j + WINDOW_SIZE(i) - 1);
-      for (k = j; k <= j + WINDOW_SIZE(i) - 1; k++) {
-        printf("%c", sequence[k]);
-      }
-      printf("\n");
+        printf("Sequence  (%d, %d): ", j, j + WINDOW_SIZE(i) - 1);
+        for (k = j; k <= j + WINDOW_SIZE(i) - 1; k++) {
+          printf("%c", sequence[k]);
+        }
+        printf("\n");
       
-      printf("Structure (%d, %d): ", j, j + WINDOW_SIZE(i) - 1);
-      for (k = j; k <= j + WINDOW_SIZE(i) - 1; k++) {
-        printf("%c", structure[k] < 0 ? '.' : (structure[k] > k ? '(' : ')'));
+        printf("Structure (%d, %d): ", j, j + WINDOW_SIZE(i) - 1);
+        for (k = j; k <= j + WINDOW_SIZE(i) - 1; k++) {
+          printf("%c", structure[k] < 0 ? '.' : (structure[k] > k ? '(' : ')'));
+        }
+        printf("\n");
       }
-      printf("\n");
   
       for (k = 0; k <= runLength; k++) {
         signal[k][FFTW_REAL] = (pow(10, PRECISION) * solutions[i][j][k].real()) / scalingFactor;
@@ -373,8 +369,10 @@ void solveSystem(dcomplex ***solutions, char *sequence, int *structure, int sequ
         printf(precisionFormat, k, solutions[i][j][k].real());
       }
   
-    	printf("Scaling factor (Z{%d, %d}): %.15f\n", j, j + WINDOW_SIZE(i) - 1, scalingFactor);
-      std::cout << "Sum: " << sum << std::endl << std::endl;
+      if (FFTBOR_DEBUG) {
+      	printf("Scaling factor (Z{%d, %d}): %.15f\n", j, j + WINDOW_SIZE(i) - 1, scalingFactor);
+        std::cout << "Sum: " << sum << std::endl << std::endl;
+      }
     }
   }
   

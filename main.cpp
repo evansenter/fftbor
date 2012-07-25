@@ -48,11 +48,9 @@ void usage() {
   
   fprintf(stderr, "Options include the following:\n");
   fprintf(stderr, "-pf\tcompute the total partition function Z.\n");
-  fprintf(stderr, "-E\tenergyfile,      the default is energy.par in this executable's directory. Must be the name of a file with all energy parameters (in the same format as used in Vienna RNA).\n");
-  fprintf(stderr, "-T\ttemperature,     the default is 37 degrees Celsius (unless an energyfile with parameters for a different temperature is used.\n");
-  fprintf(stderr, "-P\tprecision,       the default is 4, indicates the precision of the probabilities Z_k / Z to be returned (0-9, 0 disables precision handling).\n");
-  fprintf(stderr, "-W\twindow size,     the default is the input sequence length. Will calculate FFTbor on a sliding window across the input sequence.\n");
-  fprintf(stderr, "-M\tmin window size, disabled by default. When provided in conjunction with the -W flag, will calculate FFTbor for all window sizes between the -M and -W value (inclusive).\n");
+  fprintf(stderr, "-E\tenergyfile,  the default is energy.par in this executable's directory. Must be the name of a file with all energy parameters (in the same format as used in Vienna RNA).\n");
+  fprintf(stderr, "-T\ttemperature, the default is 37 degrees Celsius (unless an energyfile with parameters for a different temperature is used.\n");
+  fprintf(stderr, "-P\tprecision,   the default is 4, indicates the precision of the probabilities Z_k / Z to be returned (0-9, 0 disables precision handling).\n");
   
   exit(1);
 }
@@ -221,7 +219,7 @@ void read_input(int argc,char *argv[], char **maina, int **bps) {
   }
   
   /* Print sequence length, sequence and starting structure */
-  printf("%d %s %s\n", N, seq, str);
+  printf("%d %s %s\n", strlen(seq), seq, str);
 
   *bps = getBasePairList(str);
   free(str);
