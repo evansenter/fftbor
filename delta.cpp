@@ -107,7 +107,7 @@ void neighbours(char *a, int *bps) {
   }
   
   // Start main recursions (root <= round(runLength / 2.0) is an optimization for roots of unity).
-  for (root = 0; root <= round(runLength / 2.0); ++root) {
+  for (root = 0; root <= ceil(runLength / 2.0); ++root) {
     // Flush the matrices.
     for (i = 0; i <= sequenceLength; ++i) {
       for (j = 0; j <= sequenceLength; ++j) {
