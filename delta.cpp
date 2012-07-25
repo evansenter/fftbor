@@ -225,7 +225,7 @@ void neighbours(char *a, int *bps) {
             }
 
             // More than one stem.
-            if (k > i + THRESHOLD + 2) {
+            if (k > i + MIN_PAIR_DIST + 2) {
               energy    = P->MLintern[PN[seq[k]][seq[j]]];
               delta     = NumBP[i][j] - NumBP[i][k - 1] - NumBP[k][j];
               ZM[i][j] += ZM[i][k - 1] * ZB[k][j] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
@@ -408,10 +408,10 @@ void pf(char *a) {
     Zm[j] = (double *) xcalloc(N+1,sizeof(double));
   }
 
-  /* Initialize Sequences of lengths shorter than or equal to THRESHOLD=3
+  /* Initialize Sequences of lengths shorter than or equal to MIN_PAIR_DIST=3
    * will have no structure */
 
-  for (d = 0; d <= THRESHOLD; d++) {
+  for (d = 0; d <= MIN_PAIR_DIST; d++) {
     for (i = 1; i <= n - d; i++) {
       j = i + d;
       Z[i][j] = 1.0;
@@ -420,7 +420,7 @@ void pf(char *a) {
     }
   }
 
-  for (d = THRESHOLD+1; d <= n-1; d++) {
+  for (d = MIN_PAIR_DIST+1; d <= n-1; d++) {
     for (i = 1; i <= n - d; i++) {
       j = i + d;
       Z[i][j] = 0.0;
@@ -436,8 +436,8 @@ void pf(char *a) {
 	energy = hairpinloop(i, j, IJ, seq, a);
 	tempZ += exp(-energy/RT);
       
-	for (k = i+1; k < j - THRESHOLD ; k++)
-	  for (l = k + THRESHOLD + 1; l < j; l++) {
+	for (k = i+1; k < j - MIN_PAIR_DIST ; k++)
+	  for (l = k + MIN_PAIR_DIST + 1; l < j; l++) {
 	    if (PN[seq[k]][seq[l]]) {
 	      /* Interior loop, bulge or stack? */
 	      energy = interiorloop(i, j, k, l, IJ, 
@@ -445,7 +445,7 @@ void pf(char *a) {
 	      tempZ += Zb[k][l] * exp(-energy/RT);
 	      
 	      /* Multi loop, where (i,j) is the closing base pair. */
-	      if (k>i+THRESHOLD+2) {
+	      if (k>i+MIN_PAIR_DIST+2) {
 		  /* If there is a multiloop with (i,j) as the closing
 		   * base pair and (k,l) as the right-most base pair
 		   * inside i..j, then there will be at least one
@@ -464,8 +464,8 @@ void pf(char *a) {
 
       /* Multi loop, Zm */
       tempZ = 0.0;
-      for (k = i; k < j - THRESHOLD ; k++)
-	for (l = k + THRESHOLD + 1; l <= j; l++) {
+      for (k = i; k < j - MIN_PAIR_DIST ; k++)
+	for (l = k + MIN_PAIR_DIST + 1; l <= j; l++) {
 	  if (PN[seq[k]][seq[l]]) {
 	    /* One stem */
 	    energy = P->MLintern[PN[seq[k]][seq[l]]] + P->MLbase*(k-i+j-l);
@@ -475,7 +475,7 @@ void pf(char *a) {
 	    tempZ += Zb[k][l] * exp(-energy/RT);
 	    
 	    /* More than one stem */
-	    if (k>i+THRESHOLD+2) {
+	    if (k>i+MIN_PAIR_DIST+2) {
 	      energy = P->MLintern[PN[seq[k]][seq[l]]] + P->MLbase*(j-l);
 	      tempZ += Zb[k][l] * Zm[i][k-1] * exp(-energy/RT);
 	    }
@@ -486,8 +486,8 @@ void pf(char *a) {
       /* Z */
       /* The unpaired structure has energy 0 */
       tempZ = 1.0;
-      for (k = i; k < j - THRESHOLD ; k++)
-	for (l = k + THRESHOLD + 1; l <= j; l++) {
+      for (k = i; k < j - MIN_PAIR_DIST ; k++)
+	for (l = k + MIN_PAIR_DIST + 1; l <= j; l++) {
 	  if (PN[seq[k]][seq[l]]) {
 	    /* Compute Z */
 	    energy = 0.0; 
@@ -575,7 +575,7 @@ void initialize_NumBP(int **NumBP, int *bps, int n){
   for (i = 1; i <= n; i++)
     for (j = 1; j <= n; j++)
       NumBP[i][j] = 0;
-  for (d = THRESHOLD+1; d < n; d++) {
+  for (d = MIN_PAIR_DIST+1; d < n; d++) {
     for (i = 1; i <= n - d; i++) {
       j = i + d;
       NumBP[i][j] = numbp(i,j,bps);

@@ -1,4 +1,5 @@
 #include "energy_const.h"
+
 typedef struct {
   int id;
   int stack[NBPAIRS+1][NBPAIRS+1];
@@ -28,5 +29,3 @@ typedef struct {
 }  paramT;
 
 extern "C" paramT *scale_parameters(void);
-extern paramT *copy_parameters(void);
-extern paramT *set_parameters(paramT *dest);

@@ -80,15 +80,6 @@ int *getBasePairList(char *secStr) {
   return L;
 }
 
-int mindouble(double m, double *n) {
-  if (m>=(*n))
-    return 0;
-  (*n) = m;
-  return 1;
-}
-
-
-
 int min2(int m, int n) {
   if (m>n)
     return n;

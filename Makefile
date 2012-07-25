@@ -14,7 +14,7 @@ main.o : main.cpp delta.h
 misc.o : misc.cpp misc.h
 	 $(CC) -Wall -W -g $(CFLAGS) misc.cpp
 
-delta.o: delta.cpp delta.h
+delta.o: delta.cpp delta.h params.h energy_par.h energy_const.h
 	$(CC) -Wall -W -g $(CFLAGS) delta.cpp
 
 clean:

@@ -58,7 +58,7 @@ void usage() {
 
 void read_input(int argc,char *argv[], char **maina, int **bps) {
   FILE *infile;
-  char line[NN];
+  char line[MAX_SEQ_LENGTH];
   int i, k;
   char *seq = NULL, *str = NULL;
   
@@ -110,7 +110,7 @@ void read_input(int argc,char *argv[], char **maina, int **bps) {
       infile = fopen(argv[i], "r");
       if (infile == NULL) { 
         /* Input is not a file */
-	      /* argv[i] should be the sequence and argv[i+1] should be the structure */
+	      /* arMAX_SEQ_LENGTH[i] should be the sequence and argv[i+1] should be the structure */
         if (argc <= i + 1) {
           usage();
         }
