@@ -1,0 +1,3 @@
+> len is 110
+AAUAUAAUAGGAACACUCAUAUAAUCGCGUGGAUAUGGCACGCAAGUUUCUACCGGGCACCGUAAAUGUCCGACUAUGGGUGAGCAAUGGAACCGCACGUGUACGGUUUU
+.............((((((((.....(((((.......)))))..........((((((.......))))))..))))))))......(((((((........)))))))

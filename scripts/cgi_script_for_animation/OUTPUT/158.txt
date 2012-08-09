@@ -1,0 +1,3 @@
+> len is 158
+AAUAUAAUAGGAACACUCAUAUAAUCGCGUGGAUAUGGCACGCAAGUUUCUACCGGGCACCGUAAAUGUCCGACUAUGGGUGAGCAAUGGAACCGCACGUGUACGGUUUUUUGUGAUAUCAGCAUUGCUUGCUCUUUAUUUGAGCGGGCAAUGCUUUU
+.............((((((((.....(((((.......)))))..........((((((.......))))))..)))))))).((((.(((((((........)))))))))))......((((((((((((((.......))))))))))))))...
