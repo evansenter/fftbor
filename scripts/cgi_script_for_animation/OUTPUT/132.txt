@@ -1,0 +1,3 @@
+> len is 132
+AAUAUAAUAGGAACACUCAUAUAAUCGCGUGGAUAUGGCACGCAAGUUUCUACCGGGCACCGUAAAUGUCCGACUAUGGGUGAGCAAUGGAACCGCACGUGUACGGUUUUUUGUGAUAUCAGCAUUGCUUGC
+.............((((((((.....(((((.......)))))..........((((((.......))))))..)))))))).((((((((((((........)))))).............))))))....
