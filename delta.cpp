@@ -328,6 +328,74 @@ void solveSystem(dcomplex ***solutions, char *sequence, int *structure, int sequ
   fftw_destroy_plan(plan);
 }
 
+int jPairedTo(int i, int j, int *basePairs) {
+  return basePairs[i] == j ? -1 : 1;
+}
+
+int jPairedIn(int i, int j, int *basePairs) {
+  return basePairs[j] >= i && basePairs[j] < j ? 1 : 0;
+}
+
+void populateRemainingRoots(dcomplex ***solutions, int sequenceLength, int runLength, int lastRoot) {
+  // Optimization leveraging complementarity of roots of unity.
+  int i, j, k, root;
+  
+  for (i = 0; i < NUM_WINDOWS; ++i) {
+    for (j = 1; j <= sequenceLength - WINDOW_SIZE(i) + 1; ++j) {
+      root = lastRoot;
+  
+      if (runLength % 2) {
+        k = root - 2;
+      } else {
+        k = root - 1;
+      }
+  
+      for (; root <= runLength && k > 0; --k, ++root) {
+        solutions[i][j][root] = dcomplex(solutions[i][j][k].real(), -solutions[i][j][k].imag());
+      }
+    }
+  }
+}
+
+void populateMatrices(dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex ***solutions, dcomplex *rootsOfUnity, int sequenceLength, int runLength) {
+  int i, j;
+  
+  for (i = 0; i < NUM_WINDOWS; ++i) {
+    solutions[i] = new dcomplex*[sequenceLength - WINDOW_SIZE(i) + 2];
+    
+    for (j = 1; j <= sequenceLength - WINDOW_SIZE(i) + 1; ++j) {
+      solutions[i][j] = new dcomplex[runLength + 1];
+    }
+  }
+  
+  for (i = 0; i <= sequenceLength; ++i) {
+    Z[i]               = new dcomplex[sequenceLength + 1];
+    ZB[i]              = new dcomplex[sequenceLength + 1];
+    ZM[i]              = new dcomplex[sequenceLength + 1];
+    
+    if (i <= runLength) {
+      rootsOfUnity[i] = dcomplex(cos(2 * M_PI * i / (runLength + 1)), sin(2 * M_PI * i / (runLength + 1)));
+    }
+  }
+}
+
+void flushMatrices(dcomplex **Z, dcomplex **ZB, dcomplex **ZM, int sequenceLength) {
+  int i, j;
+  
+  for (i = 0; i <= sequenceLength; ++i) {
+    for (j = 0; j <= sequenceLength; ++j) {
+      if (i > 0 && j > 0 && abs(j - i) <= MIN_PAIR_DIST) {
+        Z[i][j] = ONE_C;
+      } else {
+        Z[i][j] = ZERO_C;
+      }
+				
+      ZB[i][j] = ZERO_C;
+      ZM[i][j] = ZERO_C;
+    }
+  }
+}
+
 void pf(char *a) {
   // I haven't touched this function -- Evan Senter
   int i,j,d;
@@ -603,72 +671,4 @@ double multiloop_closing(int i, int j, int k, int l, int bp_type1, int bp_type2,
   double energy;
   energy = P->MLclosing + P->MLintern[bp_type1] + P->MLintern[bp_type2] + P->MLbase*(j-l-1);
   return energy;
-}
-
-int jPairedTo(int i, int j, int *basePairs) {
-  return basePairs[i] == j ? -1 : 1;
-}
-
-int jPairedIn(int i, int j, int *basePairs) {
-  return basePairs[j] >= i && basePairs[j] < j ? 1 : 0;
-}
-
-void populateRemainingRoots(dcomplex ***solutions, int sequenceLength, int runLength, int lastRoot) {
-  // Optimization leveraging complementarity of roots of unity.
-  int i, j, k, root;
-  
-  for (i = 0; i < NUM_WINDOWS; ++i) {
-    for (j = 1; j <= sequenceLength - WINDOW_SIZE(i) + 1; ++j) {
-      root = lastRoot;
-  
-      if (runLength % 2) {
-        k = root - 2;
-      } else {
-        k = root - 1;
-      }
-  
-      for (; root <= runLength && k > 0; --k, ++root) {
-        solutions[i][j][root] = dcomplex(solutions[i][j][k].real(), -solutions[i][j][k].imag());
-      }
-    }
-  }
-}
-
-void populateMatrices(dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex ***solutions, dcomplex *rootsOfUnity, int sequenceLength, int runLength) {
-  int i, j;
-  
-  for (i = 0; i < NUM_WINDOWS; ++i) {
-    solutions[i] = new dcomplex*[sequenceLength - WINDOW_SIZE(i) + 2];
-    
-    for (j = 1; j <= sequenceLength - WINDOW_SIZE(i) + 1; ++j) {
-      solutions[i][j] = new dcomplex[runLength + 1];
-    }
-  }
-  
-  for (i = 0; i <= sequenceLength; ++i) {
-    Z[i]               = new dcomplex[sequenceLength + 1];
-    ZB[i]              = new dcomplex[sequenceLength + 1];
-    ZM[i]              = new dcomplex[sequenceLength + 1];
-    
-    if (i <= runLength) {
-      rootsOfUnity[i] = dcomplex(cos(2 * M_PI * i / (runLength + 1)), sin(2 * M_PI * i / (runLength + 1)));
-    }
-  }
-}
-
-void flushMatrices(dcomplex **Z, dcomplex **ZB, dcomplex **ZM, int sequenceLength) {
-  int i, j;
-  
-  for (i = 0; i <= sequenceLength; ++i) {
-    for (j = 0; j <= sequenceLength; ++j) {
-      if (i > 0 && j > 0 && abs(j - i) <= MIN_PAIR_DIST) {
-        Z[i][j] = ONE_C;
-      } else {
-        Z[i][j] = ZERO_C;
-      }
-				
-      ZB[i][j] = ZERO_C;
-      ZM[i][j] = ZERO_C;
-    }
-  }
 }
