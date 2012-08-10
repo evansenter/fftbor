@@ -50,15 +50,16 @@ end
       rnabor_distribution = rnabor.distribution
       fftbor_distribution = fftbor.distribution + ([0] * (rnabor_distribution.length - fftbor.distribution.length))
     
-      Run.create({
+      # Run.create({
+      ap({
         sequence:        sequence, 
         sequence_length: size, 
         structure:       structure, 
-        algorithm:       "RNAbor vs. FFTbor with max base pair distance (Z_k/Z)", 
+        # algorithm:       "RNAbor vs. FFTbor with max base pair distance (Z_k/Z)", 
         tvd:             Diverge.new(rnabor_distribution, fftbor_distribution).tvd,
-        count:           -1,
-        fftbor_time:     fftbor.runtime.real,
-        rnabor_time:     rnabor.runtime.real
+        # count:           -1,
+        # fftbor_time:     fftbor.runtime.real,
+        # rnabor_time:     rnabor.runtime.real
       })
     end
   end
