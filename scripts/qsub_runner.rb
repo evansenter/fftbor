@@ -8,8 +8,9 @@ def run_job(action, prefix)
   content = <<-SH
       #!/bin/sh
       #PBS -l nodes=1:clotelab
-      #PBS -oe #{prefix}.log
-      #PBS -q stage
+      #PBS -o #{prefix}.log
+      #PBS -e #{prefix}.err
+      #PBS -q normal
       #PBS -l walltime=2400:00:00
       cd $PBS_O_WORKDIR
       #{action}
