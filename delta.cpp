@@ -127,7 +127,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
         }
 
         // Interior loop / bulge / stack / multiloop.
-        for (k = i + 1; k < j - MIN_PAIR_DIST; ++k) { // TODO: k < j - MIN_PAIR_DIST - 1
+        for (k = i + 1; k < j - MIN_PAIR_DIST - 1; ++k) {
           for (l = max2(k + MIN_PAIR_DIST + 1, j - MAX_INTERIOR_DIST - 1); l < j; ++l) { 
             // TODO: l = max2(k + MIN_PAIR_DIST + 1, j - MAX_INTERIOR_DIST - 1 + (k - i - 1))
             // Anytime k - i - 1 > MAX_INTERIOR_DIST, l > j and the interior loop will terminate
@@ -198,7 +198,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
           }
 
           // More than one stem.
-          if (k > i + MIN_PAIR_DIST + 2) { // TODO: (k > i + MIN_PAIR_DIST + 1) because i can pair with k - 1
+          if (k > i + MIN_PAIR_DIST + 1) { // (k > i + MIN_PAIR_DIST + 1) because i can pair with k - 1
             energy    = P->MLintern[canBasePair[intSequence[k]][intSequence[j]]];
             delta     = numBasePairs[i][j] - numBasePairs[i][k - 1] - numBasePairs[k][j];
             ZM[i][j] += ZM[i][k - 1] * ZB[k][j] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
