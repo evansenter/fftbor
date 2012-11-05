@@ -73,14 +73,15 @@ void neighbours(char *inputSequence, int *bpList) {
   dcomplex **Z            = new dcomplex*[sequenceLength + 1];
   dcomplex **ZB           = new dcomplex*[sequenceLength + 1];
   dcomplex **ZM           = new dcomplex*[sequenceLength + 1];
+  dcomplex **ZM1          = new dcomplex*[sequenceLength + 1];
   dcomplex ***solutions   = new dcomplex**[NUM_WINDOWS];
   dcomplex *rootsOfUnity  = new dcomplex[runLength + 1];
   
-  populateMatrices(Z, ZB, ZM, solutions, rootsOfUnity, sequenceLength, runLength);
+  populateMatrices(Z, ZB, ZM, ZM1, solutions, rootsOfUnity, sequenceLength, runLength);
   
   // Start main recursions (root <= ceil(runLength / 2.0) is an optimization for roots of unity).
   for (root = 0; root <= ceil(runLength / 2.0); ++root) {
-    evaluateZ(root, Z, ZB, ZM, solutions, rootsOfUnity, inputSequence, sequence, intSequence, bpList, canBasePair, numBasePairs, sequenceLength, runLength, RT);
+    evaluateZ(root, Z, ZB, ZM, ZM1, solutions, rootsOfUnity, inputSequence, sequence, intSequence, bpList, canBasePair, numBasePairs, sequenceLength, runLength, RT);
   }
   
 	if (FFTBOR_DEBUG) {
@@ -95,11 +96,11 @@ void neighbours(char *inputSequence, int *bpList) {
   free(intSequence);
 }
 
-void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex ***solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, int *intSequence, int *bpList, int *canBasePair[5], int **numBasePairs, int sequenceLength, int runLength, double RT) {
+void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex ***solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, int *intSequence, int *bpList, int *canBasePair[5], int **numBasePairs, int sequenceLength, int runLength, double RT) {
   int i, j, k, l, d, delta;
   double energy;
   
-  flushMatrices(Z, ZB, ZM, sequenceLength);
+  flushMatrices(Z, ZB, ZM, ZM1, sequenceLength);
     
   if (ENERGY_DEBUG) {
     printf("RT: %f\n", RT / 100);
@@ -362,7 +363,7 @@ void populateRemainingRoots(dcomplex ***solutions, int sequenceLength, int runLe
   }
 }
 
-void populateMatrices(dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex ***solutions, dcomplex *rootsOfUnity, int sequenceLength, int runLength) {
+void populateMatrices(dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex ***solutions, dcomplex *rootsOfUnity, int sequenceLength, int runLength) {
   int i, j;
   
   for (i = 0; i < NUM_WINDOWS; ++i) {
@@ -384,7 +385,7 @@ void populateMatrices(dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex ***so
   }
 }
 
-void flushMatrices(dcomplex **Z, dcomplex **ZB, dcomplex **ZM, int sequenceLength) {
+void flushMatrices(dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, int sequenceLength) {
   int i, j;
   
   for (i = 0; i <= sequenceLength; ++i) {

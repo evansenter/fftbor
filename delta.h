@@ -20,8 +20,8 @@ void   solveSystem(dcomplex ***, char *, int *, int, int);
 int    jPairedTo(int, int, int *);
 int    jPairedIn(int, int, int *);
 void   populateRemainingRoots(dcomplex ***, int, int, int);
-void   populateMatrices(dcomplex **, dcomplex **, dcomplex **, dcomplex ***, dcomplex *, int, int);
-void   flushMatrices(dcomplex **, dcomplex **, dcomplex **, int);
-void   evaluateZ(int, dcomplex **, dcomplex **, dcomplex **, dcomplex ***, dcomplex *, char *, char *, int *, int *, int **, int **, int, int, double);
+void   populateMatrices(dcomplex **, dcomplex **, dcomplex **, dcomplex **, dcomplex ***, dcomplex *, int, int);
+void   flushMatrices(dcomplex **, dcomplex **, dcomplex **, dcomplex **, int);
+void   evaluateZ(int, dcomplex **, dcomplex **, dcomplex **, dcomplex **, dcomplex ***, dcomplex *, char *, char *, int *, int *, int **, int **, int, int, double);
 
 #endif
