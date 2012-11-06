@@ -26,11 +26,6 @@ int main(int argc, char *argv[]) {
   read_input(argc, argv, &a, &bps);
   neighbours(a, bps);
 
-  if (PF == 1) {
-    printf("Total Z\n");
-    pf(a);
-  }
-
   free(a);
   free(bps);
 
@@ -47,7 +42,6 @@ void usage() {
   fprintf(stderr, "\tsecondary structure\n\n");
   
   fprintf(stderr, "Options include the following:\n");
-  fprintf(stderr, "-pf\tcompute the total partition function Z.\n");
   fprintf(stderr, "-E\tenergyfile,  the default is energy.par in this executable's directory. Must be the name of a file with all energy parameters (in the same format as used in Vienna RNA).\n");
   fprintf(stderr, "-T\ttemperature, the default is 37 degrees Celsius (unless an energyfile with parameters for a different temperature is used.\n");
   fprintf(stderr, "-P\tprecision,   the default is 4, indicates the precision of the probabilities Z_k / Z to be returned (0-9, 0 disables precision handling).\n");
@@ -73,9 +67,7 @@ void read_input(int argc,char *argv[], char **maina, int **bps) {
  
   for (i = 1; i < argc; i++) {
     if (argv[i][0] == '-') {
-      if (strcmp(argv[i], "-pf") == 0) {
-        PF = 1;
-      } else if (strcmp(argv[i], "-T") == 0) {
+      if (strcmp(argv[i], "-T") == 0) {
         if (i == argc - 1) {
           usage();
         } else if (!sscanf(argv[++i], "%lf", &temperature)) {
