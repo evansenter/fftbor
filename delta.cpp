@@ -130,7 +130,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
         // Interior loop / bulge / stack / multiloop.
         for (k = i + 1; k < min2(i + 30, j - MIN_PAIR_DIST - 2) + 1; ++k) {
           // There can't be more than 30 unpaired bases between i and k, and there must be room between k and j for l
-          for (l = max2(k + MIN_PAIR_DIST + 1, j - (MAX_INTERIOR_DIST - 1 - (k - i - 1))); l < j; ++l) { 
+          for (l = max2(k + MIN_PAIR_DIST + 1, j - (MAX_INTERIOR_DIST - (k - i))); l < j; ++l) { 
             // l needs to at least have room to pair with k, and there can be at most 30 unpaired bases between (i, k) + (l, j), with l < j
             // Note: I changed this from the bounds Ivan provided.
             if (canBasePair[intSequence[k]][intSequence[l]]) {
