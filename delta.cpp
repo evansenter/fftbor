@@ -101,7 +101,7 @@ void neighbours(char *inputSequence, int **bpList) {
   free(intSequence);
 }
 
-void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex ***solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, int *intSequence, int *bpList, int *canBasePair[5], int **numBasePairs, int sequenceLength, int runLength, double RT) {
+void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex ***solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, int *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int sequenceLength, int runLength, double RT) {
   int i, j, k, l, d, delta;
   double energy;
   
@@ -300,9 +300,15 @@ void solveSystem(dcomplex ***solutions, char *sequence, int **structure, int seq
         }
         printf("\n");
       
-        printf("Structure (%d, %d): ", j, j + WINDOW_SIZE(i) - 1);
+        printf("Structure 1 (%d, %d): ", j, j + WINDOW_SIZE(i) - 1);
         for (k = j; k <= j + WINDOW_SIZE(i) - 1; k++) {
-          printf("%c", structure[k] < 0 ? '.' : (structure[k] > k ? '(' : ')'));
+          printf("%c", structure[0][k] < 0 ? '.' : (structure[0][k] > k ? '(' : ')'));
+        }
+        printf("\n");
+        
+        printf("Structure 2 (%d, %d): ", j, j + WINDOW_SIZE(i) - 1);
+        for (k = j; k <= j + WINDOW_SIZE(i) - 1; k++) {
+          printf("%c", structure[1][k] < 0 ? '.' : (structure[1][k] > k ? '(' : ')'));
         }
         printf("\n");
       }
