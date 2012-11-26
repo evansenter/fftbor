@@ -75,6 +75,11 @@ void neighbours(char *inputSequence, int **bpList) {
   runLength += max2(bpCount1, bpCount2);
   runLength += floor((sequenceLength - MIN_PAIR_DIST) / 2);
   
+  // NOTE: -----------------------------------------------------------------------------------------------------
+  // For the sake of simplicity, I'm removing the optimization that only calculates the first k-th coefficients.
+  // This should be reintroduced / revalidated once the 2D code is stable.
+  runLength = pow(sequenceLength, 2);
+  
   dcomplex **Z            = new dcomplex*[sequenceLength + 1];
   dcomplex **ZB           = new dcomplex*[sequenceLength + 1];
   dcomplex **ZM           = new dcomplex*[sequenceLength + 1];
@@ -84,8 +89,9 @@ void neighbours(char *inputSequence, int **bpList) {
   
   populateMatrices(Z, ZB, ZM, ZM1, solutions, rootsOfUnity, sequenceLength, runLength);
   
+  // Note: (see note above) ---------------------------------------------------------------------
   // Start main recursions (root <= ceil(runLength / 2.0) is an optimization for roots of unity).
-  for (root = 0; root <= ceil(runLength / 2.0); ++root) {
+  for (root = 0; root <= runLength; ++root) {
     evaluateZ(root, Z, ZB, ZM, ZM1, solutions, rootsOfUnity, inputSequence, sequence, intSequence, bpList, canBasePair, numBasePairs, sequenceLength, runLength, RT);
   }
   
