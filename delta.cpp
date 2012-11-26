@@ -32,14 +32,14 @@ extern paramT *P;
 extern "C" void read_parameter_file(const char energyfile[]);
 
 void neighbours(char *inputSequence, int **bpList) {
-  int i, root, runLength = 0, sequenceLength = strlen(inputSequence);
+  int i, root, runLength = 0, bpCount1 = 0, bpCount2 = 0, sequenceLength = strlen(inputSequence);
   double RT = 0.0019872370936902486 * (temperature + 273.15) * 100; // 0.01 * (kcal K) / mol
 
-  char *energyfile  = ENERGY;
-  char *sequence    = new char[sequenceLength + 1];
-  int  *intSequence = (int *)xcalloc(sequenceLength + 1, sizeof(int));
+  char *energyfile    = ENERGY;
+  char *sequence      = new char[sequenceLength + 1];
+  int  *intSequence   = (int *)xcalloc(sequenceLength + 1, sizeof(int));
+  int ***numBasePairs = new int**[2];
   int **canBasePair;
-  int **numBasePairs;
   
   // Load energy parameters.
   read_parameter_file(energyfile);
@@ -58,16 +58,21 @@ void neighbours(char *inputSequence, int **bpList) {
   initializeCanBasePair(canBasePair);
   
   // Initialize numBasePairs lookup for all (i, j) combinations.
-  numBasePairs = (int **)xcalloc(sequenceLength + 1, sizeof(int *));
+  numBasePairs[0] = (int **)xcalloc(sequenceLength + 1, sizeof(int *));
+  numBasePairs[1] = (int **)xcalloc(sequenceLength + 1, sizeof(int *));
   for (i = 1; i <= sequenceLength; i++) {
-    numBasePairs[i] = (int *)xcalloc(sequenceLength + 1, sizeof(int));
+    numBasePairs[0][i] = (int *)xcalloc(sequenceLength + 1, sizeof(int));
+    numBasePairs[1][i] = (int *)xcalloc(sequenceLength + 1, sizeof(int));
   }
-  initializeBasePairCounts(numBasePairs, bpList, sequenceLength);
+  initializeBasePairCounts(numBasePairs[0], bpList[0], sequenceLength);
+  initializeBasePairCounts(numBasePairs[1], bpList[1], sequenceLength);
   
   // Determine max bp. distance to determine how many roots of unity to generate.
   for (i = 1; i <= sequenceLength; ++i) {
-    runLength += (bpList[i] > i ? 1 : 0);
+    bpCount1 += (bpList[0][i] > i ? 1 : 0);
+    bpCount2 += (bpList[1][i] > i ? 1 : 0);
   }
+  runLength += max2(bpCount1, bpCount2);
   runLength += floor((sequenceLength - MIN_PAIR_DIST) / 2);
   
   dcomplex **Z            = new dcomplex*[sequenceLength + 1];
@@ -268,7 +273,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
 	}
 }
 
-void solveSystem(dcomplex ***solutions, char *sequence, int *structure, int sequenceLength, int runLength) {
+void solveSystem(dcomplex ***solutions, char *sequence, int **structure, int sequenceLength, int runLength) {
   char precisionFormat[20];
   int i, j, k;
   double scalingFactor, sum;
