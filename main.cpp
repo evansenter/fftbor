@@ -5,30 +5,32 @@
 #include <ctype.h>
 #include "delta.h"
 #include "misc.h"
+#include <iostream>
 
 int           PF, N, PRECISION, WINDOW_SIZE, MIN_WINDOW_SIZE;
 extern double temperature;
 char          *ENERGY;
 paramT        *P;
 
-void read_input(int, char **, char **, int **, int **);
+void read_input(int, char **, char **, int **);
 void usage();
 
 int main(int argc, char *argv[]) {
   char *a;  /* a points to array a[0],...,a[n] where a[0]=n, and a[1],...,a[n] are RNA nucleotides and where n <= Nseq - 2 */
-  int *bps1, *bps2; /* bps is an array of basepairs, where a base pair is defined by two integers */
+  int **bps = new int*[2]; /* bps is an array of basepairs, where a base pair is defined by two integers */
   
   if (argc == 1) {
     usage();
     exit(1);
   }
   
-  read_input(argc, argv, &a, &bps1, &bps2);
-  neighbours(a, bps1, bps2);
+  read_input(argc, argv, &a, bps);
+  neighbours(a, bps);
 
   free(a);
-  free(bps1);
-  free(bps2);
+  free(bps[0]);
+  free(bps[1]);
+  free(bps);
 
   return 0;
 }
@@ -51,7 +53,7 @@ void usage() {
   exit(1);
 }
 
-void read_input(int argc, char *argv[], char **maina, int **bps1, int **bps2) {
+void read_input(int argc, char *argv[], char **maina, int **bps) {
   FILE *infile;
   char line[MAX_SEQ_LENGTH];
   int i, k;
@@ -237,8 +239,8 @@ void read_input(int argc, char *argv[], char **maina, int **bps1, int **bps2) {
   /* Print sequence length, sequence and starting structure */
   printf("%d %s %s %s\n", N, seq, str1, str2);
 
-  *bps1 = getBasePairList(str1);
-  *bps2 = getBasePairList(str2);
+  bps[0] = getBasePairList(str1);
+  bps[1] = getBasePairList(str2);
   free(str1);
   free(str2);
 } 
