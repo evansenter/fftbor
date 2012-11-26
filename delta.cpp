@@ -20,6 +20,7 @@
 #define FFTW_IMAG 1
 #define WINDOW_SIZE(i) (MIN_WINDOW_SIZE + i)
 #define NUM_WINDOWS (WINDOW_SIZE - MIN_WINDOW_SIZE + 1)
+#define DELTA2D(expression1, expression2, n) ((expression1 * n) + expression2)
 #define ROOT_POW(i, pow, n) (rootsOfUnity[(i * pow) % (n + 1)])
 #define FFTBOR_DEBUG 0
 #define ENERGY_DEBUG (0 && !root)
@@ -126,8 +127,12 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
         // Solve ZB 
         // ****************************************************************************
         // In a hairpin, [i + 1, j - 1] unpaired.
-        energy    = hairpinloop(i, j, canBasePair[intSequence[i]][intSequence[j]], intSequence, inputSequence);
-        delta     = numBasePairs[i][j] + jPairedTo(i, j, bpList);
+        energy = hairpinloop(i, j, canBasePair[intSequence[i]][intSequence[j]], intSequence, inputSequence);
+        delta  = DELTA2D(
+          numBasePairs[0][i][j] + jPairedTo(i, j, bpList[0]), 
+          numBasePairs[1][i][j] + jPairedTo(i, j, bpList[1]), 
+          sequenceLength
+        );
         ZB[i][j] += ROOT_POW(root, delta, runLength) * exp(-energy / RT);
 
         if (ENERGY_DEBUG) {
@@ -145,8 +150,12 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
             // l needs to at least have room to pair with k, and there can be at most 30 unpaired bases between (i, k) + (l, j), with l < j
             if (canBasePair[intSequence[k]][intSequence[l]]) {
               // In interior loop / bulge / stack with (i, j) and (k, l), (i + 1, k - 1) and (l + 1, j - 1) are all unpaired.
-              energy    = interiorloop(i, j, k, l, canBasePair[intSequence[i]][intSequence[j]], canBasePair[intSequence[l]][intSequence[k]], intSequence);
-              delta     = numBasePairs[i][j] - numBasePairs[k][l] + jPairedTo(i, j, bpList);
+              energy = interiorloop(i, j, k, l, canBasePair[intSequence[i]][intSequence[j]], canBasePair[intSequence[l]][intSequence[k]], intSequence);
+              delta  = DELTA2D(
+                numBasePairs[0][i][j] - numBasePairs[0][k][l] + jPairedTo(i, j, bpList[0]), 
+                numBasePairs[1][i][j] - numBasePairs[1][k][l] + jPairedTo(i, j, bpList[1]), 
+                sequenceLength
+              );
               ZB[i][j] += ZB[k][l] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
                 
               if (ENERGY_DEBUG) {
@@ -162,8 +171,12 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
         
         for (k = i + MIN_PAIR_DIST + 3; k < j - MIN_PAIR_DIST - 1; ++k) {
           // If (i, j) is the closing b.p. of a multiloop, and (k, l) is the rightmost base pair, there is at least one hairpin between (i + 1, k - 1)
-          energy    = P->MLclosing + P->MLintern[canBasePair[intSequence[i]][intSequence[j]]];
-          delta     = numBasePairs[i][j] - numBasePairs[i + 1][k - 1] - numBasePairs[k][j - 1] + jPairedTo(i, j, bpList);
+          energy = P->MLclosing + P->MLintern[canBasePair[intSequence[i]][intSequence[j]]];
+          delta  = DELTA2D(
+            numBasePairs[0][i][j] - numBasePairs[0][i + 1][k - 1] - numBasePairs[0][k][j - 1] + jPairedTo(i, j, bpList[0]), 
+            numBasePairs[1][i][j] - numBasePairs[1][i + 1][k - 1] - numBasePairs[1][k][j - 1] + jPairedTo(i, j, bpList[1]), 
+            sequenceLength
+          );
           ZB[i][j] += ZM[i + 1][k - 1] * ZM1[k][j - 1] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
                  
           if (ENERGY_DEBUG) {
@@ -182,8 +195,13 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
       for (k = i + MIN_PAIR_DIST + 1; k <= j; ++k) {
         // k is the closing base pairing with i of a single component within the range [i, j]
         if (canBasePair[intSequence[i]][intSequence[k]]) {
-          energy     = P->MLbase * (j - k) + P->MLintern[canBasePair[intSequence[i]][intSequence[k]]];
-          delta      = numBasePairs[i][j] - numBasePairs[i][k];
+          energy = P->MLbase * (j - k) + P->MLintern[canBasePair[intSequence[i]][intSequence[k]]];
+          delta  = DELTA2D(
+            numBasePairs[0][i][j] - numBasePairs[0][i][k],
+            numBasePairs[1][i][j] - numBasePairs[1][i][k],
+            sequenceLength
+          );
+          
           ZM1[i][j] += ZB[i][k] * exp(-energy / RT);
           
           if (ENERGY_DEBUG) {
@@ -201,8 +219,12 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
       // ****************************************************************************
       for (k = i; k < j - MIN_PAIR_DIST; ++k) {
         // Only one stem.
-        energy    = P->MLbase * (k - i);
-        delta     = numBasePairs[i][j] - numBasePairs[k][j];
+        energy = P->MLbase * (k - i);
+        delta  = DELTA2D(
+          numBasePairs[0][i][j] - numBasePairs[0][k][j],
+          numBasePairs[1][i][j] - numBasePairs[1][k][j],
+          sequenceLength
+        );
         ZM[i][j] += ZM1[k][j] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
 
         if (ENERGY_DEBUG) {
@@ -215,8 +237,12 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
 
         // More than one stem.
         if (k > i + MIN_PAIR_DIST + 1) { // (k > i + MIN_PAIR_DIST + 1) because i can pair with k - 1
-          energy    = P->MLintern[canBasePair[intSequence[k]][intSequence[j]]];
-          delta     = numBasePairs[i][j] - numBasePairs[i][k - 1] - numBasePairs[k][j];
+          energy = P->MLintern[canBasePair[intSequence[k]][intSequence[j]]];
+          delta  = DELTA2D(
+            numBasePairs[0][i][j] - numBasePairs[0][i][k - 1] - numBasePairs[0][k][j],
+            numBasePairs[1][i][j] - numBasePairs[1][i][k - 1] - numBasePairs[1][k][j],
+            sequenceLength
+          );
           ZM[i][j] += ZM[i][k - 1] * ZM1[k][j] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
 
           if (ENERGY_DEBUG) {
@@ -232,7 +258,11 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
       // **************************************************************************
       // Solve Z
       // **************************************************************************
-      delta    = jPairedIn(i, j, bpList);
+      delta = DELTA2D(
+        jPairedIn(i, j, bpList[0]),
+        jPairedIn(i, j, bpList[1]),
+        sequenceLength
+      );
       Z[i][j] += Z[i][j - 1] * ROOT_POW(root, delta, runLength);
 
       if (STRUCTURE_COUNT) {
@@ -249,14 +279,22 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
           }
             
           if (k == i) {
-            delta    = numBasePairs[i][j] - numBasePairs[k][j];
+            delta = DELTA2D(
+              numBasePairs[0][i][j] - numBasePairs[0][k][j],
+              numBasePairs[1][i][j] - numBasePairs[1][k][j],
+              sequenceLength
+            );
             Z[i][j] += ZB[k][j] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
 
             if (STRUCTURE_COUNT) {
               Z[j][i] += ZB[j][k];
             }
           } else {
-            delta    = numBasePairs[i][j] - numBasePairs[i][k - 1] - numBasePairs[k][j];
+            delta = DELTA2D(
+              numBasePairs[0][i][j] - numBasePairs[0][i][k - 1] - numBasePairs[0][k][j],
+              numBasePairs[1][i][j] - numBasePairs[1][i][k - 1] - numBasePairs[1][k][j],
+              sequenceLength
+            );
             Z[i][j] += Z[i][k - 1] * ZB[k][j] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
 
             if (STRUCTURE_COUNT) {
