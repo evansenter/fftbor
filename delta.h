@@ -6,7 +6,7 @@
 
 typedef std::complex<double> dcomplex;
 
-void   neighbours(char *, int *);
+void   neighbours(char *, int *, int *);
 int    numbp(int, int, int *);
 int    bn(char);
 void   initializeCanBasePair(int **);

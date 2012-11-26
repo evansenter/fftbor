@@ -11,35 +11,37 @@ extern double temperature;
 char          *ENERGY;
 paramT        *P;
 
-void read_input(int, char **, char **, int**);
+void read_input(int, char **, char **, int **, int **);
 void usage();
 
 int main(int argc, char *argv[]) {
   char *a;  /* a points to array a[0],...,a[n] where a[0]=n, and a[1],...,a[n] are RNA nucleotides and where n <= Nseq - 2 */
-  int *bps; /* bps is an array of basepairs, where a base pair is defined by two integers */
+  int *bps1, *bps2; /* bps is an array of basepairs, where a base pair is defined by two integers */
   
   if (argc == 1) {
     usage();
     exit(1);
   }
   
-  read_input(argc, argv, &a, &bps);
-  neighbours(a, bps);
+  read_input(argc, argv, &a, &bps1, &bps2);
+  neighbours(a, bps1, bps2);
 
   free(a);
-  free(bps);
+  free(bps1);
+  free(bps2);
 
   return 0;
 }
 
 void usage() {
-  fprintf(stderr, "FFTbor [options] sequence structure [options]\n\n");
+  fprintf(stderr, "FFTbor [options] sequence structure_1 structure_2 [options]\n\n");
   
   fprintf(stderr, "FFTbor [options] filename [options]\n");
   fprintf(stderr, "where filename is a file of the format:\n");
   fprintf(stderr, "\t>comment (optional line)\n");
   fprintf(stderr, "\tsequence\n");
-  fprintf(stderr, "\tsecondary structure\n\n");
+  fprintf(stderr, "\tsecondary structure (1)\n");
+  fprintf(stderr, "\tsecondary structure (2)\n\n");
   
   fprintf(stderr, "Options include the following:\n");
   fprintf(stderr, "-E\tenergyfile,  the default is energy.par in this executable's directory. Must be the name of a file with all energy parameters (in the same format as used in Vienna RNA).\n");
@@ -49,11 +51,11 @@ void usage() {
   exit(1);
 }
 
-void read_input(int argc,char *argv[], char **maina, int **bps) {
+void read_input(int argc, char *argv[], char **maina, int **bps1, int **bps2) {
   FILE *infile;
   char line[MAX_SEQ_LENGTH];
   int i, k;
-  char *seq = NULL, *str = NULL;
+  char *seq = NULL, *str1 = NULL, *str2 = NULL;
   
   PF              = 0;
   PRECISION       = 4;
@@ -117,13 +119,16 @@ void read_input(int argc,char *argv[], char **maina, int **bps) {
         N        = strlen(argv[i]);
         (*maina) = (char *)xcalloc(N + 1, sizeof(char));
 	      seq      = *maina;
-	      str      = (char *)xcalloc(N + 1, sizeof(char));
+	      str1     = (char *)xcalloc(N + 1, sizeof(char));
+	      str2     = (char *)xcalloc(N + 1, sizeof(char));
 	      (void)sscanf(argv[i++], "%s", seq);
-	      (void)sscanf(argv[i], "%s", str);
+	      (void)sscanf(argv[i++], "%s", str1);
+	      (void)sscanf(argv[i], "%s", str2);
 	      N = strlen(seq);
         
-        if (strlen(seq) != strlen(str)) {
-          fprintf(stderr,"Length of RNA sequence and structure must be equal\n");
+        if (!TRIEQUALS(strlen(seq), strlen(str1), strlen(str2))) {
+          printf("%s\n%s\n%s\n", seq, str1, str2);
+          fprintf(stderr,"Length of RNA sequence and structures must be equal\n");
           exit(1);
         }
         
@@ -134,13 +139,14 @@ void read_input(int argc,char *argv[], char **maina, int **bps) {
             seq[k] = 'U';
           }
         }
-        str[N] = '\0';
-        seq[N] = '\0';
+        seq[N]  = '\0';
+        str1[N] = '\0';
+        str2[N] = '\0';
       }
       else { 
         /* Input is a file */
-        if (fgets(line,sizeof(line),infile) == NULL) {
-          fprintf(stderr,"There was an error reading the file\n");
+        if (fgets(line, sizeof(line), infile) == NULL) {
+          fprintf(stderr, "There was an error reading the file\n");
           exit(1);
         }
 
@@ -155,9 +161,9 @@ void read_input(int argc,char *argv[], char **maina, int **bps) {
         }
         
         N        = strlen(line);
-        (*maina) = (char *)xcalloc(N+1,sizeof(char));
+        (*maina) = (char *)xcalloc(N + 1, sizeof(char));
         seq      = *maina;
-        (void)sscanf(line,"%s",seq);
+        (void)sscanf(line, "%s", seq);
         
         for (k = 0; k < N; k++) {
           seq[k] = toupper(seq[k]);
@@ -171,11 +177,19 @@ void read_input(int argc,char *argv[], char **maina, int **bps) {
           exit(1);
         }
 
-        str = (char *)xcalloc(N + 1, sizeof(char));
-        (void)sscanf(line, "%s", str);
+        str1 = (char *)xcalloc(N + 1, sizeof(char));
+        (void)sscanf(line, "%s", str1);
+        
+        if (fgets(line, sizeof(line), infile) == NULL) {
+          fprintf(stderr,"There was an error reading the file\n");
+          exit(1);
+        }
+        
+        str2 = (char *)xcalloc(N + 1, sizeof(char));
+        (void)sscanf(line, "%s", str2);
 
-        if (strlen(seq) != strlen(str)) {
-          printf("%s\n%s\n", seq, str);
+        if (!TRIEQUALS(strlen(seq), strlen(str1), strlen(str2))) {
+          printf("%s\n%s\n%s\n", seq, str1, str2);
           fprintf(stderr, "Length of RNA sequence and structure must be equal\n");
           exit(1);
         }
@@ -191,7 +205,7 @@ void read_input(int argc,char *argv[], char **maina, int **bps) {
   }
   
   /* Post-sequence / structure validations */
-  if (seq == NULL || str == NULL) {
+  if (seq == NULL || str1 == NULL || str2 == NULL) {
     usage();
   }
   
@@ -221,8 +235,10 @@ void read_input(int argc,char *argv[], char **maina, int **bps) {
   }
   
   /* Print sequence length, sequence and starting structure */
-  printf("%d %s %s\n", N, seq, str);
+  printf("%d %s %s %s\n", N, seq, str1, str2);
 
-  *bps = getBasePairList(str);
-  free(str);
+  *bps1 = getBasePairList(str1);
+  *bps2 = getBasePairList(str2);
+  free(str1);
+  free(str2);
 } 

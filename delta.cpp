@@ -31,7 +31,9 @@ extern paramT *P;
 
 extern "C" void read_parameter_file(const char energyfile[]);
 
-void neighbours(char *inputSequence, int *bpList) {
+void neighbours(char *inputSequence, int *bpList1, int *bpList2) {
+  int *bpList = bpList1;
+  
   int i, root, runLength = 0, sequenceLength = strlen(inputSequence);
   double RT = 0.0019872370936902486 * (temperature + 273.15) * 100; // 0.01 * (kcal K) / mol
 
