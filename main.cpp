@@ -7,7 +7,7 @@
 #include "misc.h"
 #include <iostream>
 
-int           PF, N, PRECISION, WINDOW_SIZE, MIN_WINDOW_SIZE;
+int           PF, N, PRECISION;
 extern double temperature;
 char          *ENERGY;
 paramT        *P;
@@ -59,11 +59,9 @@ void read_input(int argc, char *argv[], char **maina, int **bps) {
   int i, k;
   char *seq = NULL, *str1 = NULL, *str2 = NULL;
   
-  PF              = 0;
-  PRECISION       = 4;
-  WINDOW_SIZE     = 0;
-  MIN_WINDOW_SIZE = 0;
-  ENERGY          = (char *)"energy.par";
+  PF        = 0;
+  PRECISION = 4;
+  ENERGY    = (char *)"energy.par";
 
   /* Function to retrieve RNA sequence and structure, when
    * either input in command line or in a file, where the first
@@ -88,22 +86,6 @@ void read_input(int argc, char *argv[], char **maina, int **bps) {
         } else if (!sscanf(argv[++i], "%d", &PRECISION)) {
           usage();
         } else if (PRECISION < 0 || PRECISION > 9) {
-          usage();
-        }
-      } else if (strcmp(argv[i], "-W") == 0) {
-        if (i == argc - 1) {
-          usage();
-        } else if (!sscanf(argv[++i], "%d", &WINDOW_SIZE)) {
-          usage();
-        } else if (WINDOW_SIZE < 0) {
-          usage();
-        }
-      } else if (strcmp(argv[i], "-M") == 0) {
-        if (i == argc - 1) {
-          usage();
-        } else if (!sscanf(argv[++i], "%d", &MIN_WINDOW_SIZE)) {
-          usage();
-        } else if (MIN_WINDOW_SIZE <= 0) {
           usage();
         }
       } else {
@@ -212,29 +194,6 @@ void read_input(int argc, char *argv[], char **maina, int **bps) {
   }
   
   N = (int)strlen(seq);
-  
-  if (!WINDOW_SIZE) {
-    WINDOW_SIZE = N;
-  }
-  
-  if (!MIN_WINDOW_SIZE) {
-    MIN_WINDOW_SIZE = WINDOW_SIZE;
-  }
-  
-  if (WINDOW_SIZE > N) {
-    printf("Error: the window size provided (%d) can't be longer than the input sequence length (%d).\n\n", WINDOW_SIZE, N);
-    usage();
-  }
-  
-  if (MIN_WINDOW_SIZE > WINDOW_SIZE) {
-    printf("Error: the minimum window size provided (%d) can't be larger than the window size provided (%d).\n\n", MIN_WINDOW_SIZE, WINDOW_SIZE);
-    usage();
-  }
-  
-  if (MIN_WINDOW_SIZE > N) {
-    printf("Error: the minimum window size provided (%d) can't be larger than the input sequence length (%d).\n\n", MIN_WINDOW_SIZE, N);
-    usage();
-  }
   
   /* Print sequence length, sequence and starting structure */
   printf("%d %s %s %s\n", N, seq, str1, str2);
