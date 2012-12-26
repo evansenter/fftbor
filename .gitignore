@@ -4,6 +4,7 @@ scripts/autobot
 FFTbor
 RNAbor
 RNAcentral
+FFTbor2D
 rna.ps
 *.a
 *.o

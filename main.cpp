@@ -36,9 +36,9 @@ int main(int argc, char *argv[]) {
 }
 
 void usage() {
-  fprintf(stderr, "FFTbor [options] sequence structure_1 structure_2 [options]\n\n");
+  fprintf(stderr, "FFTbor2D [options] sequence structure_1 structure_2 [options]\n\n");
   
-  fprintf(stderr, "FFTbor [options] filename [options]\n");
+  fprintf(stderr, "FFTbor2D [options] filename [options]\n");
   fprintf(stderr, "where filename is a file of the format:\n");
   fprintf(stderr, "\t>comment (optional line)\n");
   fprintf(stderr, "\tsequence\n");
