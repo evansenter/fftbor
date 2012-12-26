@@ -74,11 +74,11 @@ void neighbours(char *inputSequence, int **bpList) {
   }
   runLength += max2(bpCount1, bpCount2);
   runLength += floor((sequenceLength - MIN_PAIR_DIST) / 2);
+  runLength  = pow(runLength, 2);
   
   // Note: -----------------------------------------------------------------------------------------------------
   // For the sake of simplicity, I'm removing the optimization that only calculates the first k-th coefficients.
   // This should be reintroduced / revalidated once the 2D code is stable.
-  runLength = pow(sequenceLength, 2);
   
   dcomplex **Z            = new dcomplex*[sequenceLength + 1];
   dcomplex **ZB           = new dcomplex*[sequenceLength + 1];
@@ -324,8 +324,10 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
 void solveSystem(dcomplex *solutions, char *sequence, int **structure, int sequenceLength, int runLength) {
   char precisionFormat[20];
   char header[5 * sequenceLength]; // This is enough space for sequences up to length 999
-  int i;
+  int i, rowLength;
   double scalingFactor, sum;
+  
+  rowLength = (int)sqrt(runLength);
   
   if (TABLE_HEADERS) {
     sprintf(precisionFormat, "\t%%+.0%df", PRECISION ? PRECISION : std::numeric_limits<double>::digits10);
@@ -378,10 +380,10 @@ void solveSystem(dcomplex *solutions, char *sequence, int **structure, int seque
     if (TABLE_HEADERS) {
       if (!i) {
         printf("0");
-      } else if (!(i % sequenceLength)) {
-        printf("\n%d", i / sequenceLength);
+      } else if (!(i % rowLength)) {
+        printf("\n%d", rowLength);
       }
-    } else if (!(i % sequenceLength)) {
+    } else if (!(i % rowLength)) {
       printf("\n");
     }
         
