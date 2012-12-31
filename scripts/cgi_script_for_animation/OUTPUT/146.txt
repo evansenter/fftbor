@@ -1,3 +1,0 @@
-> len is 146
-AAUAUAAUAGGAACACUCAUAUAAUCGCGUGGAUAUGGCACGCAAGUUUCUACCGGGCACCGUAAAUGUCCGACUAUGGGUGAGCAAUGGAACCGCACGUGUACGGUUUUUUGUGAUAUCAGCAUUGCUUGCUCUUUAUUUGAGCG
-.............((((((((.....(((((.......)))))..........((((((.......))))))..)))))))).((((((((((((........)))))).............))))))..((((.......)))).
