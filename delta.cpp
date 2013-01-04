@@ -93,7 +93,8 @@ void neighbours(char *inputSequence, int **bpList) {
   }
   
   // Start main recursions (root <= floor(runLength / 2.0) is an optimization for roots of unity).
-  for (root = 0; root <= floor(runLength / 2.0); ++root) {
+  // for (root = 0; root <= floor(runLength / 2.0); ++root) {
+  for (root = 0; root < runLength; ++root) {
     evaluateZ(root, Z, ZB, ZM, ZM1, solutions, rootsOfUnity, inputSequence, sequence, intSequence, bpList, canBasePair, numBasePairs, sequenceLength, runLength, RT);
   }
   
@@ -103,7 +104,7 @@ void neighbours(char *inputSequence, int **bpList) {
   }
 
   // Convert point-value solutions to coefficient form w/ inverse DFT.
-  populateRemainingRoots(solutions, sequenceLength, runLength, root);
+  // populateRemainingRoots(solutions, sequenceLength, runLength, root);
   solveSystem(solutions, sequence, bpList, sequenceLength, runLength, inputStructureDist);
   
   free(intSequence);
@@ -310,7 +311,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
   solutions[root] = Z[1][sequenceLength];
 
   if (FFTBOR_DEBUG) {
-    std::cout << "." << std::flush;
+    std::cout << root << ' ' << std::flush;
   }
 }
 
@@ -335,7 +336,7 @@ void solveSystem(dcomplex *solutions, char *sequence, int **structure, int seque
   if (FFTBOR_DEBUG) {
     printf("Solutions:\n");
     for (i = 0; i < runLength; ++i) {
-      printf("%.2d: %+f %+fi\n", i, solutions[i].real(), solutions[i].imag());
+      printf("%d, %d: %+f %+fi\n", i / rowLength, i % rowLength, solutions[i].real(), solutions[i].imag());
     }
   }
   
@@ -395,8 +396,9 @@ void solveSystem(dcomplex *solutions, char *sequence, int **structure, int seque
         // printf("%d %d E\n", i / rowLength, i % rowLength);
       }
       
+      // If the parity of (i + j) doesn't equal bp_dist(S_a, S_b) and p_{i, j} > 0, we have a problem (by the triangle inequality)
       if ((((i / rowLength) + (i % rowLength)) % 2) != (inputStructureDist % 2) && (int)(solutions[i].real() * pow(10, PRECISION)) > 0) {
-        printf("Warning: non-zero entry at (%d, %d): ", i / rowLength, i % rowLength);
+        printf("Warning: non-zero entry at (%d,\t%d):\t", i / rowLength, i % rowLength);
         printf(precisionFormat, solutions[i].real());
         printf("\n");
       }
