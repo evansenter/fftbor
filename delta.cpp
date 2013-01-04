@@ -20,7 +20,7 @@
 #define FFTW_IMAG 1
 #define DELTA2D(expression1, expression2, n) (((expression1) * n) + expression2)
 #define ROOT_POW(i, pow, n) (rootsOfUnity[(i * pow) % n])
-#define FFTBOR_DEBUG 0
+#define FFTBOR_DEBUG 1
 #define ENERGY_DEBUG (0 && !root)
 #define TABLE_HEADERS 0
 
@@ -32,7 +32,7 @@ extern paramT *P;
 extern "C" void read_parameter_file(const char energyfile[]);
 
 void neighbours(char *inputSequence, int **bpList) {
-  int i, root, runLength = (int)pow(strlen(inputSequence), 2), sequenceLength = strlen(inputSequence);
+  int i, root, runLength = (int)pow(strlen(inputSequence), 2), sequenceLength = strlen(inputSequence), inputStructureDist = 0;
   double RT = 0.0019872370936902486 * (temperature + 273.15) * 100; // 0.01 * (kcal K) / mol
 
   char *energyfile    = ENERGY;
@@ -67,6 +67,12 @@ void neighbours(char *inputSequence, int **bpList) {
   initializeBasePairCounts(numBasePairs[0], bpList[0], sequenceLength);
   initializeBasePairCounts(numBasePairs[1], bpList[1], sequenceLength);
   
+  // Initialize the inputStructureDist value as bp_dist(S_a, S_b)
+  for (i = 1; i <= sequenceLength; ++i) {
+    inputStructureDist += (bpList[0][i] > i && bpList[0][i] != bpList[1][i] ? 1 : 0);
+    inputStructureDist += (bpList[1][i] > i && bpList[1][i] != bpList[0][i] ? 1 : 0);
+  }
+  
   dcomplex **Z            = new dcomplex*[sequenceLength + 1];
   dcomplex **ZB           = new dcomplex*[sequenceLength + 1];
   dcomplex **ZM           = new dcomplex*[sequenceLength + 1];
@@ -77,8 +83,9 @@ void neighbours(char *inputSequence, int **bpList) {
   populateMatrices(Z, ZB, ZM, ZM1, solutions, rootsOfUnity, sequenceLength, runLength);
   
   if (FFTBOR_DEBUG) {
-    printf("runLength:      %d\n", runLength);
-    printf("sequenceLength: %d\n", sequenceLength);
+    printf("runLength:          %d\n", runLength);
+    printf("sequenceLength:     %d\n", sequenceLength);
+    printf("inputStructureDist: %d\n", inputStructureDist);
     printf("Roots of unity:\n");
     for (root = 0; root < runLength; ++root) {
       printf("%.2d: %+f %+fi\n", root, rootsOfUnity[root].real(), rootsOfUnity[root].imag());
@@ -97,7 +104,7 @@ void neighbours(char *inputSequence, int **bpList) {
 
   // Convert point-value solutions to coefficient form w/ inverse DFT.
   populateRemainingRoots(solutions, sequenceLength, runLength, root);
-  solveSystem(solutions, sequence, bpList, sequenceLength, runLength);
+  solveSystem(solutions, sequence, bpList, sequenceLength, runLength, inputStructureDist);
   
   free(intSequence);
 }
@@ -307,7 +314,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
   }
 }
 
-void solveSystem(dcomplex *solutions, char *sequence, int **structure, int sequenceLength, int runLength) {
+void solveSystem(dcomplex *solutions, char *sequence, int **structure, int sequenceLength, int runLength, int inputStructureDist) {
   char precisionFormat[20];
   char header[5 * sequenceLength]; // This is enough space for sequences up to length 999
   int i, rowLength;
@@ -379,6 +386,22 @@ void solveSystem(dcomplex *solutions, char *sequence, int **structure, int seque
   printf("\n\n");
   
   if (FFTBOR_DEBUG) {
+    for (i = 0; i < runLength; ++i) {
+      if (((i / rowLength) + (i % rowLength)) % 2) {
+        // Odd
+        // printf("%d %d O\n", i / rowLength, i % rowLength);
+      } else {
+        // Even
+        // printf("%d %d E\n", i / rowLength, i % rowLength);
+      }
+      
+      if ((((i / rowLength) + (i % rowLength)) % 2) != (inputStructureDist % 2) && (int)(solutions[i].real() * pow(10, PRECISION)) > 0) {
+        printf("Warning: non-zero entry at (%d, %d): ", i / rowLength, i % rowLength);
+        printf(precisionFormat, solutions[i].real());
+        printf("\n");
+      }
+    }
+    
     printf("Scaling factor: %.15f\n", scalingFactor);
     std::cout << "Sum: " << sum << std::endl << std::endl;
   }
