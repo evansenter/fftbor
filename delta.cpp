@@ -74,7 +74,7 @@ void neighbours(char *inputSequence, int **bpList) {
   }
   
   rowLength = (sequenceLength % 2 ? sequenceLength + 1 : sequenceLength) + 1;
-  runLength = pow(rowLength, 2) / 2;
+  runLength = pow(rowLength, 2) / 2 + 1;
   
   dcomplex **Z            = new dcomplex*[sequenceLength + 1];
   dcomplex **ZB           = new dcomplex*[sequenceLength + 1];
@@ -368,8 +368,8 @@ void solveSystem(dcomplex *solutions, char *sequence, int **structure, int seque
       solutions[i] = dcomplex(pow(10.0, -PRECISION) * static_cast<int>(result[i][FFTW_REAL] / runLength), 0);
     }
     
-    probabilities[2 * i] = solutions[i].real();
-    sum                 += solutions[i].real();
+    probabilities[i] = solutions[i].real();
+    sum             += solutions[i].real();
     
     printf("> %d %f\n", i, solutions[i].real());
   }
