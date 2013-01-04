@@ -32,7 +32,7 @@ extern paramT *P;
 extern "C" void read_parameter_file(const char energyfile[]);
 
 void neighbours(char *inputSequence, int **bpList) {
-  int i, root, runLength = 0, bpCount1 = 0, bpCount2 = 0, sequenceLength = strlen(inputSequence);
+  int i, root, runLength = (int)pow(strlen(inputSequence), 2), sequenceLength = strlen(inputSequence);
   double RT = 0.0019872370936902486 * (temperature + 273.15) * 100; // 0.01 * (kcal K) / mol
 
   char *energyfile    = ENERGY;
@@ -66,15 +66,6 @@ void neighbours(char *inputSequence, int **bpList) {
   }
   initializeBasePairCounts(numBasePairs[0], bpList[0], sequenceLength);
   initializeBasePairCounts(numBasePairs[1], bpList[1], sequenceLength);
-  
-  // Determine max bp. distance to determine how many roots of unity to generate.
-  for (i = 1; i <= sequenceLength; ++i) {
-    bpCount1 += (bpList[0][i] > i ? 1 : 0);
-    bpCount2 += (bpList[1][i] > i ? 1 : 0);
-  }
-  runLength += max2(bpCount1, bpCount2);
-  runLength += floor((sequenceLength - MIN_PAIR_DIST) / 2);
-  runLength  = pow(runLength, 2);
   
   dcomplex **Z            = new dcomplex*[sequenceLength + 1];
   dcomplex **ZB           = new dcomplex*[sequenceLength + 1];
