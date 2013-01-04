@@ -18,11 +18,11 @@
 #define ONE_C dcomplex(1.0, 0.0)
 #define FFTW_REAL 0
 #define FFTW_IMAG 1
-#define DELTA2D(expression1, expression2, n) (((expression1) * n) + expression2)
+#define DELTA2D(expression1, expression2, n) (((expression1) * n) + (expression2))
 #define ROOT_POW(i, pow, n) (rootsOfUnity[(i * pow) % n])
 #define FFTBOR_DEBUG 1
 #define ENERGY_DEBUG (0 && !root)
-#define TABLE_HEADERS 0
+#define TABLE_HEADERS 1
 
 extern int    PF, N, PRECISION, WINDOW_SIZE, MIN_WINDOW_SIZE;
 extern double temperature;
@@ -32,7 +32,7 @@ extern paramT *P;
 extern "C" void read_parameter_file(const char energyfile[]);
 
 void neighbours(char *inputSequence, int **bpList) {
-  int i, root, runLength = (int)pow(strlen(inputSequence), 2), sequenceLength = strlen(inputSequence), inputStructureDist = 0;
+  int i, root, rowLength, runLength, sequenceLength = strlen(inputSequence), inputStructureDist = 0;
   double RT = 0.0019872370936902486 * (temperature + 273.15) * 100; // 0.01 * (kcal K) / mol
 
   char *energyfile    = ENERGY;
@@ -73,6 +73,9 @@ void neighbours(char *inputSequence, int **bpList) {
     inputStructureDist += (bpList[1][i] > i && bpList[1][i] != bpList[0][i] ? 1 : 0);
   }
   
+  rowLength = (sequenceLength % 2 ? sequenceLength + 1 : sequenceLength) + 1;
+  runLength = pow(rowLength, 2) / 2;
+  
   dcomplex **Z            = new dcomplex*[sequenceLength + 1];
   dcomplex **ZB           = new dcomplex*[sequenceLength + 1];
   dcomplex **ZM           = new dcomplex*[sequenceLength + 1];
@@ -83,6 +86,7 @@ void neighbours(char *inputSequence, int **bpList) {
   populateMatrices(Z, ZB, ZM, ZM1, solutions, rootsOfUnity, sequenceLength, runLength);
   
   if (FFTBOR_DEBUG) {
+    printf("rowLength:          %d\n", rowLength);
     printf("runLength:          %d\n", runLength);
     printf("sequenceLength:     %d\n", sequenceLength);
     printf("inputStructureDist: %d\n", inputStructureDist);
@@ -95,7 +99,7 @@ void neighbours(char *inputSequence, int **bpList) {
   // Start main recursions (root <= floor(runLength / 2.0) is an optimization for roots of unity).
   // for (root = 0; root <= floor(runLength / 2.0); ++root) {
   for (root = 0; root < runLength; ++root) {
-    evaluateZ(root, Z, ZB, ZM, ZM1, solutions, rootsOfUnity, inputSequence, sequence, intSequence, bpList, canBasePair, numBasePairs, sequenceLength, runLength, RT);
+    evaluateZ(root, Z, ZB, ZM, ZM1, solutions, rootsOfUnity, inputSequence, sequence, intSequence, bpList, canBasePair, numBasePairs, sequenceLength, rowLength, runLength, RT);
   }
   
   if (FFTBOR_DEBUG) {
@@ -105,12 +109,12 @@ void neighbours(char *inputSequence, int **bpList) {
 
   // Convert point-value solutions to coefficient form w/ inverse DFT.
   // populateRemainingRoots(solutions, sequenceLength, runLength, root);
-  solveSystem(solutions, sequence, bpList, sequenceLength, runLength, inputStructureDist);
+  solveSystem(solutions, sequence, bpList, sequenceLength, rowLength, runLength, inputStructureDist);
   
   free(intSequence);
 }
 
-void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex *solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, int *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int sequenceLength, int runLength, double RT) {
+void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex *solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, int *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int sequenceLength, int rowLength, int runLength, double RT) {
   int i, j, k, l, d, delta;
   double energy;
   
@@ -133,7 +137,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
         delta  = DELTA2D(
           numBasePairs[0][i][j] + jPairedTo(i, j, bpList[0]), 
           numBasePairs[1][i][j] + jPairedTo(i, j, bpList[1]), 
-          sequenceLength
+          rowLength
         );
         ZB[i][j] += ROOT_POW(root, delta, runLength) * exp(-energy / RT);
 
@@ -156,7 +160,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
               delta  = DELTA2D(
                 numBasePairs[0][i][j] - numBasePairs[0][k][l] + jPairedTo(i, j, bpList[0]), 
                 numBasePairs[1][i][j] - numBasePairs[1][k][l] + jPairedTo(i, j, bpList[1]), 
-                sequenceLength
+                rowLength
               );
               ZB[i][j] += ZB[k][l] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
                 
@@ -177,7 +181,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
           delta  = DELTA2D(
             numBasePairs[0][i][j] - numBasePairs[0][i + 1][k - 1] - numBasePairs[0][k][j - 1] + jPairedTo(i, j, bpList[0]), 
             numBasePairs[1][i][j] - numBasePairs[1][i + 1][k - 1] - numBasePairs[1][k][j - 1] + jPairedTo(i, j, bpList[1]), 
-            sequenceLength
+            rowLength
           );
           ZB[i][j] += ZM[i + 1][k - 1] * ZM1[k][j - 1] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
                  
@@ -201,7 +205,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
           delta  = DELTA2D(
             numBasePairs[0][i][j] - numBasePairs[0][i][k],
             numBasePairs[1][i][j] - numBasePairs[1][i][k],
-            sequenceLength
+            rowLength
           );
           
           ZM1[i][j] += ZB[i][k] * exp(-energy / RT);
@@ -225,7 +229,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
         delta  = DELTA2D(
           numBasePairs[0][i][j] - numBasePairs[0][k][j],
           numBasePairs[1][i][j] - numBasePairs[1][k][j],
-          sequenceLength
+          rowLength
         );
         ZM[i][j] += ZM1[k][j] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
 
@@ -243,7 +247,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
           delta  = DELTA2D(
             numBasePairs[0][i][j] - numBasePairs[0][i][k - 1] - numBasePairs[0][k][j],
             numBasePairs[1][i][j] - numBasePairs[1][i][k - 1] - numBasePairs[1][k][j],
-            sequenceLength
+            rowLength
           );
           ZM[i][j] += ZM[i][k - 1] * ZM1[k][j] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
 
@@ -263,7 +267,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
       delta = DELTA2D(
         jPairedIn(i, j, bpList[0]),
         jPairedIn(i, j, bpList[1]),
-        sequenceLength
+        rowLength
       );
       Z[i][j] += Z[i][j - 1] * ROOT_POW(root, delta, runLength);
 
@@ -284,7 +288,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
             delta = DELTA2D(
               numBasePairs[0][i][j] - numBasePairs[0][k][j],
               numBasePairs[1][i][j] - numBasePairs[1][k][j],
-              sequenceLength
+              rowLength
             );
             Z[i][j] += ZB[k][j] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
 
@@ -295,7 +299,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
             delta = DELTA2D(
               numBasePairs[0][i][j] - numBasePairs[0][i][k - 1] - numBasePairs[0][k][j],
               numBasePairs[1][i][j] - numBasePairs[1][i][k - 1] - numBasePairs[1][k][j],
-              sequenceLength
+              rowLength
             );
             Z[i][j] += Z[i][k - 1] * ZB[k][j] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
 
@@ -315,13 +319,12 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
   }
 }
 
-void solveSystem(dcomplex *solutions, char *sequence, int **structure, int sequenceLength, int runLength, int inputStructureDist) {
+void solveSystem(dcomplex *solutions, char *sequence, int **structure, int sequenceLength, int rowLength, int runLength, int inputStructureDist) {
   char precisionFormat[20];
-  char header[5 * sequenceLength]; // This is enough space for sequences up to length 999
-  int i, rowLength;
+  char header[5 * rowLength]; // This is enough space for sequences up to length 999
+  int i, solutionLength = pow(rowLength, 2);
   double scalingFactor, sum;
-  
-  rowLength = (int)sqrt(runLength);
+  double *probabilities = (double *)xcalloc(solutionLength, sizeof(double));
   
   if (TABLE_HEADERS) {
     sprintf(precisionFormat, "\t%%+.0%df", PRECISION ? PRECISION : std::numeric_limits<double>::digits10);
@@ -329,7 +332,7 @@ void solveSystem(dcomplex *solutions, char *sequence, int **structure, int seque
     sprintf(precisionFormat, "%%+.0%df\t", PRECISION ? PRECISION : std::numeric_limits<double>::digits10);
   }
   
-  for (i = 0; i < sequenceLength; ++i) {
+  for (i = 0; i < rowLength; ++i) {
     sprintf(&header[4 * i], "\t%-3d", i);
   }
   
@@ -357,10 +360,6 @@ void solveSystem(dcomplex *solutions, char *sequence, int **structure, int seque
   // Calculate transform, coefficients are in fftw_complex result array.
   fftw_execute(plan);
   
-  if (TABLE_HEADERS) {
-    std::cout << header << std::endl;
-  }
-  
   for (i = 0; i < runLength; ++i) {
     // Truncate to user-specified precision, default is 4 and if set to 0, no truncation occurs (dangerous).
     if (PRECISION == 0) {
@@ -368,20 +367,29 @@ void solveSystem(dcomplex *solutions, char *sequence, int **structure, int seque
     } else {
       solutions[i] = dcomplex(pow(10.0, -PRECISION) * static_cast<int>(result[i][FFTW_REAL] / runLength), 0);
     }
-        
-    sum += solutions[i].real();
     
+    probabilities[2 * i] = solutions[i].real();
+    sum                 += solutions[i].real();
+    
+    printf("> %d %f\n", i, solutions[i].real());
+  }
+  
+  if (TABLE_HEADERS) {
+    std::cout << header << std::endl;
+  }
+  
+  for (i = 0; i < solutionLength; ++i) {
     if (TABLE_HEADERS) {
       if (!i) {
         printf("0");
       } else if (!(i % rowLength)) {
-        printf("\n%d", rowLength);
+        printf("\n%d", i / rowLength);
       }
     } else if (!(i % rowLength)) {
       printf("\n");
     }
-        
-    printf(precisionFormat, solutions[i].real());
+    
+    printf(precisionFormat, probabilities[i]);
   }
       
   printf("\n\n");
