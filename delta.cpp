@@ -18,7 +18,7 @@
 #define ONE_C dcomplex(1.0, 0.0)
 #define FFTW_REAL 0
 #define FFTW_IMAG 1
-#define DELTA2D(expression1, expression2, n) (((expression1) * n) + (expression2))
+#define DELTA2D(expression1, expression2, n) (((expression1) * (n)) + (expression2))
 #define ROOT_POW(i, pow, n) (rootsOfUnity[(i * pow) % n])
 #define FFTBOR_DEBUG 1
 #define ENERGY_DEBUG (0 && !root)
