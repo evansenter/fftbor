@@ -31,7 +31,7 @@ extern paramT *P;
 
 extern "C" void read_parameter_file(const char energyfile[]);
 
-void neighbours(char *inputSequence, int **bpList) {
+void neighbors(char *inputSequence, int **bpList) {
   int i, root, rowLength, runLength, sequenceLength = strlen(inputSequence), inputStructureDist = 0;
   double RT = 0.0019872370936902486 * (temperature + 273.15) * 100; // 0.01 * (kcal K) / mol
 
@@ -73,8 +73,10 @@ void neighbours(char *inputSequence, int **bpList) {
     inputStructureDist += (bpList[1][i] > i && bpList[1][i] != bpList[0][i] ? 1 : 0);
   }
   
+  // Note: rowLength = (least even number >= sequenceLength) + 1 (for a seq. of length 9 rowLength = (0..10).length = 11)
   rowLength = (sequenceLength % 2 ? sequenceLength + 1 : sequenceLength) + 1;
-  runLength = pow(rowLength, 2) / 2 + 1;
+  // Note: runLength = least number div. 4 >= (rowLength ^ 2 + 1) (for a seq. of length 9 runLength = (11 ^ 2 + 1) + 2 = 124)
+  runLength = ((pow(rowLength, 2) + 1) + (int)(pow(rowLength, 2) + 1) % 4) / 2;
   
   dcomplex **Z            = new dcomplex*[sequenceLength + 1];
   dcomplex **ZB           = new dcomplex*[sequenceLength + 1];
@@ -92,13 +94,12 @@ void neighbours(char *inputSequence, int **bpList) {
     printf("inputStructureDist: %d\n", inputStructureDist);
     printf("Roots of unity:\n");
     for (root = 0; root < runLength; ++root) {
-      printf("%.2d: %+f %+fi\n", root, rootsOfUnity[root].real(), rootsOfUnity[root].imag());
+      printf("%d: %+f %+fi\n", root, rootsOfUnity[root].real(), rootsOfUnity[root].imag());
     }
   }
   
-  // Start main recursions (root <= floor(runLength / 2.0) is an optimization for roots of unity).
-  // for (root = 0; root <= floor(runLength / 2.0); ++root) {
-  for (root = 0; root < runLength; ++root) {
+  // Start main recursions.
+  for (root = 0; root <= runLength / 2; ++root) {
     evaluateZ(root, Z, ZB, ZM, ZM1, solutions, rootsOfUnity, inputSequence, sequence, intSequence, bpList, canBasePair, numBasePairs, sequenceLength, rowLength, runLength, RT);
   }
   
@@ -108,7 +109,7 @@ void neighbours(char *inputSequence, int **bpList) {
   }
 
   // Convert point-value solutions to coefficient form w/ inverse DFT.
-  // populateRemainingRoots(solutions, sequenceLength, runLength, root);
+  populateRemainingRoots(solutions, sequenceLength, runLength);
   solveSystem(solutions, sequence, bpList, sequenceLength, rowLength, runLength, inputStructureDist);
   
   free(intSequence);
@@ -337,9 +338,9 @@ void solveSystem(dcomplex *solutions, char *sequence, int **structure, int seque
   }
   
   if (FFTBOR_DEBUG) {
-    printf("Solutions:\n");
+    printf("Solutions (after populating remaining roots):\n");
     for (i = 0; i < runLength; ++i) {
-      printf("%d, %d: %+f %+fi\n", i / rowLength, i % rowLength, solutions[i].real(), solutions[i].imag());
+      printf("%d: %+f %+fi\n", i, solutions[i].real(), solutions[i].imag());
     }
   }
   
@@ -370,8 +371,6 @@ void solveSystem(dcomplex *solutions, char *sequence, int **structure, int seque
     
     probabilities[i] = solutions[i].real();
     sum             += solutions[i].real();
-    
-    printf("> %d %f\n", i, solutions[i].real());
   }
   
   if (TABLE_HEADERS) {
@@ -427,30 +426,22 @@ int jPairedIn(int i, int j, int *basePairs) {
   return basePairs[j] >= i && basePairs[j] < j ? 1 : 0;
 }
 
-void populateRemainingRoots(dcomplex *solutions, int sequenceLength, int runLength, int lastRoot) {
-  // Optimization leveraging complex conjugate of solutions to the polynomial. lastRoot is the first unsolved root index (root gets
-  // incremented in the main recursions and fails at root <= floor(runLength / 2.0))
-  int i, root;
-  root = lastRoot;
-  
-  if (runLength % 2) {
-    i = root - 1;
-  } else {
-    i = root - 2;
-  }
+void populateRemainingRoots(dcomplex *solutions, int sequenceLength, int runLength) {
+  // Optimization leveraging complex conjugate of solutions to the polynomial.
+  int i, l = runLength / 2 - 1, r = runLength / 2 + 1;
   
   if (FFTBOR_DEBUG) {
-    printf("runLength: %d, runLength %% 2: %d\n", runLength, runLength % 2);
-    printf("Index of last solved root: %d\n", lastRoot - 1);
-    printf("Starting left index: %d, starting right index: %d\n", i, root);
+    printf("runLength: %d, runLength %% 2: %d\n\n", runLength, runLength % 2);
+    
+    printf("Solutions (before populating remaining roots):\n");
+    for (i = 0; i < runLength; ++i) {
+      printf("%d: %+f %+fi\n", i, solutions[i].real(), solutions[i].imag());
+    }
   }
   
-  for (; root <= runLength && i > 0; --i, ++root) {
-    solutions[root] = dcomplex(solutions[i].real(), -solutions[i].imag());
-  }
-  
-  if (FFTBOR_DEBUG) {
-    printf("Ending left index: %d, ending right index: %d\n", i, root);
+  for (i = 0; i < runLength / 2 && l - i >= 0 && r + i < runLength; ++i) {
+    printf("i: %d, l: %d, r %d\n", i, l - i, r + i);
+    solutions[r + i] = dcomplex(solutions[l - i].real(), -solutions[l - i].imag());
   }
 }
 

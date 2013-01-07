@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
   }
   
   read_input(argc, argv, &a, bps);
-  neighbours(a, bps);
+  neighbors(a, bps);
 
   free(a);
   free(bps[0]);
