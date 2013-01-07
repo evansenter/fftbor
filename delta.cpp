@@ -75,7 +75,7 @@ void neighbors(char *inputSequence, int **bpList) {
   
   // Note: rowLength = (least even number >= sequenceLength) + 1 (for a seq. of length 9 rowLength = (0..10).length = 11)
   rowLength = (sequenceLength % 2 ? sequenceLength + 1 : sequenceLength) + 1;
-  // Note: runLength = least number div. 4 >= (rowLength ^ 2 + 1) (for a seq. of length 9 runLength = (11 ^ 2 + 1) + 2 = 124)
+  // Note: runLength = (least number div. 4 >= (rowLength ^ 2 + 1)) / 2 (for a seq. of length 9 runLength = ((11 ^ 2 + 1) + 2) / 2 = 62)
   runLength = ((pow(rowLength, 2) + 1) + (int)(pow(rowLength, 2) + 1) % 4) / 2;
   
   dcomplex **Z            = new dcomplex*[sequenceLength + 1];
@@ -100,7 +100,7 @@ void neighbors(char *inputSequence, int **bpList) {
   
   // Start main recursions.
   for (root = 0; root <= runLength / 2; ++root) {
-    evaluateZ(root, Z, ZB, ZM, ZM1, solutions, rootsOfUnity, inputSequence, sequence, intSequence, bpList, canBasePair, numBasePairs, sequenceLength, rowLength, runLength, RT);
+    evaluateZ(root, Z, ZB, ZM, ZM1, solutions, rootsOfUnity, inputSequence, sequence, intSequence, bpList, canBasePair, numBasePairs, inputStructureDist, sequenceLength, rowLength, runLength, RT);
   }
   
   if (FFTBOR_DEBUG) {
@@ -110,12 +110,25 @@ void neighbors(char *inputSequence, int **bpList) {
 
   // Convert point-value solutions to coefficient form w/ inverse DFT.
   populateRemainingRoots(solutions, sequenceLength, runLength);
+  
+  if (inputStructureDist % 2) {
+    // Odd case.
+    for (root = 0; root < runLength; ++root) {
+      std::cout << rootsOfUnity[root] << std::endl;
+      std::cout << rootsOfUnity[(runLength - root) % runLength] << std::endl;
+      std::cout << solutions[root] << std::endl;
+      std::cout << rootsOfUnity[(runLength - root) % runLength] * solutions[root] << std::endl << std::endl;
+      
+      solutions[root] = rootsOfUnity[(runLength - root) % runLength] * solutions[root];
+    }
+  }
+  
   solveSystem(solutions, sequence, bpList, sequenceLength, rowLength, runLength, inputStructureDist);
   
   free(intSequence);
 }
 
-void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex *solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, int *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int sequenceLength, int rowLength, int runLength, double RT) {
+void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex *solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, int *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int inputStructureDist, int sequenceLength, int rowLength, int runLength, double RT) {
   int i, j, k, l, d, delta;
   double energy;
   
@@ -369,8 +382,15 @@ void solveSystem(dcomplex *solutions, char *sequence, int **structure, int seque
       solutions[i] = dcomplex(pow(10.0, -PRECISION) * static_cast<int>(result[i][FFTW_REAL] / runLength), 0);
     }
     
-    probabilities[i] = solutions[i].real();
-    sum             += solutions[i].real();
+    if (inputStructureDist % 2) {
+      // Odd case
+      probabilities[2 * i + 1] = solutions[i].real();
+    } else {
+      // Even case
+      probabilities[2 * i] = solutions[i].real();
+    }
+    
+    sum += solutions[i].real();
   }
   
   if (TABLE_HEADERS) {
@@ -394,22 +414,14 @@ void solveSystem(dcomplex *solutions, char *sequence, int **structure, int seque
   printf("\n\n");
   
   if (FFTBOR_DEBUG) {
-    for (i = 0; i < runLength; ++i) {
-      if (((i / rowLength) + (i % rowLength)) % 2) {
-        // Odd
-        // printf("%d %d O\n", i / rowLength, i % rowLength);
-      } else {
-        // Even
-        // printf("%d %d E\n", i / rowLength, i % rowLength);
-      }
-      
-      // If the parity of (i + j) doesn't equal bp_dist(S_a, S_b) and p_{i, j} > 0, we have a problem (by the triangle inequality)
-      if ((((i / rowLength) + (i % rowLength)) % 2) != (inputStructureDist % 2) && (int)(solutions[i].real() * pow(10, PRECISION)) > 0) {
-        printf("Warning: non-zero entry at (%d,\t%d):\t", i / rowLength, i % rowLength);
-        printf(precisionFormat, solutions[i].real());
-        printf("\n");
-      }
-    }
+    // for (i = 0; i < runLength; ++i) {
+    //   // If the parity of (i + j) doesn't equal bp_dist(S_a, S_b) and p_{i, j} > 0, we have a problem (by the triangle inequality)
+    //   if ((((i / rowLength) + (i % rowLength)) % 2) != (inputStructureDist % 2) && (int)(solutions[i].real() * pow(10, PRECISION)) > 0) {
+    //     printf("Warning: non-zero entry at (%d,\t%d):\t", i / rowLength, i % rowLength);
+    //     printf(precisionFormat, solutions[i].real());
+    //     printf("\n");
+    //   }
+    // }
     
     printf("Scaling factor: %.15f\n", scalingFactor);
     std::cout << "Sum: " << sum << std::endl << std::endl;

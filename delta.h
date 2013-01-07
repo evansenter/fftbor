@@ -20,6 +20,6 @@ int    jPairedIn(int, int, int *);
 void   populateRemainingRoots(dcomplex *, int, int);
 void   populateMatrices(dcomplex **, dcomplex **, dcomplex **, dcomplex **, dcomplex *, dcomplex *, int, int);
 void   flushMatrices(dcomplex **, dcomplex **, dcomplex **, dcomplex **, int);
-void   evaluateZ(int, dcomplex **, dcomplex **, dcomplex **, dcomplex **, dcomplex *, dcomplex *, char *, char *, int *, int **, int **, int ***, int, int, int, double);
+void   evaluateZ(int, dcomplex **, dcomplex **, dcomplex **, dcomplex **, dcomplex *, dcomplex *, char *, char *, int *, int **, int **, int ***, int, int, int, int, double);
 
 #endif
