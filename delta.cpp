@@ -75,8 +75,8 @@ void neighbors(char *inputSequence, int **bpList) {
   
   // Note: rowLength = (least even number >= sequenceLength) + 1 (for a seq. of length 9 rowLength = (0..10).length = 11)
   rowLength = (sequenceLength % 2 ? sequenceLength + 1 : sequenceLength) + 1;
-  // Note: runLength = (least number div. 4 >= (rowLength ^ 2 + 1)) / 2 (for a seq. of length 9 runLength = ((11 ^ 2 + 1) + 2) / 2 = 62)
-  runLength = ((pow(rowLength, 2) + 1) + (int)(pow(rowLength, 2) + 1) % 4) / 2;
+  // Note: runLength = least number div. 4 >= (rowLength ^ 2 + 1) (for a seq. of length 9 runLength = (11 ^ 2 + 1) + 2 = 124)
+  runLength = ((pow(rowLength, 2) + 1) + (int)(pow(rowLength, 2) + 1) % 4);
   
   dcomplex **Z            = new dcomplex*[sequenceLength + 1];
   dcomplex **ZB           = new dcomplex*[sequenceLength + 1];
@@ -99,8 +99,8 @@ void neighbors(char *inputSequence, int **bpList) {
   }
   
   // Start main recursions.
-  for (root = 0; root <= runLength / 2; ++root) {
-    evaluateZ(root, Z, ZB, ZM, ZM1, solutions, rootsOfUnity, inputSequence, sequence, intSequence, bpList, canBasePair, numBasePairs, inputStructureDist, sequenceLength, rowLength, runLength, RT);
+  for (root = 0; root <= runLength / 4; ++root) {
+    evaluateZ(2 * root, Z, ZB, ZM, ZM1, solutions, rootsOfUnity, inputSequence, sequence, intSequence, bpList, canBasePair, numBasePairs, inputStructureDist, sequenceLength, rowLength, runLength, RT);
   }
   
   if (FFTBOR_DEBUG) {
@@ -113,12 +113,7 @@ void neighbors(char *inputSequence, int **bpList) {
   
   if (inputStructureDist % 2) {
     // Odd case.
-    for (root = 0; root < runLength; ++root) {
-      std::cout << rootsOfUnity[root] << std::endl;
-      std::cout << rootsOfUnity[(runLength - root) % runLength] << std::endl;
-      std::cout << solutions[root] << std::endl;
-      std::cout << rootsOfUnity[(runLength - root) % runLength] * solutions[root] << std::endl << std::endl;
-      
+    for (root = 0; root < runLength; ++root) {      
       solutions[root] = rootsOfUnity[(runLength - root) % runLength] * solutions[root];
     }
   }
@@ -357,29 +352,29 @@ void solveSystem(dcomplex *solutions, char *sequence, int **structure, int seque
     }
   }
   
-  fftw_complex signal[runLength];
-  fftw_complex result[runLength];
+  fftw_complex signal[runLength / 2];
+  fftw_complex result[runLength / 2];
   
-  fftw_plan plan = fftw_plan_dft_1d(runLength, signal, result, FFTW_FORWARD, FFTW_ESTIMATE);
+  fftw_plan plan = fftw_plan_dft_1d(runLength / 2, signal, result, FFTW_BACKWARD, FFTW_ESTIMATE);
   sum            = 0;
   scalingFactor  = solutions[0].real();
   
   // For some reason it's much more numerically stable to set the signal via real / imag components separately.
-  for (i = 0; i < runLength; ++i) {
+  for (i = 0; i < runLength / 2; ++i) {
     // Convert point-value solutions of Z(root) to 10^PRECISION * Z(root) / Z
-    signal[i][FFTW_REAL] = (pow(10, PRECISION) * solutions[i].real()) / scalingFactor;
-    signal[i][FFTW_IMAG] = (pow(10, PRECISION) * solutions[i].imag()) / scalingFactor;
+    signal[i][FFTW_REAL] = (pow(10, PRECISION) * solutions[2 * i].real()) / scalingFactor;
+    signal[i][FFTW_IMAG] = (pow(10, PRECISION) * solutions[2 * i].imag()) / scalingFactor;
   }
   
   // Calculate transform, coefficients are in fftw_complex result array.
   fftw_execute(plan);
   
-  for (i = 0; i < runLength; ++i) {
+  for (i = 0; i < runLength / 2; ++i) {
     // Truncate to user-specified precision, default is 4 and if set to 0, no truncation occurs (dangerous).
     if (PRECISION == 0) {
-      solutions[i] = dcomplex(result[i][FFTW_REAL] / runLength, 0);
+      solutions[i] = dcomplex(result[i][FFTW_REAL] / (runLength / 2), 0);
     } else {
-      solutions[i] = dcomplex(pow(10.0, -PRECISION) * static_cast<int>(result[i][FFTW_REAL] / runLength), 0);
+      solutions[i] = dcomplex(pow(10.0, -PRECISION) * static_cast<int>(result[i][FFTW_REAL] / (runLength / 2)), 0);
     }
     
     if (inputStructureDist % 2) {
@@ -394,6 +389,32 @@ void solveSystem(dcomplex *solutions, char *sequence, int **structure, int seque
   }
   
   if (TABLE_HEADERS) {
+    std::cout << "Unspaced table:" << std::endl;
+    std::cout << header << std::endl;
+  }
+  
+  for (i = 0; i < solutionLength; ++i) {
+    if (TABLE_HEADERS) {
+      if (!i) {
+        printf("0");
+      } else if (!(i % rowLength)) {
+        printf("\n%d", i / rowLength);
+      }
+    } else if (!(i % rowLength)) {
+      printf("\n");
+    }
+    
+    if (i < runLength / 2) {
+      printf(precisionFormat, solutions[i].real());
+    } else {
+      printf(precisionFormat, 0);
+    }
+  }
+      
+  printf("\n\n");
+  
+  if (TABLE_HEADERS) {
+    std::cout << "Spaced table:" << std::endl;
     std::cout << header << std::endl;
   }
   
@@ -414,14 +435,14 @@ void solveSystem(dcomplex *solutions, char *sequence, int **structure, int seque
   printf("\n\n");
   
   if (FFTBOR_DEBUG) {
-    // for (i = 0; i < runLength; ++i) {
-    //   // If the parity of (i + j) doesn't equal bp_dist(S_a, S_b) and p_{i, j} > 0, we have a problem (by the triangle inequality)
-    //   if ((((i / rowLength) + (i % rowLength)) % 2) != (inputStructureDist % 2) && (int)(solutions[i].real() * pow(10, PRECISION)) > 0) {
-    //     printf("Warning: non-zero entry at (%d,\t%d):\t", i / rowLength, i % rowLength);
-    //     printf(precisionFormat, solutions[i].real());
-    //     printf("\n");
-    //   }
-    // }
+    for (i = 0; i < solutionLength; ++i) {
+      // If the parity of (i + j) doesn't equal bp_dist(S_a, S_b) and p_{i, j} > 0, we have a problem (by the triangle inequality)
+      if ((((i / rowLength) + (i % rowLength)) % 2) != (inputStructureDist % 2) && (int)(probabilities[i] * pow(10, PRECISION)) > 0) {
+        printf("Warning: non-zero entry at (%d,\t%d):\t", i / rowLength, i % rowLength);
+        printf(precisionFormat, probabilities[i]);
+        printf("\n");
+      }
+    }
     
     printf("Scaling factor: %.15f\n", scalingFactor);
     std::cout << "Sum: " << sum << std::endl << std::endl;
@@ -468,7 +489,7 @@ void populateMatrices(dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1
   }
   
   for (i = 0; i < runLength; ++i) {
-    rootsOfUnity[i] = dcomplex(cos(2 * M_PI * i / runLength), sin(2 * M_PI * i / runLength));
+    rootsOfUnity[i] = dcomplex(cos(-2 * M_PI * i / runLength), sin(-2 * M_PI * i / runLength));
   }
 }
 
