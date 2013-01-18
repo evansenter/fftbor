@@ -18,13 +18,15 @@
 #define ONE_C dcomplex(1.0, 0.0)
 #define FFTW_REAL 0
 #define FFTW_IMAG 1
-#define DELTA2D(expression1, expression2, n) (((expression1) * (n)) + (expression2))
-#define ROOT_POW(i, pow, n) (rootsOfUnity[(i * pow) % n])
+#define COMPLEX_CONJ(complexNumber) (dcomplex((complexNumber).real(), -(complexNumber).imag()))
+#define DELTA2D(expression1, expression2, n) ((expression1) * (n) + (expression2))
+#define ROOT_POW(i, pow, n) (rootsOfUnity[((i) * (pow)) % (n)])
+#define PRINT_COMPLEX(i, complex) printf("%d: %+f %+fi\n", i, complex[i].real(), complex[i].imag())
 #define FFTBOR_DEBUG 1
 #define ENERGY_DEBUG (0 && !root)
 #define TABLE_HEADERS 1
 
-extern int    PF, N, PRECISION, WINDOW_SIZE, MIN_WINDOW_SIZE;
+extern int    PRECISION;
 extern double temperature;
 extern char   *ENERGY;
 extern paramT *P;
@@ -32,7 +34,7 @@ extern paramT *P;
 extern "C" void read_parameter_file(const char energyfile[]);
 
 void neighbors(char *inputSequence, int **bpList) {
-  int i, root, rowLength, runLength, sequenceLength = strlen(inputSequence), inputStructureDist = 0;
+  int i, root, rowLength, runLength, numRoots, sequenceLength = strlen(inputSequence), inputStructureDist = 0;
   double RT = 0.0019872370936902486 * (temperature + 273.15) * 100; // 0.01 * (kcal K) / mol
 
   char *energyfile    = ENERGY;
@@ -75,55 +77,49 @@ void neighbors(char *inputSequence, int **bpList) {
   
   // Note: rowLength = (least even number >= sequenceLength) + 1 (for a seq. of length 9 rowLength = (0..10).length = 11)
   rowLength = (sequenceLength % 2 ? sequenceLength + 1 : sequenceLength) + 1;
-  // Note: runLength = least number div. 4 >= (rowLength ^ 2 + 1) (for a seq. of length 9 runLength = (11 ^ 2 + 1) + 2 = 124)
-  runLength = ((pow(rowLength, 2) + 1) + (int)(pow(rowLength, 2) + 1) % 4);
+  // Note: runLength = (least number div. 4 >= (rowLength ^ 2 + 1)) / 2 (for a seq. of length 9 runLength = ((11 ^ 2 + 1) + 2) / 2 = 62)
+  runLength = ((pow(rowLength, 2) + 1) + (int)(pow(rowLength, 2) + 1) % 4) / 2;
+  numRoots  = runLength * 2;
   
   dcomplex **Z            = new dcomplex*[sequenceLength + 1];
   dcomplex **ZB           = new dcomplex*[sequenceLength + 1];
   dcomplex **ZM           = new dcomplex*[sequenceLength + 1];
   dcomplex **ZM1          = new dcomplex*[sequenceLength + 1];
   dcomplex *solutions     = new dcomplex[runLength];
-  dcomplex *rootsOfUnity  = new dcomplex[runLength];
+  dcomplex *rootsOfUnity  = new dcomplex[numRoots];
   
-  populateMatrices(Z, ZB, ZM, ZM1, solutions, rootsOfUnity, sequenceLength, runLength);
+  populateMatrices(Z, ZB, ZM, ZM1, solutions, rootsOfUnity, sequenceLength, numRoots);
   
   if (FFTBOR_DEBUG) {
+    printf("sequenceLength:     %d\n", sequenceLength);
     printf("rowLength:          %d\n", rowLength);
     printf("runLength:          %d\n", runLength);
-    printf("sequenceLength:     %d\n", sequenceLength);
+    printf("numRoots:           %d\n", numRoots);
     printf("inputStructureDist: %d\n", inputStructureDist);
     printf("Roots of unity:\n");
-    for (root = 0; root < runLength; ++root) {
-      printf("%d: %+f %+fi\n", root, rootsOfUnity[root].real(), rootsOfUnity[root].imag());
+    for (root = 0; root < numRoots; ++root) {
+      PRINT_COMPLEX(root, rootsOfUnity);
     }
   }
   
   // Start main recursions.
-  for (root = 0; root <= runLength / 4; ++root) {
-    evaluateZ(2 * root, Z, ZB, ZM, ZM1, solutions, rootsOfUnity, inputSequence, sequence, intSequence, bpList, canBasePair, numBasePairs, inputStructureDist, sequenceLength, rowLength, runLength, RT);
+  for (root = 0; root <= runLength / 2; ++root) {
+    evaluateZ(root, Z, ZB, ZM, ZM1, solutions, rootsOfUnity, inputSequence, sequence, intSequence, bpList, canBasePair, numBasePairs, inputStructureDist, sequenceLength, rowLength, numRoots, RT);
   }
   
   if (FFTBOR_DEBUG) {
-    std::cout << std::endl;
-    printf("Number of structures: %.0f\n", Z[sequenceLength][1].real());
+    printf("\nNumber of structures: %.0f\n", Z[sequenceLength][1].real());
   }
 
   // Convert point-value solutions to coefficient form w/ inverse DFT.
-  populateRemainingRoots(solutions, sequenceLength, runLength);
+  populateRemainingRoots(solutions, rootsOfUnity, runLength, inputStructureDist);
   
-  if (inputStructureDist % 2) {
-    // Odd case.
-    for (root = 0; root < runLength; ++root) {      
-      solutions[root] = rootsOfUnity[(runLength - root) % runLength] * solutions[root];
-    }
-  }
-  
-  solveSystem(solutions, sequence, bpList, sequenceLength, rowLength, runLength, inputStructureDist);
+  solveSystem(solutions, rootsOfUnity, sequence, bpList, sequenceLength, rowLength, runLength, inputStructureDist);
   
   free(intSequence);
 }
 
-void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex *solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, int *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int inputStructureDist, int sequenceLength, int rowLength, int runLength, double RT) {
+void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex *solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, int *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int inputStructureDist, int sequenceLength, int rowLength, int numRoots, double RT) {
   int i, j, k, l, d, delta;
   double energy;
   
@@ -148,7 +144,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
           numBasePairs[1][i][j] + jPairedTo(i, j, bpList[1]), 
           rowLength
         );
-        ZB[i][j] += ROOT_POW(root, delta, runLength) * exp(-energy / RT);
+        ZB[i][j] += ROOT_POW(root, delta, numRoots) * exp(-energy / RT);
 
         if (ENERGY_DEBUG) {
           printf("%+f: GetHairpinEnergy(%c (%d), %c (%d)); Delta = %d\n", energy / 100, sequence[i], i, sequence[j], j, delta);
@@ -171,7 +167,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
                 numBasePairs[1][i][j] - numBasePairs[1][k][l] + jPairedTo(i, j, bpList[1]), 
                 rowLength
               );
-              ZB[i][j] += ZB[k][l] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
+              ZB[i][j] += ZB[k][l] * ROOT_POW(root, delta, numRoots) * exp(-energy / RT);
                 
               if (ENERGY_DEBUG) {
                 printf("%+f: GetInteriorStackingAndBulgeEnergy(%c (%d), %c (%d), %c (%d), %c (%d)); Delta = %d\n", energy / 100, sequence[i], i, sequence[j], j, sequence[k], k, sequence[l], l, delta);
@@ -192,7 +188,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
             numBasePairs[1][i][j] - numBasePairs[1][i + 1][k - 1] - numBasePairs[1][k][j - 1] + jPairedTo(i, j, bpList[1]), 
             rowLength
           );
-          ZB[i][j] += ZM[i + 1][k - 1] * ZM1[k][j - 1] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
+          ZB[i][j] += ZM[i + 1][k - 1] * ZM1[k][j - 1] * ROOT_POW(root, delta, numRoots) * exp(-energy / RT);
                  
           if (ENERGY_DEBUG) {
             printf("%+f: MultiloopA + MultiloopB; Delta = %d\n", energy / 100, delta);
@@ -240,7 +236,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
           numBasePairs[1][i][j] - numBasePairs[1][k][j],
           rowLength
         );
-        ZM[i][j] += ZM1[k][j] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
+        ZM[i][j] += ZM1[k][j] * ROOT_POW(root, delta, numRoots) * exp(-energy / RT);
 
         if (ENERGY_DEBUG) {
           printf("%+f: MultiloopC * (%d - %d); Delta = %d\n", energy / 100, k, i, delta);
@@ -258,7 +254,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
             numBasePairs[1][i][j] - numBasePairs[1][i][k - 1] - numBasePairs[1][k][j],
             rowLength
           );
-          ZM[i][j] += ZM[i][k - 1] * ZM1[k][j] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
+          ZM[i][j] += ZM[i][k - 1] * ZM1[k][j] * ROOT_POW(root, delta, numRoots) * exp(-energy / RT);
 
           if (ENERGY_DEBUG) {
             printf("%+f: MultiloopB; Delta = %d\n", energy / 100, delta);
@@ -278,7 +274,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
         jPairedIn(i, j, bpList[1]),
         rowLength
       );
-      Z[i][j] += Z[i][j - 1] * ROOT_POW(root, delta, runLength);
+      Z[i][j] += Z[i][j - 1] * ROOT_POW(root, delta, numRoots);
 
       if (STRUCTURE_COUNT) {
         Z[j][i] += Z[j - 1][i];
@@ -299,7 +295,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
               numBasePairs[1][i][j] - numBasePairs[1][k][j],
               rowLength
             );
-            Z[i][j] += ZB[k][j] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
+            Z[i][j] += ZB[k][j] * ROOT_POW(root, delta, numRoots) * exp(-energy / RT);
 
             if (STRUCTURE_COUNT) {
               Z[j][i] += ZB[j][k];
@@ -310,7 +306,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
               numBasePairs[1][i][j] - numBasePairs[1][i][k - 1] - numBasePairs[1][k][j],
               rowLength
             );
-            Z[i][j] += Z[i][k - 1] * ZB[k][j] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
+            Z[i][j] += Z[i][k - 1] * ZB[k][j] * ROOT_POW(root, delta, numRoots) * exp(-energy / RT);
 
             if (STRUCTURE_COUNT) {
               Z[j][i] += Z[k - 1][i] * ZB[j][k];
@@ -324,16 +320,16 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
   solutions[root] = Z[1][sequenceLength];
 
   if (FFTBOR_DEBUG) {
-    std::cout << root << ' ' << std::flush;
+    std::cout << '.' << std::flush;
   }
 }
 
-void solveSystem(dcomplex *solutions, char *sequence, int **structure, int sequenceLength, int rowLength, int runLength, int inputStructureDist) {
+void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, int **structure, int sequenceLength, int rowLength, int runLength, int inputStructureDist) {
   char precisionFormat[20];
   char header[5 * rowLength]; // This is enough space for sequences up to length 999
   int i, solutionLength = pow(rowLength, 2);
-  double scalingFactor, sum;
   double *probabilities = (double *)xcalloc(solutionLength, sizeof(double));
+  double scalingFactor, sum;
   
   if (TABLE_HEADERS) {
     sprintf(precisionFormat, "\t%%+.0%df", PRECISION ? PRECISION : std::numeric_limits<double>::digits10);
@@ -345,36 +341,37 @@ void solveSystem(dcomplex *solutions, char *sequence, int **structure, int seque
     sprintf(&header[4 * i], "\t%-3d", i);
   }
   
-  if (FFTBOR_DEBUG) {
-    printf("Solutions (after populating remaining roots):\n");
-    for (i = 0; i < runLength; ++i) {
-      printf("%d: %+f %+fi\n", i, solutions[i].real(), solutions[i].imag());
-    }
-  }
+  fftw_complex signal[runLength];
+  fftw_complex result[runLength];
   
-  fftw_complex signal[runLength / 2];
-  fftw_complex result[runLength / 2];
-  
-  fftw_plan plan = fftw_plan_dft_1d(runLength / 2, signal, result, FFTW_BACKWARD, FFTW_ESTIMATE);
+  fftw_plan plan = fftw_plan_dft_1d(runLength, signal, result, FFTW_BACKWARD, FFTW_ESTIMATE);
   sum            = 0;
   scalingFactor  = solutions[0].real();
   
   // For some reason it's much more numerically stable to set the signal via real / imag components separately.
-  for (i = 0; i < runLength / 2; ++i) {
+  for (i = 0; i < runLength; ++i) {
     // Convert point-value solutions of Z(root) to 10^PRECISION * Z(root) / Z
-    signal[i][FFTW_REAL] = (pow(10, PRECISION) * solutions[2 * i].real()) / scalingFactor;
-    signal[i][FFTW_IMAG] = (pow(10, PRECISION) * solutions[2 * i].imag()) / scalingFactor;
+    signal[i][FFTW_REAL] = (pow(10, PRECISION) * solutions[i].real()) / scalingFactor;
+    signal[i][FFTW_IMAG] = (pow(10, PRECISION) * solutions[i].imag()) / scalingFactor;
+  }
+  
+  if (FFTBOR_DEBUG) {    
+    std::cout << "Scaling factor: " << solutions[0] << std::endl;
+    printf("Scaled solutions vector for the inverse DFT:\n");
+    for (i = 0; i < runLength; ++i) {
+      printf("%d: %+f %+fi\n", i, signal[i][FFTW_REAL], signal[i][FFTW_IMAG]);
+    }
   }
   
   // Calculate transform, coefficients are in fftw_complex result array.
   fftw_execute(plan);
   
-  for (i = 0; i < runLength / 2; ++i) {
+  for (i = 0; i < runLength; ++i) {
     // Truncate to user-specified precision, default is 4 and if set to 0, no truncation occurs (dangerous).
-    if (PRECISION == 0) {
-      solutions[i] = dcomplex(result[i][FFTW_REAL] / (runLength / 2), 0);
+    if (!PRECISION) {
+      solutions[i] = dcomplex(result[i][FFTW_REAL] / runLength, 0);
     } else {
-      solutions[i] = dcomplex(pow(10.0, -PRECISION) * static_cast<int>(result[i][FFTW_REAL] / (runLength / 2)), 0);
+      solutions[i] = dcomplex(pow(10.0, -PRECISION) * static_cast<int>(result[i][FFTW_REAL] / runLength), 0);
     }
     
     if (inputStructureDist % 2) {
@@ -388,14 +385,11 @@ void solveSystem(dcomplex *solutions, char *sequence, int **structure, int seque
     sum += solutions[i].real();
   }
   
-  if (TABLE_HEADERS) {
-    std::cout << "Unspaced table:" << std::endl;
-    std::cout << header << std::endl;
-  }
-  
   for (i = 0; i < solutionLength; ++i) {
     if (TABLE_HEADERS) {
       if (!i) {
+        std::cout << "Unspaced table:" << std::endl;
+        std::cout << header << std::endl;
         printf("0");
       } else if (!(i % rowLength)) {
         printf("\n%d", i / rowLength);
@@ -404,13 +398,13 @@ void solveSystem(dcomplex *solutions, char *sequence, int **structure, int seque
       printf("\n");
     }
     
-    if (i < runLength / 2) {
+    if (i < runLength) {
       printf(precisionFormat, solutions[i].real());
     } else {
       printf(precisionFormat, 0);
     }
   }
-      
+  
   printf("\n\n");
   
   if (TABLE_HEADERS) {
@@ -431,20 +425,9 @@ void solveSystem(dcomplex *solutions, char *sequence, int **structure, int seque
     
     printf(precisionFormat, probabilities[i]);
   }
-      
-  printf("\n\n");
   
   if (FFTBOR_DEBUG) {
-    for (i = 0; i < solutionLength; ++i) {
-      // If the parity of (i + j) doesn't equal bp_dist(S_a, S_b) and p_{i, j} > 0, we have a problem (by the triangle inequality)
-      if ((((i / rowLength) + (i % rowLength)) % 2) != (inputStructureDist % 2) && (int)(probabilities[i] * pow(10, PRECISION)) > 0) {
-        printf("Warning: non-zero entry at (%d,\t%d):\t", i / rowLength, i % rowLength);
-        printf(precisionFormat, probabilities[i]);
-        printf("\n");
-      }
-    }
-    
-    printf("Scaling factor: %.15f\n", scalingFactor);
+    printf("\n\nScaling factor: %.15f\n", scalingFactor);
     std::cout << "Sum: " << sum << std::endl << std::endl;
   }
   
@@ -459,26 +442,44 @@ int jPairedIn(int i, int j, int *basePairs) {
   return basePairs[j] >= i && basePairs[j] < j ? 1 : 0;
 }
 
-void populateRemainingRoots(dcomplex *solutions, int sequenceLength, int runLength) {
+void populateRemainingRoots(dcomplex *solutions, dcomplex *rootsOfUnity, int runLength, int inputStructureDist) {
   // Optimization leveraging complex conjugate of solutions to the polynomial.
-  int i, l = runLength / 2 - 1, r = runLength / 2 + 1;
+  int i;
   
-  if (FFTBOR_DEBUG) {
-    printf("runLength: %d, runLength %% 2: %d\n\n", runLength, runLength % 2);
-    
+  if (FFTBOR_DEBUG) {    
     printf("Solutions (before populating remaining roots):\n");
     for (i = 0; i < runLength; ++i) {
-      printf("%d: %+f %+fi\n", i, solutions[i].real(), solutions[i].imag());
+      PRINT_COMPLEX(i, solutions);
     }
   }
   
-  for (i = 0; i < runLength / 2 && l - i >= 0 && r + i < runLength; ++i) {
-    printf("i: %d, l: %d, r %d\n", i, l - i, r + i);
-    solutions[r + i] = dcomplex(solutions[l - i].real(), -solutions[l - i].imag());
+  for (i = runLength / 2 + 1; i < runLength; ++i) {
+    printf("l: %d, r %d\n", i, runLength - i);
+    solutions[i] = COMPLEX_CONJ(solutions[runLength - i]);
+  }
+  
+  if (FFTBOR_DEBUG) {    
+    printf("Solutions (after populating remaining roots):\n");
+    for (i = 0; i < runLength; ++i) {
+      PRINT_COMPLEX(i, solutions);
+    }
+  }
+  
+  if (inputStructureDist % 2) {
+    for (i = 0; i < runLength; ++i) {
+      solutions[i] = COMPLEX_CONJ(rootsOfUnity[i]) * solutions[i];
+    }
+    
+    if (FFTBOR_DEBUG) {
+      printf("Solutions (after multiplying solutions by nu^-k):\n");
+      for (i = 0; i < runLength; ++i) {
+        PRINT_COMPLEX(i, solutions);
+      }
+    }
   }
 }
 
-void populateMatrices(dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex *solutions, dcomplex *rootsOfUnity, int sequenceLength, int runLength) {
+void populateMatrices(dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex *solutions, dcomplex *rootsOfUnity, int sequenceLength, int numRoots) {
   int i;
   
   for (i = 0; i <= sequenceLength; ++i) {
@@ -488,8 +489,8 @@ void populateMatrices(dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1
     ZM1[i] = new dcomplex[sequenceLength + 1];
   }
   
-  for (i = 0; i < runLength; ++i) {
-    rootsOfUnity[i] = dcomplex(cos(-2 * M_PI * i / runLength), sin(-2 * M_PI * i / runLength));
+  for (i = 0; i < numRoots; ++i) {
+    rootsOfUnity[i] = dcomplex(cos(-2 * M_PI * i / numRoots), sin(-2 * M_PI * i / numRoots));
   }
 }
 
