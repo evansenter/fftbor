@@ -388,33 +388,7 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
   for (i = 0; i < solutionLength; ++i) {
     if (TABLE_HEADERS) {
       if (!i) {
-        std::cout << "Unspaced table:" << std::endl;
         std::cout << header << std::endl;
-        printf("0");
-      } else if (!(i % rowLength)) {
-        printf("\n%d", i / rowLength);
-      }
-    } else if (!(i % rowLength)) {
-      printf("\n");
-    }
-    
-    if (i < runLength) {
-      printf(precisionFormat, solutions[i].real());
-    } else {
-      printf(precisionFormat, 0);
-    }
-  }
-  
-  printf("\n\n");
-  
-  if (TABLE_HEADERS) {
-    std::cout << "Spaced table:" << std::endl;
-    std::cout << header << std::endl;
-  }
-  
-  for (i = 0; i < solutionLength; ++i) {
-    if (TABLE_HEADERS) {
-      if (!i) {
         printf("0");
       } else if (!(i % rowLength)) {
         printf("\n%d", i / rowLength);
@@ -470,8 +444,12 @@ void populateRemainingRoots(dcomplex *solutions, dcomplex *rootsOfUnity, int run
       solutions[i] = COMPLEX_CONJ(rootsOfUnity[i]) * solutions[i];
     }
     
+    for (i = 0; i < runLength / 2; ++i) {
+      solutions[runLength - i] = dcomplex(-1, 0) * solutions[runLength - i];
+    }
+    
     if (FFTBOR_DEBUG) {
-      printf("Solutions (after multiplying solutions by nu^-k):\n");
+      printf("Solutions (after multiplying solutions by nu^{-k} (and the scalar -1 for solutions y_{k: k > M_{0} / 2})):\n");
       for (i = 0; i < runLength; ++i) {
         PRINT_COMPLEX(i, solutions);
       }
