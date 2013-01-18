@@ -22,9 +22,9 @@
 #define DELTA2D(expression1, expression2, n) ((expression1) * (n) + (expression2))
 #define ROOT_POW(i, pow, n) (rootsOfUnity[((i) * (pow)) % (n)])
 #define PRINT_COMPLEX(i, complex) printf("%d: %+f %+fi\n", i, complex[i].real(), complex[i].imag())
-#define FFTBOR_DEBUG 1
+#define FFTBOR_DEBUG 0
 #define ENERGY_DEBUG (0 && !root)
-#define TABLE_HEADERS 1
+#define TABLE_HEADERS 0
 
 extern int    PRECISION;
 extern double temperature;
@@ -400,8 +400,10 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
     printf(precisionFormat, probabilities[i]);
   }
   
+  printf("\n");
+  
   if (FFTBOR_DEBUG) {
-    printf("\n\nScaling factor: %.15f\n", scalingFactor);
+    printf("\nScaling factor: %.15f\n", scalingFactor);
     std::cout << "Sum: " << sum << std::endl << std::endl;
   }
   
@@ -428,7 +430,9 @@ void populateRemainingRoots(dcomplex *solutions, dcomplex *rootsOfUnity, int run
   }
   
   for (i = runLength / 2 + 1; i < runLength; ++i) {
-    printf("l: %d, r %d\n", i, runLength - i);
+    if (FFTBOR_DEBUG) {
+      printf("l: %d, r %d\n", i, runLength - i);
+    }
     solutions[i] = COMPLEX_CONJ(solutions[runLength - i]);
   }
   
