@@ -22,7 +22,7 @@
 #define DELTA2D(expression1, expression2, n) ((expression1) * (n) + (expression2))
 #define ROOT_POW(i, pow, n) (rootsOfUnity[((i) * (pow)) % (n)])
 #define PRINT_COMPLEX(i, complex) printf("%d: %+f %+fi\n", i, complex[i].real(), complex[i].imag())
-#define FFTBOR_DEBUG 0
+#define FFTBOR_DEBUG 1
 #define ENERGY_DEBUG (0 && !root)
 #define TABLE_HEADERS 0
 
@@ -448,8 +448,8 @@ void populateRemainingRoots(dcomplex *solutions, dcomplex *rootsOfUnity, int run
       solutions[i] = COMPLEX_CONJ(rootsOfUnity[i]) * solutions[i];
     }
     
-    for (i = 0; i < runLength / 2; ++i) {
-      solutions[runLength - i] = dcomplex(-1, 0) * solutions[runLength - i];
+    for (i = runLength / 2 + 1; i <= runLength; ++i) {
+      // solutions[i] = dcomplex(-1, 0) * solutions[i];
     }
     
     if (FFTBOR_DEBUG) {
