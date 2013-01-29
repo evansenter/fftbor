@@ -449,7 +449,7 @@ void populateRemainingRoots(dcomplex *solutions, dcomplex *rootsOfUnity, int run
     }
     
     for (i = runLength / 2 + 1; i <= runLength; ++i) {
-      // solutions[i] = dcomplex(-1, 0) * solutions[i];
+      solutions[i] = dcomplex(-1, 0) * solutions[i];
     }
     
     if (FFTBOR_DEBUG) {
