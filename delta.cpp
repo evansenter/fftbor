@@ -22,7 +22,7 @@
 #define DELTA2D(expression1, expression2, n) ((expression1) * (n) + (expression2))
 #define ROOT_POW(i, pow, n) (rootsOfUnity[((i) * (pow)) % (n)])
 #define PRINT_COMPLEX(i, complex) printf("%d: %+f %+fi\n", i, complex[i].real(), complex[i].imag())
-#define FFTBOR_DEBUG 1
+#define FFTBOR_DEBUG 0
 #define ENERGY_DEBUG (0 && !root)
 #define TABLE_HEADERS 0
 
