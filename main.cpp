@@ -6,8 +6,11 @@
 #include "delta.h"
 #include "misc.h"
 #include <iostream>
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
-int           PF, N, PRECISION;
+int           PF, N, PRECISION, MAXTHREADS;
 extern double temperature;
 char          *ENERGY;
 paramT        *P;
@@ -58,7 +61,8 @@ void read_input(int argc, char *argv[], char **maina, int **bps) {
   char line[MAX_SEQ_LENGTH];
   int i, k;
   char *seq = NULL, *str1 = NULL, *str2 = NULL;
-  
+ 
+  MAXTHREADS	  = 2; 
   PF        = 0;
   PRECISION = 4;
   ENERGY    = (char *)"energy.par";
@@ -197,9 +201,13 @@ void read_input(int argc, char *argv[], char **maina, int **bps) {
   
   /* Print sequence length, sequence and starting structure */
   printf("%d %s %s %s\n", N, seq, str1, str2);
+#ifdef _OPENMP
+  printf("setting number of threads = %d\n",MAXTHREADS);
+  omp_set_num_threads(MAXTHREADS); 
+#endif
 
   bps[0] = getBasePairList(str1);
   bps[1] = getBasePairList(str2);
-  free(str1);
-  free(str2);
+  // free(str1);
+  // free(str2);
 } 

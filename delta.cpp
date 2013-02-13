@@ -10,6 +10,10 @@
 #include "energy_par.h"
 #include <iostream>
 #include <limits>
+using namespace std;
+#ifdef _OPENMP
+  #include <omp.h>
+#endif
 
 #define STRUCTURE_COUNT 1
 #define MIN_PAIR_DIST 3
@@ -26,7 +30,7 @@
 #define ENERGY_DEBUG (0 && !root)
 #define TABLE_HEADERS 0
 
-extern int    PRECISION;
+extern int    PRECISION, MAXTHREADS;
 extern double temperature;
 extern char   *ENERGY;
 extern paramT *P;
@@ -78,17 +82,31 @@ void neighbors(char *inputSequence, int **bpList) {
   // Note: rowLength = (least even number >= sequenceLength) + 1 (for a seq. of length 9 rowLength = (0..10).length = 11)
   rowLength = (sequenceLength % 2 ? sequenceLength + 1 : sequenceLength) + 1;
   // Note: runLength = (least number div. 4 >= (rowLength ^ 2 + 1)) / 2 (for a seq. of length 9 runLength = ((11 ^ 2 + 1) + 2) / 2 = 62)
-  runLength = ((pow(rowLength, 2) + 1) + (int)(pow(rowLength, 2) + 1) % 4) / 2;
+  double drowLength = rowLength;
+
+  runLength = ((pow(drowLength, 2) + 1) + (int)(pow(drowLength, 2) + 1) % 4) / 2;
   numRoots  = runLength * 2;
   
-  dcomplex **Z            = new dcomplex*[sequenceLength + 1];
-  dcomplex **ZB           = new dcomplex*[sequenceLength + 1];
-  dcomplex **ZM           = new dcomplex*[sequenceLength + 1];
-  dcomplex **ZM1          = new dcomplex*[sequenceLength + 1];
+  dcomplex ***Z            = new dcomplex**[MAXTHREADS];//[sequenceLength + 1];
+  dcomplex ***ZB           = new dcomplex**[MAXTHREADS];//[sequenceLength + 1];
+  dcomplex ***ZM           = new dcomplex**[MAXTHREADS];//[sequenceLength + 1];
+  dcomplex ***ZM1          = new dcomplex**[MAXTHREADS];//[sequenceLength + 1];
+
+#pragma omp parallel for  default(shared)
+  for(int tid = 0; tid < MAXTHREADS; tid ++)
+    {
+      Z[tid] = new dcomplex*[sequenceLength+1];
+      ZB[tid] = new dcomplex*[sequenceLength+1];
+      ZM[tid] = new dcomplex*[sequenceLength+1];
+      ZM1[tid] = new dcomplex*[sequenceLength+1];
+      populateZMatrices(Z[tid], ZB[tid], ZM[tid], ZM1[tid], sequenceLength);
+    }
+
+
   dcomplex *solutions     = new dcomplex[runLength];
   dcomplex *rootsOfUnity  = new dcomplex[numRoots];
   
-  populateMatrices(Z, ZB, ZM, ZM1, solutions, rootsOfUnity, sequenceLength, numRoots);
+  populateMatrices(solutions, rootsOfUnity, sequenceLength, numRoots);
   
   if (FFTBOR_DEBUG) {
     printf("sequenceLength:     %d\n", sequenceLength);
@@ -103,13 +121,31 @@ void neighbors(char *inputSequence, int **bpList) {
   }
   
   // Start main recursions.
-  for (root = 0; root <= runLength / 2; ++root) {
+  /*for (root = 0; root <= runLength / 2; ++root) {
     evaluateZ(root, Z, ZB, ZM, ZM1, solutions, rootsOfUnity, inputSequence, sequence, intSequence, bpList, canBasePair, numBasePairs, inputStructureDist, sequenceLength, rowLength, numRoots, RT);
+  }*/
+
+  int maxroot = runLength / 2;
+  int thread_id;
+  // Start main recursions (root <= ceil(runLength / 2.0) is an optimization for roots of unity).
+#pragma omp parallel for ordered private(root,thread_id) shared(Z, ZB, ZM, ZM1, bpList, canBasePair, numBasePairs, inputStructureDist,sequenceLength, runLength, rowLength, numRoots, RT, maxroot, intSequence, sequence, inputSequence, rootsOfUnity, solutions) default(none) num_threads(MAXTHREADS)
+  for (root = 0; root <= maxroot; ++root) {
+#ifdef _OPENMP
+	thread_id = omp_get_thread_num();
+	if(root == maxroot/2)
+	  {
+	    printf( "thread id = %d, number of threads = %d, root=%d\n", thread_id, omp_get_num_threads(), root);
+	  }
+#endif
+#ifndef _OPENMP
+	thread_id = 0;
+#endif
+    evaluateZ(root, Z[thread_id], ZB[thread_id], ZM[thread_id], ZM1[thread_id], solutions, rootsOfUnity, inputSequence, sequence, intSequence, bpList, canBasePair, numBasePairs, inputStructureDist, sequenceLength, rowLength, numRoots, RT);
   }
   
-  if (FFTBOR_DEBUG) {
-    printf("\nNumber of structures: %.0f\n", Z[sequenceLength][1].real());
-  }
+  //if (FFTBOR_DEBUG) {
+  //  printf("\nNumber of structures: %.0f\n", Z[sequenceLength][1].real());
+  //}
 
   // Convert point-value solutions to coefficient form w/ inverse DFT.
   populateRemainingRoots(solutions, rootsOfUnity, runLength, inputStructureDist);
@@ -122,7 +158,13 @@ void neighbors(char *inputSequence, int **bpList) {
 void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex *solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, int *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int inputStructureDist, int sequenceLength, int rowLength, int numRoots, double RT) {
   int i, j, k, l, d, delta;
   double energy;
-  
+  if(Z==NULL || ZB==NULL || ZM == NULL)
+  {
+#ifdef _OPENMP
+	int thread_id = omp_get_thread_num();
+	cout << "something is NULL for tid = "<< thread_id << endl;
+#endif
+  }
   flushMatrices(Z, ZB, ZM, ZM1, sequenceLength);
     
   if (ENERGY_DEBUG) {
@@ -327,7 +369,8 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
 void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, int **structure, int sequenceLength, int rowLength, int runLength, int inputStructureDist) {
   char precisionFormat[20];
   char header[5 * rowLength]; // This is enough space for sequences up to length 999
-  int i, solutionLength = pow(rowLength, 2);
+  double drowLength = rowLength;
+  int i, solutionLength = pow(drowLength, 2);
   double *probabilities = (double *)xcalloc(solutionLength, sizeof(double));
   double scalingFactor, sum;
   
@@ -351,8 +394,8 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
   // For some reason it's much more numerically stable to set the signal via real / imag components separately.
   for (i = 0; i < runLength; ++i) {
     // Convert point-value solutions of Z(root) to 10^PRECISION * Z(root) / Z
-    signal[i][FFTW_REAL] = (pow(10, PRECISION) * solutions[i].real()) / scalingFactor;
-    signal[i][FFTW_IMAG] = (pow(10, PRECISION) * solutions[i].imag()) / scalingFactor;
+    signal[i][FFTW_REAL] = (pow(10.0, (double)PRECISION) * solutions[i].real()) / scalingFactor;
+    signal[i][FFTW_IMAG] = (pow(10.0, (double)PRECISION) * solutions[i].imag()) / scalingFactor;
   }
   
   if (FFTBOR_DEBUG) {    
@@ -461,15 +504,18 @@ void populateRemainingRoots(dcomplex *solutions, dcomplex *rootsOfUnity, int run
   }
 }
 
-void populateMatrices(dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex *solutions, dcomplex *rootsOfUnity, int sequenceLength, int numRoots) {
+void populateZMatrices(dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, int sequenceLength){
   int i;
-  
   for (i = 0; i <= sequenceLength; ++i) {
     Z[i]   = new dcomplex[sequenceLength + 1];
     ZB[i]  = new dcomplex[sequenceLength + 1];
     ZM[i]  = new dcomplex[sequenceLength + 1];
     ZM1[i] = new dcomplex[sequenceLength + 1];
   }
+}
+
+void populateMatrices(dcomplex *solutions, dcomplex *rootsOfUnity, int sequenceLength, int numRoots) {
+  int i;
   
   for (i = 0; i < numRoots; ++i) {
     rootsOfUnity[i] = dcomplex(cos(-2 * M_PI * i / numRoots), sin(-2 * M_PI * i / numRoots));
