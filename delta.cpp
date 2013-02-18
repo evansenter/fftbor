@@ -86,9 +86,7 @@ void neighbors(char *inputSequence, int **bpList) {
   // Note: rowLength = (least even number >= sequenceLength) + 1 (for a seq. of length 9 rowLength = (0..10).length = 11)
   rowLength = (sequenceLength % 2 ? sequenceLength + 1 : sequenceLength) + 1;
   // Note: runLength = (least number div. 4 >= (rowLength ^ 2 + 1)) / 2 (for a seq. of length 9 runLength = ((11 ^ 2 + 1) + 2) / 2 = 62)
-  double drowLength = rowLength;
-
-  runLength = ((pow(drowLength, 2) + 1) + (int)(pow(drowLength, 2) + 1) % 4) / 2;
+  runLength = ((pow((double)rowLength, 2) + 1) + (int)(pow((double)rowLength, 2) + 1) % 4) / 2;
   numRoots  = runLength * 2;
   
   dcomplex ***Z   = new dcomplex**[MAXTHREADS];
@@ -382,8 +380,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
 void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, int **structure, int sequenceLength, int rowLength, int runLength, int inputStructureDist) {
   char precisionFormat[20];
   char header[5 * rowLength]; // This is enough space for sequences up to length 999
-  double drowLength = rowLength;
-  int i, solutionLength = pow(drowLength, 2);
+  int i, solutionLength = (int)pow((double)rowLength, 2);
   double *probabilities = (double *)xcalloc(solutionLength, sizeof(double));
   double scalingFactor, sum;
   
