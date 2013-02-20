@@ -78,7 +78,7 @@ void neighbors(char *inputSequence, int **bpList) {
   // Note: rowLength = (least even number >= sequenceLength) + 1 (for a seq. of length 9 rowLength = (0..10).length = 11)
   rowLength = (sequenceLength % 2 ? sequenceLength + 1 : sequenceLength) + 1;
   // Note: runLength = (least number div. 4 >= (rowLength ^ 2 + 1)) / 2 (for a seq. of length 9 runLength = ((11 ^ 2 + 1) + 2) / 2 = 62)
-  runLength = ((pow(rowLength, 2) + 1) + (int)(pow(rowLength, 2) + 1) % 4) / 2;
+  runLength = (((int)pow(rowLength, 2) + 1) + ((int)pow(rowLength, 2) + 1) % 4) / 2;
   numRoots  = runLength * 2;
   
   dcomplex **Z            = new dcomplex*[sequenceLength + 1];
@@ -410,11 +410,11 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
   fftw_destroy_plan(plan);
 }
 
-int jPairedTo(int i, int j, int *basePairs) {
+inline int jPairedTo(int i, int j, int *basePairs) {
   return basePairs[i] == j ? -1 : 1;
 }
 
-int jPairedIn(int i, int j, int *basePairs) {
+inline int jPairedIn(int i, int j, int *basePairs) {
   return basePairs[j] >= i && basePairs[j] < j ? 1 : 0;
 }
 
