@@ -429,7 +429,7 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
       solutions[i] = dcomplex(pow(10.0, -PRECISION) * static_cast<int>(result[i][FFTW_REAL] / runLength), 0);
     }
     
-    probabilities[inputStructureDist % 2 ? 2 * i + 1 : 2 * i] = solutions[i].real() > 0 ? solutions[i].real() : 0;
+    probabilities[inputStructureDist % 2 ? 2 * i + 1 : 2 * i] = solutions[i].real();
         
     sum += solutions[i].real();
   }

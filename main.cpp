@@ -67,7 +67,7 @@ void read_input(int argc, char *argv[], char **maina, int **bps) {
  
   MAXTHREADS    = omp_get_max_threads(); 
   PF            = 0;
-  PRECISION     = 8;
+  PRECISION     = 4;
   ROW_LENGTH    = 0;
   MATRIX_FORMAT = 0; 
   ENERGY        = (char *)"energy.par";
