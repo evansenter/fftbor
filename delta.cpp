@@ -429,14 +429,8 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
       solutions[i] = dcomplex(pow(10.0, -PRECISION) * static_cast<int>(result[i][FFTW_REAL] / runLength), 0);
     }
     
-    if (inputStructureDist % 2) {
-      // Odd case
-      probabilities[2 * i + 1] = solutions[i].real();
-    } else {
-      // Even case
-      probabilities[2 * i] = solutions[i].real();
-    }
-    
+    probabilities[inputStructureDist % 2 ? 2 * i + 1 : 2 * i] = solutions[i].real() > 0 ? solutions[i].real() : 0;
+        
     sum += solutions[i].real();
   }
   
