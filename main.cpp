@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
   free(a);
   free(bps[0]);
   free(bps[1]);
-  free(bps);
+  delete [] bps;
 
   return 0;
 }
