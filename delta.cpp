@@ -179,8 +179,6 @@ void neighbors(char *inputSequence, int **bpList) {
     TIMING(start, stop, "FFT")
     TIMING(fullStart, fullStop, "total")
   #endif
-  
-  free(intSequence);
 }
 
 void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex *solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, int *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int inputStructureDist, int sequenceLength, int rowLength, int numRoots, double RT) {
