@@ -30,6 +30,7 @@ using namespace std;
 // #define SILENCE_OUTPUT 1
 // #define TIMING_DEBUG 1
 // #define FFTBOR_DEBUG 1
+// #define OPENMP_DEBUG 1
 // #define STRUCTURE_COUNT 1
 // #define ENERGY_DEBUG (1 && !root)
 
@@ -102,7 +103,7 @@ void neighbors(char *inputSequence, int **bpList) {
   dcomplex ***ZM  = new dcomplex**[MAXTHREADS];
   dcomplex ***ZM1 = new dcomplex**[MAXTHREADS];
   
-  #if defined(_OPENMP) && defined(FFTBOR_DEBUG)
+  #if defined(_OPENMP) && defined(OPENMP_DEBUG)
     printf("Max threads possible: %d\n", omp_get_max_threads());
     printf("Setting number of threads: %d\n", MAXTHREADS);
   #endif
