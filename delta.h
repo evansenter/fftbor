@@ -13,7 +13,7 @@ void   initializeCanBasePair(int **);
 void   translateToIntSequence(char *, short *);
 void   initializeBasePairCounts(int **, int *, int );
 double hairpinloop(int, int, int, short, short, char *);
-double interiorloop(int, int, int, int, int, int, short, short, short, short, short, short);
+double interiorloop(int, int, int, int, int, int, short, short, short, short);
 void   solveSystem(dcomplex *, dcomplex *, char *, int **, int, int, int, int);
 int    jPairedTo(int, int, int *);
 int    jPairedIn(int, int, int *);

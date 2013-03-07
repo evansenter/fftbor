@@ -264,7 +264,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
             // l needs to at least have room to pair with k, and there can be at most 30 unpaired bases between (i, k) + (l, j), with l < j
             if (canBasePair[intSequence[k]][intSequence[l]]) {
               // In interior loop / bulge / stack with (i, j) and (k, l), (i + 1, k - 1) and (l + 1, j - 1) are all unpaired.
-              energy = interiorloop(i, j, k, l, canBasePair[intSequence[i]][intSequence[j]], canBasePair[intSequence[l]][intSequence[k]], intSequence[i+1], intSequence[l+1], intSequence[j-1], intSequence[k-1],intSequence[i+2],intSequence[l+2]);
+              energy = interiorloop(i, j, k, l, canBasePair[intSequence[i]][intSequence[j]], canBasePair[intSequence[l]][intSequence[k]], intSequence[i + 1], intSequence[l + 1], intSequence[j - 1], intSequence[k - 1]);
               delta  = DELTA2D[numBasePairs[0][i][j] - numBasePairs[0][k][l] + jPairedTo0[i][j]][numBasePairs[1][i][j] - numBasePairs[1][k][l] + jPairedTo1[i][j]];
               
               ZB[i][j] += ZB[k][l] * ROOTPOW[root][delta] * exp(-energy / RT);
@@ -645,7 +645,7 @@ inline double hairpinloop(int i, int j, int bp_type, short iplus1, short jminus1
   return energy;
 }
 
-inline double interiorloop(int i, int j, int k, int l, int bp_type1, int bp_type2, short iplus1, short lplus1, short jminus1, short kminus1, short iplus2, short lplus2) {
+inline double interiorloop(int i, int j, int k, int l, int bp_type1, int bp_type2, short iplus1, short lplus1, short jminus1, short kminus1) {
   double energy;
   int n1,n2;
   /* Interior loop, bulge or stack? */
@@ -665,11 +665,11 @@ inline double interiorloop(int i, int j, int k, int l, int bp_type1, int bp_type
     else if ( (n1==1) && (n2==1) )
       return P->int11[bp_type1][bp_type2][iplus1][jminus1];
     else if ( (n1==2) && (n2==1) )
-      return P->int21[bp_type2][bp_type1][jminus1][iplus1][iplus2];
+      return P->int21[bp_type2][bp_type1][lplus1][iplus1][kminus1];
     else if ( (n1==1) && (n2==2) )
-      return P->int21[bp_type1][bp_type2][iplus1][lplus1][lplus2];
+      return P->int21[bp_type1][bp_type2][iplus1][lplus1][jminus1];
     else //if ( (n1==2) && (n2==2) )
-      return P->int22[bp_type1][bp_type2][iplus1][iplus2][lplus1][lplus2];
+      return P->int22[bp_type1][bp_type2][iplus1][kminus1][lplus1][jminus1];
     
   }else if ( (n1>0) || (n2>0) ) {
     /* Bulge */
