@@ -26,6 +26,8 @@ using namespace std;
 #define ROOT_POW(i, pow, n) (rootsOfUnity[((i) * (pow)) % (n)])
 #define PRINT_COMPLEX(i, complex) printf("%d: %+f %+fi\n", i, complex[i].real(), complex[i].imag())
 #define TIMING(start, stop, task) printf("Time in ms for %s: %.2f\n", task, (double)(((stop.tv_sec * 1000000 + stop.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec)) / 1000.0));
+#define MIN2(A, B)      ((A) < (B) ? (A) : (B))
+#define MAX2(A, B)      ((A) > (B) ? (A) : (B))
 
 // #define SILENCE_OUTPUT 1
 // #define TIMING_DEBUG 1
@@ -125,21 +127,21 @@ void neighbors(char *inputSequence, int **bpList) {
     populateZMatrices(Z[threadId], ZB[threadId], ZM[threadId], ZM1[threadId], sequenceLength);
   }
 
-  dcomplex *solutions    = new dcomplex[runLength];
+  dcomplex *solutions    = new dcomplex[runLength+1];
   dcomplex *rootsOfUnity = new dcomplex[numRoots];
   
   populateMatrices(solutions, rootsOfUnity, sequenceLength, numRoots);
   
   dcomplex **ROOTPOW = new dcomplex*[runLength+1];
   for(i = 0; i <= runLength; i++){
-    ROOTPOW[i] = new dcomplex[rowLength*rowLength];
-    for(int j = 0; j<rowLength*rowLength;j++)
+    ROOTPOW[i] = new dcomplex[(rowLength+1)*sequenceLength+1];
+    for(int j = 0; j<(rowLength+1)*sequenceLength+1;j++)
       ROOTPOW[i][j] = ROOT_POW(i,j,numRoots);
   }
-  int **DELTA2D = new int*[rowLength+1];
-  for(i = 0; i <= rowLength; i++){
-    DELTA2D[i] = new int[rowLength+1];
-    for(int j = 0; j<=rowLength;j++)
+  int **DELTA2D = new int*[sequenceLength+1];
+  for(i = 0; i <= sequenceLength; i++){
+    DELTA2D[i] = new int[sequenceLength+1];
+    for(int j = 0; j<=sequenceLength;j++)
       DELTA2D[i][j] = DELTA_2D(i,j,rowLength);
   } 
   
@@ -205,23 +207,59 @@ void neighbors(char *inputSequence, int **bpList) {
     TIMING(fullStart, fullStop, "total")
   #endif
   
+  //Free memory!!!!!!!!!!!!
+  delete [] sequence;
+  for(i=0;i<2;i++){
+    for(int j=0;j<sequenceLength+1;j++)
+      free(numBasePairs[i][j]);
+    free(numBasePairs[i]);
+  }
+  delete []numBasePairs;
+
+  for(i = 0; i<5;i++)
+    free(canBasePair[i]);
+  free(canBasePair);
+  
   free(intSequence);
 
-  for(i=0;i<=runLength;i++)
-    delete ROOTPOW[i];
+  for (int threadId = 0; threadId < MAXTHREADS; ++threadId) {
+    for(int j=0; j<=sequenceLength;j++){
+       delete [] Z[threadId][j];
+       delete [] ZB[threadId][j];
+       delete [] ZM[threadId][j];
+       delete [] ZM1[threadId][j];
+    }
+    delete [] Z[threadId];//   = new double**[sequenceLength + 1];
+    delete [] ZB[threadId];//  = new double**[sequenceLength + 1];
+    delete [] ZM[threadId];//  = new double**[sequenceLength + 1];
+    delete [] ZM1[threadId];// = new double**[sequenceLength + 1];
+  }
+
+  delete []Z;
+  delete []ZB;
+  delete []ZM;
+  delete []ZM1;
+
+  delete []solutions;
+  delete []rootsOfUnity;
+
+  for(i=0;i<=runLength;i++){
+    delete [] ROOTPOW[i];
+  }
   delete [] ROOTPOW;
 
-  for(i=0;i<=rowLength;i++)
-    delete DELTA2D[i];
+  for(i=0;i<=sequenceLength;i++)
+    delete [] DELTA2D[i];
   delete [] DELTA2D;
 
   for(i=0;i<=sequenceLength;i++){
-    delete jPairedTo0[i];
-    delete jPairedTo1[i];
+    delete [] jPairedTo0[i];
+    delete [] jPairedTo1[i];
   }
 
   delete [] jPairedTo0;
   delete [] jPairedTo1;
+  
 }
 
 void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex *solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, short *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int inputStructureDist, int sequenceLength, int rowLength, int numRoots, double RT, dcomplex **ROOTPOW, int **DELTA2D, int **jPairedTo0, int **jPairedTo1) {
@@ -258,13 +296,13 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
         #endif
 
         // Interior loop / bulge / stack / multiloop.
-        for (k = i + 1; k < min2(i + 30, j - MIN_PAIR_DIST - 2) + 1; ++k) {
+        for (k = i + 1; k < MIN2(i + 30, j - MIN_PAIR_DIST - 2) + 1; ++k) {
           // There can't be more than 30 unpaired bases between i and k, and there must be room between k and j for l
-          for (l = max2(k + MIN_PAIR_DIST + 1, j - (MAX_INTERIOR_DIST - (k - i))); l < j; ++l) { 
+          for (l = MAX2(k + MIN_PAIR_DIST + 1, j - (MAX_INTERIOR_DIST - (k - i))); l < j; ++l) { 
             // l needs to at least have room to pair with k, and there can be at most 30 unpaired bases between (i, k) + (l, j), with l < j
             if (canBasePair[intSequence[k]][intSequence[l]]) {
               // In interior loop / bulge / stack with (i, j) and (k, l), (i + 1, k - 1) and (l + 1, j - 1) are all unpaired.
-              energy = interiorloop(i, j, k, l, canBasePair[intSequence[i]][intSequence[j]], canBasePair[intSequence[l]][intSequence[k]], intSequence[i + 1], intSequence[l + 1], intSequence[j - 1], intSequence[k - 1]);
+              energy = interiorloop(i, j, k, l, canBasePair[intSequence[i]][intSequence[j]], canBasePair[intSequence[l]][intSequence[k]], intSequence[i+1], intSequence[l+1], intSequence[j-1], intSequence[k-1]);
               delta  = DELTA2D[numBasePairs[0][i][j] - numBasePairs[0][k][l] + jPairedTo0[i][j]][numBasePairs[1][i][j] - numBasePairs[1][k][l] + jPairedTo1[i][j]];
               
               ZB[i][j] += ZB[k][l] * ROOTPOW[root][delta] * exp(-energy / RT);
@@ -405,7 +443,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
 void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, int **structure, int sequenceLength, int rowLength, int runLength, int inputStructureDist) {
   char precisionFormat[20];
   int i, solutionLength = (int)pow((double)rowLength, 2);
-  double *probabilities = (double *)xcalloc(solutionLength, sizeof(double));
+  double *probabilities = (double *)xcalloc(2*runLength+1, sizeof(double));
   double scalingFactor, sum;
   
   sprintf(precisionFormat, "%%+.0%df", PRECISION ? PRECISION : std::numeric_limits<double>::digits10);
@@ -477,6 +515,7 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
   #endif
   
   fftw_destroy_plan(plan);
+  free(probabilities);
 }
 
 inline int jPairedTo(int i, int j, int *basePairs) {
@@ -658,7 +697,7 @@ inline double interiorloop(int i, int j, int k, int l, int bp_type1, int bp_type
         (P->internal_loop[30]+(P->lxc*log((n1+n2)/30.))))+
         P->mismatchI[bp_type1][iplus1][jminus1] +
         P->mismatchI[bp_type2][lplus1][kminus1] +
-        min2(MAX_NINIO, abs(n1-n2)*P->F_ninio[2]);
+        MIN2(MAX_NINIO, abs(n1-n2)*P->F_ninio[2]);
     /* Interior loop, special cases for interior loops of 
      * sizes 1+1, 1+2, 2+1, and 2+2. */
     
@@ -693,3 +732,5 @@ inline double interiorloop(int i, int j, int k, int l, int bp_type1, int bp_type
   }
   return energy;
 }
+
+
