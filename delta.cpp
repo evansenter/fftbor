@@ -156,6 +156,35 @@ void neighbors(char *inputSequence, int **bpList) {
       jPairedTo1[i][j] = jPairedTo(i,j,bpList[1]);
     }
   }
+
+  /**** Precalculate Energies **********/
+  double **EH = new double*[sequenceLength+1];
+  double ****EIL = new double***[sequenceLength+1];
+  double **EHM = new double*[sequenceLength+1];
+  double ***EM1 = new double**[sequenceLength+1]; 
+  double **EMA = new double*[sequenceLength+1]; 
+  double **EMB = new double*[sequenceLength+1];
+  double **EZ = new double*[sequenceLength+1];
+  
+  for(i=0;i<=sequenceLength;i++){
+    EIL[i] = new double**[sequenceLength+1];
+    EM1[i] = new double*[sequenceLength+1];
+    EH[i] = new double[sequenceLength+1];
+    EHM[i] = new double[sequenceLength+1];
+    EMA[i] = new double[sequenceLength+1];
+    EMB[i] = new double[sequenceLength+1];
+    EZ[i] = new double[sequenceLength+1];
+    for(int j=0;j<=sequenceLength;j++){
+      EM1[i][j] = new double[sequenceLength+1];
+      EIL[i][j] = new double*[sequenceLength+1];
+      for(int k=0;k<=sequenceLength;k++)
+        EIL[i][j][k] = new double[sequenceLength+1];
+    }
+  }
+  
+  calculateEnergies(inputSequence, sequence, intSequence,bpList,canBasePair, numBasePairs, sequenceLength,RT, ROOTPOW,DELTA2D,jPairedTo0,jPairedTo1,EH,EIL,EHM,EM1,EMA,EMB,EZ);
+  /************************************/
+
   
   #ifdef FFTBOR_DEBUG
     printf("sequenceLength:     %d\n", sequenceLength);
@@ -173,7 +202,7 @@ void neighbors(char *inputSequence, int **bpList) {
   int maxroot = runLength / 2;
   int threadId;
     
-  #pragma omp parallel for private(root, threadId) shared(Z, ZB, ZM, ZM1, bpList, canBasePair, numBasePairs, inputStructureDist, sequenceLength, runLength, rowLength, numRoots, RT, maxroot, intSequence, sequence, inputSequence, rootsOfUnity, solutions, ROOTPOW, DELTA2D, jPairedTo0, jPairedTo1) default(none) num_threads(MAXTHREADS)
+  #pragma omp parallel for private(root, threadId) shared(Z, ZB, ZM, ZM1, bpList, canBasePair, numBasePairs, inputStructureDist, sequenceLength, runLength, rowLength, numRoots, RT, maxroot, intSequence, sequence, inputSequence, rootsOfUnity, solutions, ROOTPOW, DELTA2D, jPairedTo0, jPairedTo1, EH,EIL,EHM,EM1,EMA,EMB,EZ) default(none) num_threads(MAXTHREADS)
   for (root = 0; root <= maxroot; ++root) {
     #ifdef _OPENMP
       threadId = omp_get_thread_num();
@@ -181,7 +210,7 @@ void neighbors(char *inputSequence, int **bpList) {
       threadId = 0;
     #endif
     
-    evaluateZ(root, Z[threadId], ZB[threadId], ZM[threadId], ZM1[threadId], solutions, rootsOfUnity, inputSequence, sequence, intSequence, bpList, canBasePair, numBasePairs, inputStructureDist, sequenceLength, rowLength, numRoots, RT, ROOTPOW, DELTA2D, jPairedTo0, jPairedTo1);
+    evaluateZ(root, Z[threadId], ZB[threadId], ZM[threadId], ZM1[threadId], solutions, rootsOfUnity, inputSequence, sequence, intSequence, bpList, canBasePair, numBasePairs, inputStructureDist, sequenceLength, rowLength, numRoots, RT, ROOTPOW, DELTA2D, jPairedTo0, jPairedTo1,EH,EIL,EHM,EM1,EMA,EMB,EZ);
   }
   
   #ifdef TIMING_DEBUG
@@ -209,6 +238,28 @@ void neighbors(char *inputSequence, int **bpList) {
   #endif
   
   //Free memory!!!!!!!!!!!!
+  for(i=0;i<=sequenceLength;i++){
+    delete [] EH[i];// = new double[sequenceLength];
+    delete [] EHM[i];// = new double[sequenceLength];
+    delete [] EMA[i];// = new double[sequenceLength];
+    delete [] EMB[i];// = new double[sequenceLength];
+    delete [] EZ[i];// = new double[sequenceLength];
+    for(int j=0;j<=sequenceLength;j++){
+      delete  []EM1[i][j];// = new double[sequenceLength];
+      for(int k=0;k<=sequenceLength;k++)
+        delete [] EIL[i][j][k];// = new double[sequenceLength];
+      delete []EIL[i][j];
+    }
+    delete []EM1[i];
+    delete [] EIL[i];
+  }
+  delete [] EH;
+  delete [] EHM;
+  delete [] EMA;
+  delete [] EMB;
+  delete [] EZ;
+  delete [] EIL;
+  delete [] EM1;
   delete [] sequence;
   for(i=0;i<2;i++){
     for(int j=0;j<sequenceLength+1;j++)
@@ -263,7 +314,74 @@ void neighbors(char *inputSequence, int **bpList) {
   
 }
 
-void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex *solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, short *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int inputStructureDist, int sequenceLength, int rowLength, int numRoots, double RT, dcomplex **ROOTPOW, int **DELTA2D, int **jPairedTo0, int **jPairedTo1) {
+void calculateEnergies(char *inputSequence, char *sequence, short *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int sequenceLength, double RT, dcomplex **ROOTPOW, int **DELTA2D, int **jPairedTo0, int **jPairedTo1, double **EH, double ****EIL, double **EHM, double ***EM1, double **EMA, double **EMB, double **EZ) {
+  int i, j, k, l, d, delta;
+  
+  for (d = MIN_PAIR_DIST + 1; d < sequenceLength; ++d) {
+    for (i = 1; i <= sequenceLength - d; ++i) {
+      j = i + d;
+      
+      if (canBasePair[intSequence[i]][intSequence[j]]) {
+        // ****************************************************************************
+        // Solve ZB 
+        // ****************************************************************************
+          // In a hairpin, [i + 1, j - 1] unpaired.
+           EH[i][j]  = exp(-hairpinloop(i, j, canBasePair[intSequence[i]][intSequence[j]], intSequence[i+1], intSequence[j-1], inputSequence)/RT);
+
+        // Interior loop / bulge / stack / multiloop.
+        for (k = i + 1; k < MIN2(i + 30, j - MIN_PAIR_DIST - 2) + 1; ++k) {
+          // There can't be more than 30 unpaired bases between i and k, and there must be room between k and j for l
+          for (l = MAX2(k + MIN_PAIR_DIST + 1, j - (MAX_INTERIOR_DIST - (k - i))); l < j; ++l) { 
+            // l needs to at least have room to pair with k, and there can be at most 30 unpaired bases between (i, k) + (l, j), with l < j
+            if (canBasePair[intSequence[k]][intSequence[l]]) {
+                // In interior loop / bulge / stack with (i, j) and (k, l), (i + 1, k - 1) and (l + 1, j - 1) are all unpaired.
+                EIL[i][j][k][l] = exp(-interiorloop(i, j, k, l, canBasePair[intSequence[i]][intSequence[j]], canBasePair[intSequence[l]][intSequence[k]], intSequence[i+1], intSequence[l+1], intSequence[j-1], intSequence[k-1])/RT);      
+            }
+          }
+        }
+        
+        // If (i, j) is the closing b.p. of a multiloop, and (k, l) is the rightmost base pair, there is at least one hairpin between (i + 1, k - 1)
+        EHM[i][j] = exp(-(P->MLclosing + P->MLintern[canBasePair[intSequence[i]][intSequence[j]]])/RT);
+      }
+      
+      // ****************************************************************************
+      // Solve ZM1
+      // ****************************************************************************
+      for (k = i + MIN_PAIR_DIST + 1; k <= j; ++k) {
+        // k is the closing base pairing with i of a single component within the range [i, j]
+        if (canBasePair[intSequence[i]][intSequence[k]]) {
+            EM1[i][j][k] = exp(-(P->MLbase * (j - k) + P->MLintern[canBasePair[intSequence[i]][intSequence[k]]])/RT);
+        }
+      }
+        
+      // ****************************************************************************
+      // Solve ZM
+      // ****************************************************************************
+      for (k = i; k < j - MIN_PAIR_DIST; ++k) {
+          // Only one stem.
+          EMA[i][k] = exp(-(P->MLbase * (k - i))/RT);
+        
+        // More than one stem.
+        if (k > i + MIN_PAIR_DIST + 1) { // (k > i + MIN_PAIR_DIST + 1) because i can pair with k - 1
+            EMB[j][k] = exp(-(P->MLintern[canBasePair[intSequence[k]][intSequence[j]]])/RT);
+        }
+      }
+        
+      // **************************************************************************
+      // Solve Z
+      // **************************************************************************
+      for (k = i; k < j - MIN_PAIR_DIST; ++k) { 
+        // (k, j) is the rightmost base pair in (i, j)
+        if (canBasePair[intSequence[k]][intSequence[j]]) {
+            EZ[j][k] = exp(-(canBasePair[intSequence[k]][intSequence[j]] > 2 ? TerminalAU : 0)/RT);
+
+        }
+      }
+    }
+  } 
+}
+
+void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex *solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, short *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int inputStructureDist, int sequenceLength, int rowLength, int numRoots, double RT, dcomplex **ROOTPOW, int **DELTA2D, int **jPairedTo0, int **jPairedTo1,double **EH, double ****EIL, double **EHM, double ***EM1, double **EMA, double **EMB, double **EZ) {
   int i, j, k, l, d, delta;
   double energy;
   
@@ -283,11 +401,10 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
         // ****************************************************************************
         #ifdef DO_WORK
           // In a hairpin, [i + 1, j - 1] unpaired.
-          energy = hairpinloop(i, j, canBasePair[intSequence[i]][intSequence[j]], intSequence[i+1], intSequence[j-1], inputSequence);
           delta  = DELTA2D[numBasePairs[0][i][j] + jPairedTo0[i][j]][numBasePairs[1][i][j] + jPairedTo1[i][j]];
           
       
-          ZB[i][j] += ROOTPOW[root][delta] * exp(-energy / RT);
+          ZB[i][j] += ROOTPOW[root][delta] * EH[i][j];//exp(-energy / RT);
 
           #ifdef ENERGY_DEBUG
             printf("%+f: GetHairpinEnergy(%c (%d), %c (%d)); Delta = %d\n", energy / 100, sequence[i], i, sequence[j], j, delta);
@@ -307,10 +424,9 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
             if (canBasePair[intSequence[k]][intSequence[l]]) {
               #ifdef DO_WORK
                 // In interior loop / bulge / stack with (i, j) and (k, l), (i + 1, k - 1) and (l + 1, j - 1) are all unpaired.
-                energy = interiorloop(i, j, k, l, canBasePair[intSequence[i]][intSequence[j]], canBasePair[intSequence[l]][intSequence[k]], intSequence[i+1], intSequence[l+1], intSequence[j-1], intSequence[k-1]);
                 delta  = DELTA2D[numBasePairs[0][i][j] - numBasePairs[0][k][l] + jPairedTo0[i][j]][numBasePairs[1][i][j] - numBasePairs[1][k][l] + jPairedTo1[i][j]];
               
-                ZB[i][j] += ZB[k][l] * ROOTPOW[root][delta] * exp(-energy / RT);
+                ZB[i][j] += ZB[k][l] * ROOTPOW[root][delta] * EIL[i][j][k][l];//exp(-energy / RT);
                 
                 #ifdef ENERGY_DEBUG
                   printf("%+f: GetInteriorStackingAndBulgeEnergy(%c (%d), %c (%d), %c (%d), %c (%d)); Delta = %d\n", energy / 100, sequence[i], i, sequence[j], j, sequence[k], k, sequence[l], l, delta);
@@ -323,14 +439,13 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
             }
           }
         }
-        
+        energy = EHM[i][j];
         for (k = i + MIN_PAIR_DIST + 3; k < j - MIN_PAIR_DIST - 1; ++k) {
           #ifdef DO_WORK
             // If (i, j) is the closing b.p. of a multiloop, and (k, l) is the rightmost base pair, there is at least one hairpin between (i + 1, k - 1)
-            energy = P->MLclosing + P->MLintern[canBasePair[intSequence[i]][intSequence[j]]];
             delta  = DELTA2D[numBasePairs[0][i][j] - numBasePairs[0][i + 1][k - 1] - numBasePairs[0][k][j - 1] + jPairedTo0[i][j]][numBasePairs[1][i][j] - numBasePairs[1][i + 1][k - 1] - numBasePairs[1][k][j - 1] + jPairedTo1[i][j]];
          
-            ZB[i][j] += ZM[i + 1][k - 1] * ZM1[k][j - 1] * ROOTPOW[root][delta] * exp(-energy / RT);
+            ZB[i][j] += ZM[i + 1][k - 1] * ZM1[k][j - 1] * ROOTPOW[root][delta] * energy;//exp(-energy / RT);
                  
             #ifdef ENERGY_DEBUG
               printf("%+f: MultiloopA + MultiloopB; Delta = %d\n", energy / 100, delta);
@@ -350,10 +465,9 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
         // k is the closing base pairing with i of a single component within the range [i, j]
         if (canBasePair[intSequence[i]][intSequence[k]]) {
           #ifdef DO_WORK
-            energy = P->MLbase * (j - k) + P->MLintern[canBasePair[intSequence[i]][intSequence[k]]];
             delta  = DELTA2D[numBasePairs[0][i][j] - numBasePairs[0][i][k]][numBasePairs[1][i][j] - numBasePairs[1][i][k]];
           
-            ZM1[i][j] += ZB[i][k] * exp(-energy / RT);
+            ZM1[i][j] += ZB[i][k] * EM1[i][j][k];//exp(-energy / RT);
           
             #ifdef ENERGY_DEBUG
               printf("%+f: MultiloopB + MultiloopC * (%d - %d); Delta = %d\n", energy / 100, j, k, delta);
@@ -372,10 +486,9 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
       for (k = i; k < j - MIN_PAIR_DIST; ++k) {
         #ifdef DO_WORK
           // Only one stem.
-          energy = P->MLbase * (k - i);
           delta  = DELTA2D[numBasePairs[0][i][j] - numBasePairs[0][k][j]][numBasePairs[1][i][j] - numBasePairs[1][k][j]];
         
-          ZM[i][j] += ZM1[k][j] * ROOTPOW[root][delta] * exp(-energy / RT);
+          ZM[i][j] += ZM1[k][j] * ROOTPOW[root][delta] * EMA[i][k];//exp(-energy / RT);
 
           #ifdef ENERGY_DEBUG
             printf("%+f: MultiloopC * (%d - %d); Delta = %d\n", energy / 100, k, i, delta);
@@ -389,10 +502,9 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
         // More than one stem.
         if (k > i + MIN_PAIR_DIST + 1) { // (k > i + MIN_PAIR_DIST + 1) because i can pair with k - 1
           #ifdef DO_WORK
-            energy = P->MLintern[canBasePair[intSequence[k]][intSequence[j]]];
             delta  = DELTA2D[numBasePairs[0][i][j] - numBasePairs[0][i][k - 1] - numBasePairs[0][k][j]][numBasePairs[1][i][j] - numBasePairs[1][i][k - 1] - numBasePairs[1][k][j]];
           
-            ZM[i][j] += ZM[i][k - 1] * ZM1[k][j] * ROOTPOW[root][delta] * exp(-energy / RT);
+            ZM[i][j] += ZM[i][k - 1] * ZM1[k][j] * ROOTPOW[root][delta] * EMB[j][k];//exp(-energy / RT);
 
             #ifdef ENERGY_DEBUG
               printf("%+f: MultiloopB; Delta = %d\n", energy / 100, delta);
@@ -422,7 +534,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
         // (k, j) is the rightmost base pair in (i, j)
         if (canBasePair[intSequence[k]][intSequence[j]]) {
           #ifdef DO_WORK
-            energy = canBasePair[intSequence[k]][intSequence[j]] > 2 ? TerminalAU : 0;
+            energy = EZ[j][k];//canBasePair[intSequence[k]][intSequence[j]] > 2 ? TerminalAU : 0;
 
             #ifdef ENERGY_DEBUG
               printf("%+f: %c-%c == (2 || 3) ? 0 : GUAU_penalty; Delta = %d\n", energy / 100, sequence[k], sequence[j], delta);
@@ -433,7 +545,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
             #ifdef DO_WORK
               delta = DELTA2D[numBasePairs[0][i][j] - numBasePairs[0][k][j]][numBasePairs[1][i][j] - numBasePairs[1][k][j]];
             
-              Z[i][j] += ZB[k][j] * ROOTPOW[root][delta] * exp(-energy / RT);
+              Z[i][j] += ZB[k][j] * ROOTPOW[root][delta] * energy;//exp(-energy / RT);
 
               #ifdef STRUCTURE_COUNT
                 Z[j][i] += ZB[j][k];
@@ -443,7 +555,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
             #ifdef DO_WORK
               delta = DELTA2D[numBasePairs[0][i][j] - numBasePairs[0][i][k - 1] - numBasePairs[0][k][j]][numBasePairs[1][i][j] - numBasePairs[1][i][k - 1] - numBasePairs[1][k][j]];
             
-              Z[i][j] += Z[i][k - 1] * ZB[k][j] * ROOTPOW[root][delta] * exp(-energy / RT);
+              Z[i][j] += Z[i][k - 1] * ZB[k][j] * ROOTPOW[root][delta] * energy;//exp(-energy / RT);
 
               #ifdef STRUCTURE_COUNT
                 Z[j][i] += Z[k - 1][i] * ZB[j][k];
