@@ -159,15 +159,16 @@ void neighbors(char *inputSequence, int **bpList) {
 
   /**** Precalculate Energies **********/
   double **EH = new double*[sequenceLength+1];
-  double ****EIL = new double***[sequenceLength+1];
+  double ***EIL = new double**[sequenceLength+1];
   double **EHM = new double*[sequenceLength+1];
   double ***EM1 = new double**[sequenceLength+1]; 
   double **EMA = new double*[sequenceLength+1]; 
   double **EMB = new double*[sequenceLength+1];
   double **EZ = new double*[sequenceLength+1];
   
+  
   for(i=0;i<=sequenceLength;i++){
-    EIL[i] = new double**[sequenceLength+1];
+    EIL[i] = new double*[sequenceLength+1];
     EM1[i] = new double*[sequenceLength+1];
     EH[i] = new double[sequenceLength+1];
     EHM[i] = new double[sequenceLength+1];
@@ -176,9 +177,7 @@ void neighbors(char *inputSequence, int **bpList) {
     EZ[i] = new double[sequenceLength+1];
     for(int j=0;j<=sequenceLength;j++){
       EM1[i][j] = new double[sequenceLength+1];
-      EIL[i][j] = new double*[sequenceLength+1];
-      for(int k=0;k<=sequenceLength;k++)
-        EIL[i][j][k] = new double[sequenceLength+1];
+      EIL[i][j] = new double[5*(sequenceLength+1)];
     }
   }
   
@@ -222,21 +221,6 @@ void neighbors(char *inputSequence, int **bpList) {
   // Convert point-value solutions to coefficient form w/ inverse DFT.
   populateRemainingRoots(solutions, rootsOfUnity, runLength, inputStructureDist);
   
-  #ifdef TIMING_DEBUG
-    gettimeofday(&stop, NULL);
-    TIMING(start, stop, "inferred evaluation of Z")
-    gettimeofday(&start, NULL);
-  #endif
-  
-  solveSystem(solutions, rootsOfUnity, sequence, bpList, sequenceLength, rowLength, runLength, inputStructureDist);
-  
-  #ifdef TIMING_DEBUG
-    gettimeofday(&stop, NULL);
-    gettimeofday(&fullStop, NULL);
-    TIMING(start, stop, "FFT")
-    TIMING(fullStart, fullStop, "total")
-  #endif
-  
   //Free memory!!!!!!!!!!!!
   for(i=0;i<=sequenceLength;i++){
     delete [] EH[i];// = new double[sequenceLength];
@@ -246,8 +230,6 @@ void neighbors(char *inputSequence, int **bpList) {
     delete [] EZ[i];// = new double[sequenceLength];
     for(int j=0;j<=sequenceLength;j++){
       delete  []EM1[i][j];// = new double[sequenceLength];
-      for(int k=0;k<=sequenceLength;k++)
-        delete [] EIL[i][j][k];// = new double[sequenceLength];
       delete []EIL[i][j];
     }
     delete []EM1[i];
@@ -260,7 +242,6 @@ void neighbors(char *inputSequence, int **bpList) {
   delete [] EZ;
   delete [] EIL;
   delete [] EM1;
-  delete [] sequence;
   for(i=0;i<2;i++){
     for(int j=0;j<sequenceLength+1;j++)
       free(numBasePairs[i][j]);
@@ -292,9 +273,6 @@ void neighbors(char *inputSequence, int **bpList) {
   delete []ZM;
   delete []ZM1;
 
-  delete []solutions;
-  delete []rootsOfUnity;
-
   for(i=0;i<=runLength;i++){
     delete [] ROOTPOW[i];
   }
@@ -311,14 +289,34 @@ void neighbors(char *inputSequence, int **bpList) {
 
   delete [] jPairedTo0;
   delete [] jPairedTo1;
-  
+ 
+  #ifdef TIMING_DEBUG
+    gettimeofday(&stop, NULL);
+    TIMING(start, stop, "inferred evaluation of Z")
+    gettimeofday(&start, NULL);
+  #endif
+
+  solveSystem(solutions, rootsOfUnity, sequence, bpList, sequenceLength, rowLength, runLength, inputStructureDist);
+
+  #ifdef TIMING_DEBUG
+    gettimeofday(&stop, NULL);
+    gettimeofday(&fullStop, NULL);
+    TIMING(start, stop, "FFT")
+    TIMING(fullStart, fullStop, "total")
+  #endif
+
+  delete []solutions;
+  delete []rootsOfUnity;
+  delete []sequence; 
 }
 
-void calculateEnergies(char *inputSequence, char *sequence, short *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int sequenceLength, double RT, dcomplex **ROOTPOW, int **DELTA2D, int **jPairedTo0, int **jPairedTo1, double **EH, double ****EIL, double **EHM, double ***EM1, double **EMA, double **EMB, double **EZ) {
-  int i, j, k, l, d, delta;
-  
-  for (d = MIN_PAIR_DIST + 1; d < sequenceLength; ++d) {
-    for (i = 1; i <= sequenceLength - d; ++i) {
+void calculateEnergies(char *inputSequence, char *sequence, short *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int sequenceLength, double RT, dcomplex **ROOTPOW, int **DELTA2D, int **jPairedTo0, int **jPairedTo1, double **EH, double ***EIL, double **EHM, double ***EM1, double **EMA, double **EMB, double **EZ) {
+  int i, j, k, l, d, delta, pos;
+
+  #pragma opm parallel for shared(default)  
+  for (i = 1; i <= sequenceLength; ++i) {
+     
+     for (d = MIN_PAIR_DIST + 1; d <= sequenceLength-i; ++d) {
       j = i + d;
       
       if (canBasePair[intSequence[i]][intSequence[j]]) {
@@ -328,6 +326,7 @@ void calculateEnergies(char *inputSequence, char *sequence, short *intSequence, 
           // In a hairpin, [i + 1, j - 1] unpaired.
            EH[i][j]  = exp(-hairpinloop(i, j, canBasePair[intSequence[i]][intSequence[j]], intSequence[i+1], intSequence[j-1], inputSequence)/RT);
 
+        pos=0;
         // Interior loop / bulge / stack / multiloop.
         for (k = i + 1; k < MIN2(i + 30, j - MIN_PAIR_DIST - 2) + 1; ++k) {
           // There can't be more than 30 unpaired bases between i and k, and there must be room between k and j for l
@@ -335,7 +334,8 @@ void calculateEnergies(char *inputSequence, char *sequence, short *intSequence, 
             // l needs to at least have room to pair with k, and there can be at most 30 unpaired bases between (i, k) + (l, j), with l < j
             if (canBasePair[intSequence[k]][intSequence[l]]) {
                 // In interior loop / bulge / stack with (i, j) and (k, l), (i + 1, k - 1) and (l + 1, j - 1) are all unpaired.
-                EIL[i][j][k][l] = exp(-interiorloop(i, j, k, l, canBasePair[intSequence[i]][intSequence[j]], canBasePair[intSequence[l]][intSequence[k]], intSequence[i+1], intSequence[l+1], intSequence[j-1], intSequence[k-1])/RT);      
+                EIL[i][j][pos] = exp(-interiorloop(i, j, k, l, canBasePair[intSequence[i]][intSequence[j]], canBasePair[intSequence[l]][intSequence[k]], intSequence[i+1], intSequence[l+1], intSequence[j-1], intSequence[k-1])/RT);      
+                pos++;
             }
           }
         }
@@ -378,11 +378,11 @@ void calculateEnergies(char *inputSequence, char *sequence, short *intSequence, 
         }
       }
     }
-  } 
+  }
 }
 
-void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex *solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, short *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int inputStructureDist, int sequenceLength, int rowLength, int numRoots, double RT, dcomplex **ROOTPOW, int **DELTA2D, int **jPairedTo0, int **jPairedTo1,double **EH, double ****EIL, double **EHM, double ***EM1, double **EMA, double **EMB, double **EZ) {
-  int i, j, k, l, d, delta;
+void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex *solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, short *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int inputStructureDist, int sequenceLength, int rowLength, int numRoots, double RT, dcomplex **ROOTPOW, int **DELTA2D, int **jPairedTo0, int **jPairedTo1,double **EH, double ***EIL, double **EHM, double ***EM1, double **EMA, double **EMB, double **EZ) {  
+  int i, j, k, l, d, delta, pos;
   double energy;
   
   flushMatrices(Z, ZB, ZM, ZM1, sequenceLength);
@@ -415,7 +415,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
           #endif
         #endif
         
-
+        pos = 0;
         // Interior loop / bulge / stack / multiloop.
         for (k = i + 1; k < MIN2(i + 30, j - MIN_PAIR_DIST - 2) + 1; ++k) {
           // There can't be more than 30 unpaired bases between i and k, and there must be room between k and j for l
@@ -426,8 +426,8 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
                 // In interior loop / bulge / stack with (i, j) and (k, l), (i + 1, k - 1) and (l + 1, j - 1) are all unpaired.
                 delta  = DELTA2D[numBasePairs[0][i][j] - numBasePairs[0][k][l] + jPairedTo0[i][j]][numBasePairs[1][i][j] - numBasePairs[1][k][l] + jPairedTo1[i][j]];
               
-                ZB[i][j] += ZB[k][l] * ROOTPOW[root][delta] * EIL[i][j][k][l];//exp(-energy / RT);
-                
+                ZB[i][j] += ZB[k][l] * ROOTPOW[root][delta] * EIL[i][j][pos];//exp(-energy / RT);
+                pos++;
                 #ifdef ENERGY_DEBUG
                   printf("%+f: GetInteriorStackingAndBulgeEnergy(%c (%d), %c (%d), %c (%d), %c (%d)); Delta = %d\n", energy / 100, sequence[i], i, sequence[j], j, sequence[k], k, sequence[l], l, delta);
                 #endif
@@ -635,7 +635,7 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
     } else {
       printf("\nk\tl\tp(Z_{k,l}/Z)\t-RTln(Z_{k,l})\n");
       
-      for (i = 0; i < solutionLength; ++i) {
+      for (i = 0; i < solutionLength; ++i){ 
         printf("%d\t%d\t", i / rowLength, i % rowLength);
         printf(precisionFormat, probabilities[i]);
         printf("\t%f\n", -(RT / 100) * log(probabilities[i]) -(RT / 100) * log(scalingFactor));
@@ -670,7 +670,7 @@ void populateRemainingRoots(dcomplex *solutions, dcomplex *rootsOfUnity, int run
       PRINT_COMPLEX(i, solutions);
     }
   #endif
-  
+ 
   for (i = runLength / 2 + 1; i < runLength; ++i) {
     #ifdef FFTBOR_DEBUG
       printf("l: %d, r %d\n", i, runLength - i);
@@ -689,7 +689,6 @@ void populateRemainingRoots(dcomplex *solutions, dcomplex *rootsOfUnity, int run
     for (i = 0; i < runLength; ++i) {
       solutions[i] = COMPLEX_CONJ(rootsOfUnity[i]) * solutions[i];
     }
-    
     for (i = runLength / 2 + 1; i <= runLength; ++i) {
       solutions[i] = dcomplex(-1, 0) * solutions[i];
     }
@@ -715,7 +714,7 @@ void populateZMatrices(dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM
 
 void populateMatrices(dcomplex *solutions, dcomplex *rootsOfUnity, int sequenceLength, int numRoots) {
   int i;
-  
+  #pragma omp parallel for default(shared)
   for (i = 0; i < numRoots; ++i) {
     rootsOfUnity[i] = dcomplex(cos(-2 * M_PI * i / numRoots), sin(-2 * M_PI * i / numRoots));
   }
@@ -723,7 +722,7 @@ void populateMatrices(dcomplex *solutions, dcomplex *rootsOfUnity, int sequenceL
 
 inline void flushMatrices(dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, int sequenceLength) {
   int i, j;
-  
+ 
   for (i = 0; i <= sequenceLength; ++i) {
     for (j = 0; j <= sequenceLength; ++j) {
       if (i > 0 && j > 0 && abs(j - i) <= MIN_PAIR_DIST) {
