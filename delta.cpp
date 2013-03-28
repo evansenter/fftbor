@@ -10,10 +10,11 @@
 #include "energy_par.h"
 #include <iostream>
 #include <limits>
-using namespace std;
 #ifdef _OPENMP
   #include <omp.h>
 #endif
+
+using namespace std;
 
 #define MIN_PAIR_DIST 3
 #define MAX_INTERIOR_DIST 30
@@ -57,7 +58,7 @@ void neighbors(char *inputSequence, int **bpList) {
 
   char *energyfile    = ENERGY;
   char *sequence      = new char[sequenceLength + 1];
-  short  *intSequence   = (short *)xcalloc(sequenceLength + 1, sizeof(short));
+  short *intSequence  = (short *)xcalloc(sequenceLength + 1, sizeof(short));
   int ***numBasePairs = new int**[2];
   int **canBasePair;
   
@@ -80,7 +81,7 @@ void neighbors(char *inputSequence, int **bpList) {
   // Initialize numBasePairs lookup for all (i, j) combinations.
   numBasePairs[0] = (int **)xcalloc(sequenceLength + 1, sizeof(int *));
   numBasePairs[1] = (int **)xcalloc(sequenceLength + 1, sizeof(int *));
-  for (i = 1; i <= sequenceLength; i++) {
+  for (i = 1; i <= sequenceLength; ++i) {
     numBasePairs[0][i] = (int *)xcalloc(sequenceLength + 1, sizeof(int));
     numBasePairs[1][i] = (int *)xcalloc(sequenceLength + 1, sizeof(int));
   }
@@ -100,24 +101,20 @@ void neighbors(char *inputSequence, int **bpList) {
   // Note: runLength = (least number div. 4 >= rowLength ^ 2) / 2 (for a seq. of length 9 runLength = (11 ^ 2 + 3) / 2 = 62)
   runLength = ((int)pow((double)rowLength, 2) + ((int)pow((double)rowLength, 2) % 4)) / 2;
   numRoots  = runLength * 2;
- 
-  dcomplex ***Z   = new dcomplex**[MAXTHREADS];
-  dcomplex ***ZB  = new dcomplex**[MAXTHREADS];
-  dcomplex ***ZM  = new dcomplex**[MAXTHREADS];
-  dcomplex ***ZM1 = new dcomplex**[MAXTHREADS];
   
   #if defined(_OPENMP) && defined(OPENMP_DEBUG)
     printf("Max threads possible: %d\n", omp_get_max_threads());
     printf("Setting number of threads: %d\n", MAXTHREADS);
   #endif
     
+  // Set number of threads for OpenMP
   omp_set_num_threads(MAXTHREADS);
-
-  #ifdef TIMING_DEBUG
-    gettimeofday(&stop, NULL);
-    TIMING(start, stop, "initialization")
-    gettimeofday(&start, NULL);
-  #endif
+  
+  // Initialize matricies for dynamic programming.
+  dcomplex ***Z   = new dcomplex**[MAXTHREADS];
+  dcomplex ***ZB  = new dcomplex**[MAXTHREADS];
+  dcomplex ***ZM  = new dcomplex**[MAXTHREADS];
+  dcomplex ***ZM1 = new dcomplex**[MAXTHREADS];
 
   #pragma omp parallel for default(shared)
   for (int threadId = 0; threadId < MAXTHREADS; ++threadId) {
@@ -128,62 +125,101 @@ void neighbors(char *inputSequence, int **bpList) {
     populateZMatrices(Z[threadId], ZB[threadId], ZM[threadId], ZM1[threadId], sequenceLength);
   }
 
-  dcomplex *solutions    = new dcomplex[runLength+1];
+  // Initialize convenience tables for storing solutions, roots of unity.
+  dcomplex *solutions    = new dcomplex[runLength + 1];
   dcomplex *rootsOfUnity = new dcomplex[numRoots];
   
+  // Populate convenience tables.
   populateMatrices(solutions, rootsOfUnity, sequenceLength, numRoots);
   
-  dcomplex **ROOTPOW = new dcomplex*[runLength+1];
-  for(i = 0; i <= runLength; i++){
-    ROOTPOW[i] = new dcomplex[(rowLength+1)*sequenceLength+1];
-    for(int j = 0; j<(rowLength+1)*sequenceLength+1;j++)
-      ROOTPOW[i][j] = ROOT_POW(i,j,numRoots);
+  // Create convenience table for looking up powers of roots.
+  dcomplex **rootToPower = new dcomplex*[runLength + 1];
+  for (i = 0; i <= runLength; ++i) {
+    rootToPower[i] = new dcomplex[(rowLength + 1) * sequenceLength + 1];
+    for (int j = 0; j < (rowLength + 1) * sequenceLength + 1; ++j) {
+      rootToPower[i][j] = ROOT_POW(i,j,numRoots);
+    }
   }
-  int **DELTA2D = new int*[sequenceLength+1];
-  for(i = 0; i <= sequenceLength; i++){
-    DELTA2D[i] = new int[sequenceLength+1];
-    for(int j = 0; j<=sequenceLength;j++)
-      DELTA2D[i][j] = DELTA_2D(i,j,rowLength);
+  
+  // Create convenience table for looking up 1D indexing of (k, l) coordinates.
+  int **deltaTable = new int*[sequenceLength + 1];
+  for (i = 0; i <= sequenceLength; ++i) {
+    deltaTable[i] = new int[sequenceLength + 1];
+    for (int j = 0; j <= sequenceLength; ++j) {
+      deltaTable[i][j] = DELTA_2D(i,j,rowLength);
+    }
   } 
   
-  int **jPairedTo0 = new int*[sequenceLength+1];
-  int **jPairedTo1 = new int*[sequenceLength+1];
-  for(i = 0; i <= sequenceLength; i++){
-    jPairedTo0[i] = new int[sequenceLength+1];
-    jPairedTo1[i] = new int[sequenceLength+1];
-    for(int j = 0; j<=sequenceLength;j++){
+  // Create convenience table for boolean (i, j paired?) values.
+  int **jPairedTo0 = new int*[sequenceLength + 1];
+  int **jPairedTo1 = new int*[sequenceLength + 1];
+  for (i = 0; i <= sequenceLength; ++i) {
+    jPairedTo0[i] = new int[sequenceLength + 1];
+    jPairedTo1[i] = new int[sequenceLength + 1];
+    for (int j = 0; j <= sequenceLength; ++j) {
       jPairedTo0[i][j] = jPairedTo(i,j,bpList[0]);
       jPairedTo1[i][j] = jPairedTo(i,j,bpList[1]);
     }
   }
 
-  /**** Precalculate Energies **********/
-  double **EH = new double*[sequenceLength+1];
-  double ***EIL = new double**[sequenceLength+1];
-  double **EHM = new double*[sequenceLength+1];
-  double ***EM1 = new double**[sequenceLength+1]; 
-  double **EMA = new double*[sequenceLength+1]; 
-  double **EMB = new double*[sequenceLength+1];
-  double **EZ = new double*[sequenceLength+1];
+  // Initialize tables for precalculating energies.
+  double **EZ   = new double*[sequenceLength + 1];
+  double **EH   = new double*[sequenceLength + 1];
+  double **EHM  = new double*[sequenceLength + 1];
+  double **EMA  = new double*[sequenceLength + 1]; 
+  double **EMB  = new double*[sequenceLength + 1];
+  double ***EIL = new double**[sequenceLength + 1];
+  double ***EM1 = new double**[sequenceLength + 1]; 
   
   
-  for(i=0;i<=sequenceLength;i++){
-    EIL[i] = new double*[sequenceLength+1];
-    EM1[i] = new double*[sequenceLength+1];
-    EH[i] = new double[sequenceLength+1];
-    EHM[i] = new double[sequenceLength+1];
-    EMA[i] = new double[sequenceLength+1];
-    EMB[i] = new double[sequenceLength+1];
-    EZ[i] = new double[sequenceLength+1];
-    for(int j=0;j<=sequenceLength;j++){
-      EM1[i][j] = new double[sequenceLength+1];
-      EIL[i][j] = new double[5*(sequenceLength+1)];
+  for (i = 0; i <= sequenceLength; ++i) {
+    EZ[i]  = new double[sequenceLength + 1];
+    EH[i]  = new double[sequenceLength + 1];
+    EHM[i] = new double[sequenceLength + 1];
+    EMA[i] = new double[sequenceLength + 1];
+    EMB[i] = new double[sequenceLength + 1];
+    EIL[i] = new double*[sequenceLength + 1];
+    EM1[i] = new double*[sequenceLength + 1];
+    for (int j = 0; j <= sequenceLength; ++j) {
+      EM1[i][j] = new double[sequenceLength + 1];
+      // 5 is still a "twiddle" factor.
+      EIL[i][j] = new double[5 * (sequenceLength + 1)];
     }
   }
   
-  calculateEnergies(inputSequence, sequence, intSequence,bpList,canBasePair, numBasePairs, sequenceLength,RT, ROOTPOW,DELTA2D,jPairedTo0,jPairedTo1,EH,EIL,EHM,EM1,EMA,EMB,EZ);
-  /************************************/
-
+  #ifdef TIMING_DEBUG
+    gettimeofday(&stop, NULL);
+    TIMING(start, stop, "initialization")
+    gettimeofday(&start, NULL);
+  #endif
+  
+  calculateEnergies(
+    inputSequence, 
+    sequence, 
+    intSequence,
+    bpList,
+    canBasePair, 
+    numBasePairs, 
+    sequenceLength,
+    RT, 
+    rootToPower,
+    deltaTable,
+    jPairedTo0,
+    jPairedTo1,
+    EH,
+    EIL,
+    EHM,
+    EM1,
+    EMA,
+    EMB,
+    EZ
+  );
+  
+  #ifdef TIMING_DEBUG
+    gettimeofday(&stop, NULL);
+    TIMING(start, stop, "pre-calculate energies")
+    gettimeofday(&start, NULL);
+  #endif
   
   #ifdef FFTBOR_DEBUG
     printf("sequenceLength:     %d\n", sequenceLength);
@@ -201,7 +237,7 @@ void neighbors(char *inputSequence, int **bpList) {
   int maxroot = runLength / 2;
   int threadId;
     
-  #pragma omp parallel for private(root, threadId) shared(Z, ZB, ZM, ZM1, bpList, canBasePair, numBasePairs, inputStructureDist, sequenceLength, runLength, rowLength, numRoots, RT, maxroot, intSequence, sequence, inputSequence, rootsOfUnity, solutions, ROOTPOW, DELTA2D, jPairedTo0, jPairedTo1, EH,EIL,EHM,EM1,EMA,EMB,EZ) default(none) num_threads(MAXTHREADS)
+  #pragma omp parallel for private(root, threadId) shared(Z, ZB, ZM, ZM1, bpList, canBasePair, numBasePairs, inputStructureDist, sequenceLength, runLength, rowLength, numRoots, RT, maxroot, intSequence, sequence, inputSequence, rootsOfUnity, solutions, rootToPower, deltaTable, jPairedTo0, jPairedTo1, EH, EIL, EHM, EM1, EMA, EMB, EZ) default(none) num_threads(MAXTHREADS)
   for (root = 0; root <= maxroot; ++root) {
     #ifdef _OPENMP
       threadId = omp_get_thread_num();
@@ -209,7 +245,37 @@ void neighbors(char *inputSequence, int **bpList) {
       threadId = 0;
     #endif
     
-    evaluateZ(root, Z[threadId], ZB[threadId], ZM[threadId], ZM1[threadId], solutions, rootsOfUnity, inputSequence, sequence, intSequence, bpList, canBasePair, numBasePairs, inputStructureDist, sequenceLength, rowLength, numRoots, RT, ROOTPOW, DELTA2D, jPairedTo0, jPairedTo1,EH,EIL,EHM,EM1,EMA,EMB,EZ);
+    evaluateZ(
+      root, 
+      Z[threadId], 
+      ZB[threadId], 
+      ZM[threadId], 
+      ZM1[threadId], 
+      solutions, 
+      rootsOfUnity, 
+      inputSequence, 
+      sequence, 
+      intSequence, 
+      bpList, 
+      canBasePair, 
+      numBasePairs, 
+      inputStructureDist, 
+      sequenceLength, 
+      rowLength, 
+      numRoots, 
+      RT, 
+      rootToPower, 
+      deltaTable, 
+      jPairedTo0, 
+      jPairedTo1,
+      EH,
+      EIL,
+      EHM,
+      EM1,
+      EMA,
+      EMB,
+      EZ
+    );
   }
   
   #ifdef TIMING_DEBUG
@@ -221,18 +287,24 @@ void neighbors(char *inputSequence, int **bpList) {
   // Convert point-value solutions to coefficient form w/ inverse DFT.
   populateRemainingRoots(solutions, rootsOfUnity, runLength, inputStructureDist);
   
-  //Free memory!!!!!!!!!!!!
-  for(i=0;i<=sequenceLength;i++){
-    delete [] EH[i];// = new double[sequenceLength];
-    delete [] EHM[i];// = new double[sequenceLength];
-    delete [] EMA[i];// = new double[sequenceLength];
-    delete [] EMB[i];// = new double[sequenceLength];
-    delete [] EZ[i];// = new double[sequenceLength];
-    for(int j=0;j<=sequenceLength;j++){
-      delete  []EM1[i][j];// = new double[sequenceLength];
-      delete []EIL[i][j];
+  #ifdef TIMING_DEBUG
+    gettimeofday(&stop, NULL);
+    TIMING(start, stop, "inferred evaluation of Z")
+    gettimeofday(&start, NULL);
+  #endif
+  
+  // Free memory.
+  for (i = 0; i <= sequenceLength; ++i) {
+    delete [] EH[i];
+    delete [] EHM[i];
+    delete [] EMA[i];
+    delete [] EMB[i];
+    delete [] EZ[i];
+    for (int j = 0; j <= sequenceLength; ++j) {
+      delete [] EM1[i][j];
+      delete [] EIL[i][j];
     }
-    delete []EM1[i];
+    delete [] EM1[i];
     delete [] EIL[i];
   }
   delete [] EH;
@@ -242,47 +314,50 @@ void neighbors(char *inputSequence, int **bpList) {
   delete [] EZ;
   delete [] EIL;
   delete [] EM1;
-  for(i=0;i<2;i++){
-    for(int j=0;j<sequenceLength+1;j++)
+  for (i = 0; i < 2; ++i) {
+    for (int j = 0; j < sequenceLength + 1; ++j) {
       free(numBasePairs[i][j]);
+    }
     free(numBasePairs[i]);
   }
-  delete []numBasePairs;
-
-  for(i = 0; i<5;i++)
-    free(canBasePair[i]);
-  free(canBasePair);
   
+  delete [] numBasePairs;
+
+  for (i = 0; i < 5; ++i) {
+    free(canBasePair[i]);
+  }
+  free(canBasePair);
   free(intSequence);
 
   for (int threadId = 0; threadId < MAXTHREADS; ++threadId) {
-    for(int j=0; j<=sequenceLength;j++){
+    for (int j = 0; j <= sequenceLength; ++j) {
        delete [] Z[threadId][j];
        delete [] ZB[threadId][j];
        delete [] ZM[threadId][j];
        delete [] ZM1[threadId][j];
     }
-    delete [] Z[threadId];//   = new double**[sequenceLength + 1];
-    delete [] ZB[threadId];//  = new double**[sequenceLength + 1];
-    delete [] ZM[threadId];//  = new double**[sequenceLength + 1];
-    delete [] ZM1[threadId];// = new double**[sequenceLength + 1];
+    delete [] Z[threadId];
+    delete [] ZB[threadId];
+    delete [] ZM[threadId];
+    delete [] ZM1[threadId];
   }
 
-  delete []Z;
-  delete []ZB;
-  delete []ZM;
-  delete []ZM1;
+  delete [] Z;
+  delete [] ZB;
+  delete [] ZM;
+  delete [] ZM1;
 
-  for(i=0;i<=runLength;i++){
-    delete [] ROOTPOW[i];
+  for (i = 0; i <= runLength; ++i) {
+    delete [] rootToPower[i];
   }
-  delete [] ROOTPOW;
+  delete [] rootToPower;
 
-  for(i=0;i<=sequenceLength;i++)
-    delete [] DELTA2D[i];
-  delete [] DELTA2D;
+  for (i = 0; i <= sequenceLength; ++i) {
+    delete [] deltaTable[i];
+  }
+  delete [] deltaTable;
 
-  for(i=0;i<=sequenceLength;i++){
+  for (i = 0; i <= sequenceLength; ++i) {
     delete [] jPairedTo0[i];
     delete [] jPairedTo1[i];
   }
@@ -292,7 +367,7 @@ void neighbors(char *inputSequence, int **bpList) {
  
   #ifdef TIMING_DEBUG
     gettimeofday(&stop, NULL);
-    TIMING(start, stop, "inferred evaluation of Z")
+    TIMING(start, stop, "free memory")
     gettimeofday(&start, NULL);
   #endif
 
@@ -300,17 +375,20 @@ void neighbors(char *inputSequence, int **bpList) {
 
   #ifdef TIMING_DEBUG
     gettimeofday(&stop, NULL);
-    gettimeofday(&fullStop, NULL);
     TIMING(start, stop, "FFT")
-    TIMING(fullStart, fullStop, "total")
   #endif
 
-  delete []solutions;
-  delete []rootsOfUnity;
-  delete []sequence; 
+  delete [] solutions;
+  delete [] rootsOfUnity;
+  delete [] sequence; 
+  
+  #ifdef TIMING_DEBUG
+    gettimeofday(&fullStop, NULL);
+    TIMING(fullStart, fullStop, "total")
+  #endif
 }
 
-void calculateEnergies(char *inputSequence, char *sequence, short *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int sequenceLength, double RT, dcomplex **ROOTPOW, int **DELTA2D, int **jPairedTo0, int **jPairedTo1, double **EH, double ***EIL, double **EHM, double ***EM1, double **EMA, double **EMB, double **EZ) {
+void calculateEnergies(char *inputSequence, char *sequence, short *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int sequenceLength, double RT, dcomplex **rootToPower, int **deltaTable, int **jPairedTo0, int **jPairedTo1, double **EH, double ***EIL, double **EHM, double ***EM1, double **EMA, double **EMB, double **EZ) {
   int i, j, k, l, d, delta, pos;
 
   #pragma opm parallel for shared(default)  
@@ -381,7 +459,7 @@ void calculateEnergies(char *inputSequence, char *sequence, short *intSequence, 
   }
 }
 
-void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex *solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, short *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int inputStructureDist, int sequenceLength, int rowLength, int numRoots, double RT, dcomplex **ROOTPOW, int **DELTA2D, int **jPairedTo0, int **jPairedTo1,double **EH, double ***EIL, double **EHM, double ***EM1, double **EMA, double **EMB, double **EZ) {  
+void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex *solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, short *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int inputStructureDist, int sequenceLength, int rowLength, int numRoots, double RT, dcomplex **rootToPower, int **deltaTable, int **jPairedTo0, int **jPairedTo1,double **EH, double ***EIL, double **EHM, double ***EM1, double **EMA, double **EMB, double **EZ) {  
   int i, j, k, l, d, delta, pos;
   double energy;
   
@@ -401,10 +479,10 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
         // ****************************************************************************
         #ifdef DO_WORK
           // In a hairpin, [i + 1, j - 1] unpaired.
-          delta  = DELTA2D[numBasePairs[0][i][j] + jPairedTo0[i][j]][numBasePairs[1][i][j] + jPairedTo1[i][j]];
+          delta  = deltaTable[numBasePairs[0][i][j] + jPairedTo0[i][j]][numBasePairs[1][i][j] + jPairedTo1[i][j]];
           
       
-          ZB[i][j] += ROOTPOW[root][delta] * EH[i][j];//exp(-energy / RT);
+          ZB[i][j] += rootToPower[root][delta] * EH[i][j];//exp(-energy / RT);
 
           #ifdef ENERGY_DEBUG
             printf("%+f: GetHairpinEnergy(%c (%d), %c (%d)); Delta = %d\n", energy / 100, sequence[i], i, sequence[j], j, delta);
@@ -424,9 +502,9 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
             if (canBasePair[intSequence[k]][intSequence[l]]) {
               #ifdef DO_WORK
                 // In interior loop / bulge / stack with (i, j) and (k, l), (i + 1, k - 1) and (l + 1, j - 1) are all unpaired.
-                delta  = DELTA2D[numBasePairs[0][i][j] - numBasePairs[0][k][l] + jPairedTo0[i][j]][numBasePairs[1][i][j] - numBasePairs[1][k][l] + jPairedTo1[i][j]];
+                delta  = deltaTable[numBasePairs[0][i][j] - numBasePairs[0][k][l] + jPairedTo0[i][j]][numBasePairs[1][i][j] - numBasePairs[1][k][l] + jPairedTo1[i][j]];
               
-                ZB[i][j] += ZB[k][l] * ROOTPOW[root][delta] * EIL[i][j][pos];//exp(-energy / RT);
+                ZB[i][j] += ZB[k][l] * rootToPower[root][delta] * EIL[i][j][pos];//exp(-energy / RT);
                 pos++;
                 #ifdef ENERGY_DEBUG
                   printf("%+f: GetInteriorStackingAndBulgeEnergy(%c (%d), %c (%d), %c (%d), %c (%d)); Delta = %d\n", energy / 100, sequence[i], i, sequence[j], j, sequence[k], k, sequence[l], l, delta);
@@ -443,9 +521,9 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
         for (k = i + MIN_PAIR_DIST + 3; k < j - MIN_PAIR_DIST - 1; ++k) {
           #ifdef DO_WORK
             // If (i, j) is the closing b.p. of a multiloop, and (k, l) is the rightmost base pair, there is at least one hairpin between (i + 1, k - 1)
-            delta  = DELTA2D[numBasePairs[0][i][j] - numBasePairs[0][i + 1][k - 1] - numBasePairs[0][k][j - 1] + jPairedTo0[i][j]][numBasePairs[1][i][j] - numBasePairs[1][i + 1][k - 1] - numBasePairs[1][k][j - 1] + jPairedTo1[i][j]];
+            delta  = deltaTable[numBasePairs[0][i][j] - numBasePairs[0][i + 1][k - 1] - numBasePairs[0][k][j - 1] + jPairedTo0[i][j]][numBasePairs[1][i][j] - numBasePairs[1][i + 1][k - 1] - numBasePairs[1][k][j - 1] + jPairedTo1[i][j]];
          
-            ZB[i][j] += ZM[i + 1][k - 1] * ZM1[k][j - 1] * ROOTPOW[root][delta] * energy;//exp(-energy / RT);
+            ZB[i][j] += ZM[i + 1][k - 1] * ZM1[k][j - 1] * rootToPower[root][delta] * energy;//exp(-energy / RT);
                  
             #ifdef ENERGY_DEBUG
               printf("%+f: MultiloopA + MultiloopB; Delta = %d\n", energy / 100, delta);
@@ -465,7 +543,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
         // k is the closing base pairing with i of a single component within the range [i, j]
         if (canBasePair[intSequence[i]][intSequence[k]]) {
           #ifdef DO_WORK
-            delta  = DELTA2D[numBasePairs[0][i][j] - numBasePairs[0][i][k]][numBasePairs[1][i][j] - numBasePairs[1][i][k]];
+            delta  = deltaTable[numBasePairs[0][i][j] - numBasePairs[0][i][k]][numBasePairs[1][i][j] - numBasePairs[1][i][k]];
           
             ZM1[i][j] += ZB[i][k] * EM1[i][j][k];//exp(-energy / RT);
           
@@ -486,9 +564,9 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
       for (k = i; k < j - MIN_PAIR_DIST; ++k) {
         #ifdef DO_WORK
           // Only one stem.
-          delta  = DELTA2D[numBasePairs[0][i][j] - numBasePairs[0][k][j]][numBasePairs[1][i][j] - numBasePairs[1][k][j]];
+          delta  = deltaTable[numBasePairs[0][i][j] - numBasePairs[0][k][j]][numBasePairs[1][i][j] - numBasePairs[1][k][j]];
         
-          ZM[i][j] += ZM1[k][j] * ROOTPOW[root][delta] * EMA[i][k];//exp(-energy / RT);
+          ZM[i][j] += ZM1[k][j] * rootToPower[root][delta] * EMA[i][k];//exp(-energy / RT);
 
           #ifdef ENERGY_DEBUG
             printf("%+f: MultiloopC * (%d - %d); Delta = %d\n", energy / 100, k, i, delta);
@@ -502,9 +580,9 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
         // More than one stem.
         if (k > i + MIN_PAIR_DIST + 1) { // (k > i + MIN_PAIR_DIST + 1) because i can pair with k - 1
           #ifdef DO_WORK
-            delta  = DELTA2D[numBasePairs[0][i][j] - numBasePairs[0][i][k - 1] - numBasePairs[0][k][j]][numBasePairs[1][i][j] - numBasePairs[1][i][k - 1] - numBasePairs[1][k][j]];
+            delta  = deltaTable[numBasePairs[0][i][j] - numBasePairs[0][i][k - 1] - numBasePairs[0][k][j]][numBasePairs[1][i][j] - numBasePairs[1][i][k - 1] - numBasePairs[1][k][j]];
           
-            ZM[i][j] += ZM[i][k - 1] * ZM1[k][j] * ROOTPOW[root][delta] * EMB[j][k];//exp(-energy / RT);
+            ZM[i][j] += ZM[i][k - 1] * ZM1[k][j] * rootToPower[root][delta] * EMB[j][k];//exp(-energy / RT);
 
             #ifdef ENERGY_DEBUG
               printf("%+f: MultiloopB; Delta = %d\n", energy / 100, delta);
@@ -521,9 +599,9 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
       // Solve Z
       // **************************************************************************
       #ifdef DO_WORK
-        delta = DELTA2D[jPairedIn(i, j, bpList[0])][jPairedIn(i, j, bpList[1])];
+        delta = deltaTable[jPairedIn(i, j, bpList[0])][jPairedIn(i, j, bpList[1])];
       
-        Z[i][j] += Z[i][j - 1] * ROOTPOW[root][delta];
+        Z[i][j] += Z[i][j - 1] * rootToPower[root][delta];
 
         #ifdef STRUCTURE_COUNT
           Z[j][i] += Z[j - 1][i];
@@ -543,9 +621,9 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
             
           if (k == i) {
             #ifdef DO_WORK
-              delta = DELTA2D[numBasePairs[0][i][j] - numBasePairs[0][k][j]][numBasePairs[1][i][j] - numBasePairs[1][k][j]];
+              delta = deltaTable[numBasePairs[0][i][j] - numBasePairs[0][k][j]][numBasePairs[1][i][j] - numBasePairs[1][k][j]];
             
-              Z[i][j] += ZB[k][j] * ROOTPOW[root][delta] * energy;//exp(-energy / RT);
+              Z[i][j] += ZB[k][j] * rootToPower[root][delta] * energy;//exp(-energy / RT);
 
               #ifdef STRUCTURE_COUNT
                 Z[j][i] += ZB[j][k];
@@ -553,9 +631,9 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
             #endif
           } else {
             #ifdef DO_WORK
-              delta = DELTA2D[numBasePairs[0][i][j] - numBasePairs[0][i][k - 1] - numBasePairs[0][k][j]][numBasePairs[1][i][j] - numBasePairs[1][i][k - 1] - numBasePairs[1][k][j]];
+              delta = deltaTable[numBasePairs[0][i][j] - numBasePairs[0][i][k - 1] - numBasePairs[0][k][j]][numBasePairs[1][i][j] - numBasePairs[1][i][k - 1] - numBasePairs[1][k][j]];
             
-              Z[i][j] += Z[i][k - 1] * ZB[k][j] * ROOTPOW[root][delta] * energy;//exp(-energy / RT);
+              Z[i][j] += Z[i][k - 1] * ZB[k][j] * rootToPower[root][delta] * energy;//exp(-energy / RT);
 
               #ifdef STRUCTURE_COUNT
                 Z[j][i] += Z[k - 1][i] * ZB[j][k];
@@ -776,17 +854,17 @@ void initializeCanBasePair(int **canBasePair) {
 void translateToIntSequence(char *a, short *intSequence) {
   int i;
   intSequence[0] = strlen(a);
-  for (i=0; i < intSequence[0]; i++)
+  for (i=0; i < intSequence[0]; ++i)
     intSequence[i+1] = bn(a[i]);
 }
 
 void initializeBasePairCounts(int **numBasePairs, int *bpList, int n) {
   int d, i, j;
-  for (i = 1; i <= n; i++)
-    for (j = 1; j <= n; j++)
+  for (i = 1; i <= n; ++i)
+    for (j = 1; j <= n; ++j)
       numBasePairs[i][j] = 0;
   for (d = MIN_PAIR_DIST+1; d < n; d++) {
-    for (i = 1; i <= n - d; i++) {
+    for (i = 1; i <= n - d; ++i) {
       j = i + d;
       numBasePairs[i][j] = numbp(i, j, bpList);
     }
