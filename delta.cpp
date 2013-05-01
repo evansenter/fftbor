@@ -115,8 +115,6 @@ void neighbors(char *inputSequence, int **bpList) {
   populateRemainingRoots(solutions, rootsOfUnity, runLength, inputStructureDist);
   
   solveSystem(solutions, rootsOfUnity, sequence, bpList, sequenceLength, rowLength, runLength, inputStructureDist);
-  
-  free(intSequence);
 }
 
 void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex *solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, int *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int inputStructureDist, int sequenceLength, int rowLength, int numRoots, double RT) {
@@ -327,7 +325,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
 void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, int **structure, int sequenceLength, int rowLength, int runLength, int inputStructureDist) {
   char precisionFormat[20];
   char header[5 * rowLength]; // This is enough space for sequences up to length 999
-  int i, solutionLength = pow(rowLength, 2);
+  int i, solutionLength = (int)pow(rowLength, 2);
   double *probabilities = (double *)xcalloc(solutionLength, sizeof(double));
   double scalingFactor, sum;
   

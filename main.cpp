@@ -27,11 +27,6 @@ int main(int argc, char *argv[]) {
   read_input(argc, argv, &a, bps);
   neighbors(a, bps);
 
-  free(a);
-  free(bps[0]);
-  free(bps[1]);
-  free(bps);
-
   return 0;
 }
 
@@ -200,6 +195,4 @@ void read_input(int argc, char *argv[], char **maina, int **bps) {
 
   bps[0] = getBasePairList(str1);
   bps[1] = getBasePairList(str2);
-  free(str1);
-  free(str2);
 } 
