@@ -1,6 +1,6 @@
 *.out
 benchmarking/
-scripts/autobot
+scripts/
 FFTbor
 RNAbor
 RNAcentral
