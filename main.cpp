@@ -50,7 +50,7 @@ void usage() {
   fprintf(stderr, "\tsecondary structure (2)\n\n");
   
   fprintf(stderr, "Options include the following:\n");
-  fprintf(stderr, "-E\tenergyfile,    the default is energy.par in this executable's directory. Must be the name of a file with all energy parameters (in the same format as used in Vienna RNA).\n");
+  fprintf(stderr, "-E\tenergyfile,    the default is rna_turner1999.par in this executable's directory. Must be the name of a file with all energy parameters (in the same format as used in Vienna RNA).\n");
   fprintf(stderr, "-T\ttemperature,   the default is 37 degrees Celsius (unless an energyfile with parameters for a different temperature is used.\n");
   fprintf(stderr, "-P\tprecision,     the default is 8, indicates the precision of the probabilities Z_k / Z to be returned (0-9, 0 disables precision handling).\n");
   fprintf(stderr, "-R\trow length,    the default is the least even number greater than or equal to the sequence length + 1.\n");
@@ -70,7 +70,7 @@ void read_input(int argc, char *argv[], char **maina, int **bps) {
   PRECISION     = 4;
   ROW_LENGTH    = 0;
   MATRIX_FORMAT = 0; 
-  ENERGY        = (char *)"energy.par";
+  ENERGY        = (char *)"rna_turner1999.par";
 
   /* Function to retrieve RNA sequence and structure, when
    * either input in command line or in a file, where the first

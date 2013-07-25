@@ -22,4 +22,4 @@ clean:
 
 install:
 	cp FFTbor2D $(BINDIR)
-	cp energy.par $(BINDIR)
+	cp rna_turner1999.par $(BINDIR)
