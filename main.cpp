@@ -11,7 +11,7 @@
   #include <omp.h>
 #endif
 
-int           PF, N, PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT;
+int           PF, N, PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT, SIMPLE_OUTPUT;
 extern double temperature;
 char          *ENERGY;
 paramT        *P;
@@ -55,6 +55,7 @@ void usage() {
   fprintf(stderr, "-P\tprecision,     the default is 8, indicates the precision of the probabilities Z_k / Z to be returned (0-9, 0 disables precision handling).\n");
   fprintf(stderr, "-R\trow length,    the default is the least even number greater than or equal to the sequence length + 1.\n");
   fprintf(stderr, "-M\tmatrix format, the default is disabled, presents output in a matrix format instead of a column format.\n");
+  fprintf(stderr, "-S\tsimple output, the default is disabled, presents output in column format, for non-zero entries only with no header output (columns are: k, l, p(Z_{k,l}/Z), -RTln(Z_{k,l})).\n");
   
   exit(1);
 }
@@ -70,6 +71,7 @@ void read_input(int argc, char *argv[], char **maina, int **bps) {
   PRECISION     = 4;
   ROW_LENGTH    = 0;
   MATRIX_FORMAT = 0; 
+  SIMPLE_OUTPUT = 0; 
   ENERGY        = (char *)"rna_turner1999.par";
 
   /* Function to retrieve RNA sequence and structure, when
@@ -102,6 +104,11 @@ void read_input(int argc, char *argv[], char **maina, int **bps) {
           usage();
         }
         MATRIX_FORMAT = 1;
+      } else if (strcmp(argv[i], "-S") == 0) {
+        if (i == argc - 1) {
+          usage();
+        }
+        SIMPLE_OUTPUT = 1;
       } else if (strcmp(argv[i], "-P") == 0) {
         if (i == argc - 1) {
           usage();
@@ -215,9 +222,11 @@ void read_input(int argc, char *argv[], char **maina, int **bps) {
     usage();
   }
   
-  /* Print sequence length, sequence and starting structure */
-  printf("%s\n%s\n%s\n", seq, str1, str2);
+  if (!SIMPLE_OUTPUT) {
+    /* Print sequence length, sequence and starting structure */
+    printf("%s\n%s\n%s\n", seq, str1, str2);
+  }
 
-  bps[0] = getBasePairList(str1);
-  bps[1] = getBasePairList(str2);
+    bps[0] = getBasePairList(str1);
+    bps[1] = getBasePairList(str2);
 } 

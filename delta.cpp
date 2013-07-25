@@ -33,12 +33,12 @@ using namespace std;
 // #define SILENCE_OUTPUT 1
 // #define TIMING_DEBUG 1
 // #define FFTBOR_DEBUG 1
-#define OPENMP_DEBUG 1
+// #define OPENMP_DEBUG 1
 // #define STRUCTURE_COUNT 1
 // #define ENERGY_DEBUG (1 && !root)
 #define DO_WORK
 
-extern int    PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT;
+extern int    PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT, SIMPLE_OUTPUT;
 extern double temperature;
 extern char   *ENERGY;
 extern paramT *P;
@@ -699,7 +699,15 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
   }
   
   #ifndef SILENCE_OUTPUT
-    if (MATRIX_FORMAT) {
+    if (SIMPLE_OUTPUT) {
+      for (i = 0; i < solutionLength; ++i) { 
+        if (probabilities[i] > 0) {
+          printf("%d\t%d\t", i / rowLength, i % rowLength);
+          printf(precisionFormat, probabilities[i]);
+          printf("\t%f\n", -(RT / 100) * log(probabilities[i]) -(RT / 100) * log(scalingFactor));
+        }
+      }
+    } else if (MATRIX_FORMAT) {
       for (i = 0; i < solutionLength; ++i) {
         if (!(i % rowLength)) {
           printf("\n");
@@ -713,7 +721,7 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
     } else {
       printf("\nk\tl\tp(Z_{k,l}/Z)\t-RTln(Z_{k,l})\n");
       
-      for (i = 0; i < solutionLength; ++i){ 
+      for (i = 0; i < solutionLength; ++i) { 
         printf("%d\t%d\t", i / rowLength, i % rowLength);
         printf(precisionFormat, probabilities[i]);
         printf("\t%f\n", -(RT / 100) * log(probabilities[i]) -(RT / 100) * log(scalingFactor));
