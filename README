@@ -26,6 +26,7 @@ Options include the following:
 -P	precision,     the default is 8, indicates the precision of the probabilities Z_k / Z to be returned (0-9, 0 disables precision handling).
 -R	row length,    the default is the least even number greater than or equal to the sequence length + 1.
 -M	matrix format, the default is disabled, presents output in a matrix format instead of a column format.
+-S      simple output, the default is disabled, presents output in column format, for non-zero entries only with no header output (columns are: k, l, p(Z_{k,l}/Z), -RTln(Z_{k,l})).
 
 INSTALLATION
 ________________________________________________________________
