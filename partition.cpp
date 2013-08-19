@@ -3,7 +3,7 @@
 #include <ctype.h>
 #include <math.h>
 #include <stdlib.h>
-#include "delta.h"
+#include "partition.h"
 #include "misc.h"
 #include <fftw3.h>
 #include "energy_const.h"
@@ -16,8 +16,8 @@
 
 using namespace std;
 
-#define MIN_PAIR_DIST 3
-#define MAX_INTERIOR_DIST 30
+#define MIN_PAIR_DIST TURN
+#define MAX_INTERIOR_DIST MAXLOOP
 #define ZERO_C dcomplex(0.0, 0.0)
 #define ONE_C dcomplex(1.0, 0.0)
 #define FFTW_REAL 0
@@ -54,7 +54,7 @@ void neighbors(char *inputSequence, int **bpList) {
   #endif
   
   int i, root, requestedRowLength, rowLength, runLength, numRoots, sequenceLength = strlen(inputSequence), inputStructureDist = 0;
-  RT = 0.0019872370936902486 * (temperature + 273.15) * 100; // 0.01 * (kcal K) / mol
+  RT = 0.001 * GASCONST * (temperature + K0) * 100; // 0.01 * (kcal K) / mol
 
   char *energyfile    = ENERGY;
   char *sequence      = new char[sequenceLength + 1];
@@ -137,7 +137,7 @@ void neighbors(char *inputSequence, int **bpList) {
   for (i = 0; i <= runLength; ++i) {
     rootToPower[i] = new dcomplex[(rowLength + 1) * sequenceLength + 1];
     for (int j = 0; j < (rowLength + 1) * sequenceLength + 1; ++j) {
-      rootToPower[i][j] = ROOT_POW(i,j,numRoots);
+      rootToPower[i][j] = ROOT_POW(i, j, numRoots);
     }
   }
   

@@ -41,15 +41,15 @@ ________________________________________________________________
 
 Files:
 
-main.cpp           - the main program file, reads input and prints output
-delta.cpp, delta.h - the algorithm implementation
-misc.cpp, misc.h   - a few additional functions and global variables
+main.cpp                   - the main program file, reads input and prints output
+partition.cpp, partition.h - the algorithm implementation
+misc.cpp, misc.h           - a few additional functions and global variables
 energy_const.h,
 energy_par.h,
-params.h           - three h-files from Vienna RNA, these define energy 
+params.h                   - three h-files from Vienna RNA, these define energy 
                      parameters.
-rna_turner1999.par - The energy parameters.
-libRNA.a           - Vienna RNA library file, this file is not included in this
+rna_turner1999.par         - The energy parameters.
+libRNA.a                   - Vienna RNA library file, this file is not included in this
                      source, but is included in the Vienna RNA package. This 
                      implementation requires ViennaRNA >= 2.0
-Makefile           - The makefile
+Makefile                   - The makefile

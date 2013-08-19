@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <ctype.h>
-#include "delta.h"
+#include "partition.h"
 #include "misc.h"
 #include <iostream>
 
