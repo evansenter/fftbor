@@ -1,25 +1,25 @@
-# Makefile for FFTbor
+# Makefile for FFTbor2D
 
-CFLAGS  = -c -O3
-LDFLAGS = -lfftw3 -lm -L.
+CFLAGS  = -c -O3 -fopenmp
+LDFLAGS = -lfftw3 -L. -lgomp 
 BINDIR  = /usr/local/bin # Change this to the BINDIR
 CC      = g++
 
-FFTbor : delta.o misc.o main.o
-	 $(CC) -g delta.o misc.o main.o $(LDFLAGS) -lRNA -o FFTbor
+FFTbor2D : delta.o misc.o main.o
+	$(CC) delta.o misc.o main.o $(LDFLAGS) -lRNA -o FFTbor2D
 	
 main.o : main.cpp delta.h
-	   $(CC) -Wall -W $(CFLAGS) main.cpp
+	$(CC) $(CFLAGS) main.cpp
 
 misc.o : misc.cpp misc.h
-	 $(CC) -Wall -W -g $(CFLAGS) misc.cpp
+	$(CC) $(CFLAGS) misc.cpp
 
 delta.o: delta.cpp delta.h params.h energy_par.h energy_const.h
-	$(CC) -Wall -W -g $(CFLAGS) delta.cpp
+	$(CC) $(CFLAGS) delta.cpp
 
 clean:
-	rm -f *.o FFTbor
+	rm -f *.o FFTbor2D
 
 install:
-	cp FFTbor $(BINDIR)
-	cp energy.par $(BINDIR)
+	cp FFTbor2D $(BINDIR)
+	cp rna_turner1999.par $(BINDIR)

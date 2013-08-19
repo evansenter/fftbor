@@ -1,9 +1,12 @@
 *.out
+spliced_leader_lists/
+rnabor_benchmarking_seqs/
 benchmarking/
 scripts/
 FFTbor
 RNAbor
 RNAcentral
+FFTbor2D
 rna.ps
 *.a
 *.o
