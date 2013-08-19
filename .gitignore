@@ -10,3 +10,5 @@ rna.ps
 *.o
 test*.txt
 debug*.txt
+rnabor_benchmarking_seqs
+spliced_leader_lists
