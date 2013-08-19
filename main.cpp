@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
   free(a);
   free(bps[0]);
   free(bps[1]);
-  delete [] bps;
+  delete []bps;
 
   return 0;
 }
@@ -53,7 +53,7 @@ void usage() {
   fprintf(stderr, "-E\tenergyfile,    the default is rna_turner1999.par in this executable's directory. Must be the name of a file with all energy parameters (in the same format as used in Vienna RNA).\n");
   fprintf(stderr, "-T\ttemperature,   the default is 37 degrees Celsius (unless an energyfile with parameters for a different temperature is used.\n");
   fprintf(stderr, "-P\tprecision,     the default is 8, indicates the precision of the probabilities Z_k / Z to be returned (0-9, 0 disables precision handling).\n");
-  fprintf(stderr, "-R\trow length,    the default is the least even number greater than or equal to the sequence length + 1.\n");
+  fprintf(stderr, "-R\trow length,    the default is 100, takes an integer 0 < R <= 100 that describes the dimensions of the 2D matrix in terms of the percentage sequence length.\n");
   fprintf(stderr, "-M\tmatrix format, the default is disabled, presents output in a matrix format instead of a column format.\n");
   fprintf(stderr, "-S\tsimple output, the default is disabled, presents output in column format, for non-zero entries only with no header output (columns are: k, l, p(Z_{k,l}/Z), -RTln(Z_{k,l})).\n");
   
@@ -96,7 +96,7 @@ void read_input(int argc, char *argv[], char **maina, int **bps) {
           usage();
         } else if (!sscanf(argv[++i], "%d", &ROW_LENGTH)) {
           usage();
-        } else if (ROW_LENGTH < 0) {
+        } else if (ROW_LENGTH < 0 || ROW_LENGTH > 100) {
           usage();
         }
       } else if (strcmp(argv[i], "-M") == 0) {

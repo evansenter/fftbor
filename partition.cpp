@@ -95,7 +95,7 @@ void neighbors(char *inputSequence, int **bpList) {
   }
   
   // Initialize the row length and matrix size variables for the 2D evaluation.
-  requestedRowLength = ROW_LENGTH > 0 ? ROW_LENGTH : sequenceLength;
+  requestedRowLength = ROW_LENGTH > 0 ? (int)ceil(sequenceLength * ROW_LENGTH / 100.) : sequenceLength;
   // Note: rowLength = (least even number >= sequenceLength) + 1 (for a seq. of length 9 rowLength = (0..10).length = 11)
   rowLength = (requestedRowLength % 2 ? requestedRowLength + 1 : requestedRowLength) + 1;
   // Note: runLength = (least number div. 4 >= rowLength ^ 2) / 2 (for a seq. of length 9 runLength = (11 ^ 2 + 3) / 2 = 62)
@@ -295,25 +295,25 @@ void neighbors(char *inputSequence, int **bpList) {
   
   // Free memory.
   for (i = 0; i <= sequenceLength; ++i) {
-    delete [] EH[i];
-    delete [] EHM[i];
-    delete [] EMA[i];
-    delete [] EMB[i];
-    delete [] EZ[i];
+    delete []EH[i];
+    delete []EHM[i];
+    delete []EMA[i];
+    delete []EMB[i];
+    delete []EZ[i];
     for (int j = 0; j <= sequenceLength; ++j) {
-      delete [] EM1[i][j];
-      delete [] EIL[i][j];
+      delete []EM1[i][j];
+      delete []EIL[i][j];
     }
-    delete [] EM1[i];
-    delete [] EIL[i];
+    delete []EM1[i];
+    delete []EIL[i];
   }
-  delete [] EH;
-  delete [] EHM;
-  delete [] EMA;
-  delete [] EMB;
-  delete [] EZ;
-  delete [] EIL;
-  delete [] EM1;
+  delete []EH;
+  delete []EHM;
+  delete []EMA;
+  delete []EMB;
+  delete []EZ;
+  delete []EIL;
+  delete []EM1;
   for (i = 0; i < 2; ++i) {
     for (int j = 0; j < sequenceLength + 1; ++j) {
       free(numBasePairs[i][j]);
@@ -321,7 +321,7 @@ void neighbors(char *inputSequence, int **bpList) {
     free(numBasePairs[i]);
   }
   
-  delete [] numBasePairs;
+  delete []numBasePairs;
 
   for (i = 0; i < 5; ++i) {
     free(canBasePair[i]);
@@ -331,39 +331,39 @@ void neighbors(char *inputSequence, int **bpList) {
 
   for (int threadId = 0; threadId < MAXTHREADS; ++threadId) {
     for (int j = 0; j <= sequenceLength; ++j) {
-       delete [] Z[threadId][j];
-       delete [] ZB[threadId][j];
-       delete [] ZM[threadId][j];
-       delete [] ZM1[threadId][j];
+       delete []Z[threadId][j];
+       delete []ZB[threadId][j];
+       delete []ZM[threadId][j];
+       delete []ZM1[threadId][j];
     }
-    delete [] Z[threadId];
-    delete [] ZB[threadId];
-    delete [] ZM[threadId];
-    delete [] ZM1[threadId];
+    delete []Z[threadId];
+    delete []ZB[threadId];
+    delete []ZM[threadId];
+    delete []ZM1[threadId];
   }
 
-  delete [] Z;
-  delete [] ZB;
-  delete [] ZM;
-  delete [] ZM1;
+  delete []Z;
+  delete []ZB;
+  delete []ZM;
+  delete []ZM1;
 
   for (i = 0; i <= runLength; ++i) {
-    delete [] rootToPower[i];
+    delete []rootToPower[i];
   }
-  delete [] rootToPower;
+  delete []rootToPower;
 
   for (i = 0; i <= sequenceLength; ++i) {
-    delete [] deltaTable[i];
+    delete []deltaTable[i];
   }
-  delete [] deltaTable;
+  delete []deltaTable;
 
   for (i = 0; i <= sequenceLength; ++i) {
-    delete [] jPairedTo0[i];
-    delete [] jPairedTo1[i];
+    delete []jPairedTo0[i];
+    delete []jPairedTo1[i];
   }
 
-  delete [] jPairedTo0;
-  delete [] jPairedTo1;
+  delete []jPairedTo0;
+  delete []jPairedTo1;
  
   #ifdef TIMING_DEBUG
     gettimeofday(&stop, NULL);
@@ -378,9 +378,9 @@ void neighbors(char *inputSequence, int **bpList) {
     TIMING(start, stop, "FFT")
   #endif
 
-  delete [] solutions;
-  delete [] rootsOfUnity;
-  delete [] sequence; 
+  delete []solutions;
+  delete []rootsOfUnity;
+  delete []sequence; 
   
   #ifdef TIMING_DEBUG
     gettimeofday(&fullStop, NULL);
