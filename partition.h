@@ -21,6 +21,6 @@ void   populateRemainingRoots(dcomplex *, dcomplex *, int, int);
 void   populateMatrices(dcomplex *, dcomplex *, int, int);
 void   populateZMatrices(dcomplex **, dcomplex **, dcomplex **, dcomplex **, int);
 void   flushMatrices(dcomplex **, dcomplex **, dcomplex **, dcomplex **, int);
-void   calculateEnergies(char *, char *, short *, int **, int **, int ***, int, double, dcomplex **, int **, int **, int **, double **, double ***, double **, double ***, double **, double **, double **);
-void   evaluateZ(int, dcomplex **, dcomplex **, dcomplex **, dcomplex **, dcomplex *, dcomplex *, char *, char *, short *, int **, int **, int ***, int, int, int, int, double, dcomplex **, int **, int **, int **,double **, double ***, double **, double ***, double **, double **, double **);
+void   calculateEnergies(char *, char *, short *, int **, int **, int ***, int, double, int, int **, int **, int **, double **, double ***, double **, double ***, double **, double **, double **);
+void   evaluateZ(int, dcomplex **, dcomplex **, dcomplex **, dcomplex **, dcomplex *, dcomplex *, char *, char *, short *, int **, int **, int ***, int, int, int, int, double, int **, int **, int **,double **, double ***, double **, double ***, double **, double **, double **);
 #endif
