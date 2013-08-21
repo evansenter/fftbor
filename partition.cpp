@@ -54,7 +54,7 @@ void neighbors(char *inputSequence, int **bpList) {
   #endif
   
   int i, j, root, requestedRowLength, rowLength, runLength, numRoots, sequenceLength = strlen(inputSequence), inputStructureDist = 0;
-  RT = 0.001 * GASCONST * (temperature + K0) * 100; // 0.01 * (kcal K) / mol
+  RT = 0.0019872370936902486 * (temperature + K0) * 100; // 0.01 * (kcal K) / mol
 
   char *energyfile    = ENERGY;
   char *sequence      = new char[sequenceLength + 1];
