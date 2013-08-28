@@ -446,7 +446,7 @@ void calculateEnergies(char *inputSequence, char *sequence, short *intSequence, 
       for (k = i; k < j - MIN_PAIR_DIST; ++k) { 
         // (k, j) is the rightmost base pair in (i, j)
         if (canBasePair[intSequence[k]][intSequence[j]]) {
-          EZ[j][k] = exp(-(canBasePair[intSequence[k]][intSequence[j]] > 2 ? TerminalAU37 : 0) / RT);
+          EZ[j][k] = exp(-(canBasePair[intSequence[k]][intSequence[j]] > 2 ? TerminalAU : 0) / RT);
 
         }
       }
@@ -611,7 +611,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
         // (k, j) is the rightmost base pair in (i, j)
         if (canBasePair[intSequence[k]][intSequence[j]]) {
           #ifdef DO_WORK
-            energy = EZ[j][k];//canBasePair[intSequence[k]][intSequence[j]] > 2 ? TerminalAU37 : 0;
+            energy = EZ[j][k];//canBasePair[intSequence[k]][intSequence[j]] > 2 ? TerminalAU : 0;
 
             #ifdef ENERGY_DEBUG
               printf("%+f: %c-%c == (2 || 3) ? 0 : GUAU_penalty; Delta = %d\n", energy / 100, sequence[k], sequence[j], delta);
@@ -891,7 +891,7 @@ inline double hairpinloop(int i, int j, int bp_type, short iplus1, short jminus1
     if ((ts=strstr(Triloops, tl))) 
       energy += P->Triloop_E[(ts - Triloops)/6];
     if (bp_type>2)
-      energy += TerminalAU37;
+      energy += TerminalAU;
 	}
   if ((j-i-1) == 4) { /* check for tetraloop bonus */
     char tl[7]={0}, *ts;
@@ -938,9 +938,9 @@ inline double interiorloop(int i, int j, int k, int l, int bp_type1, int bp_type
       return energy + P->stack[bp_type1][bp_type2];
     else {
       if ( bp_type1>2)
-	energy += TerminalAU37;
+	energy += TerminalAU;
       if ( bp_type2>2)
-	energy += TerminalAU37;
+	energy += TerminalAU;
       return energy;
     }
   }
