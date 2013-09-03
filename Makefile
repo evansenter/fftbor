@@ -1,7 +1,7 @@
 # Makefile for FFTbor2D
 
 CFLAGS  = -c -O3 -fopenmp
-LDFLAGS = -lfftw3 -L. -lgomp 
+LDFLAGS = -lfftw3l -L. -lgomp 
 BINDIR  = /usr/local/bin # Change this to the BINDIR
 CC      = g++
 

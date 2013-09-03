@@ -27,7 +27,7 @@ using namespace std;
 #define COMPLEX_CONJ(complexNumber) (dcomplex((complexNumber).real(), -(complexNumber).imag()))
 #define DELTA_2D(expression1, expression2, n) ((expression1) * (n) + (expression2))
 #define ROOT_POW(i, pow, n) (rootsOfUnity[((i) * (pow)) % (n)])
-#define PRINT_COMPLEX(i, complex) printf("%d: %+f %+fi\n", i, complex[i].real(), complex[i].imag())
+#define PRINT_COMPLEX(i, complex) printf("%d: %+Lf %+Lfi\n", i, complex[i].real(), complex[i].imag())
 #define TIMING(start, stop, task) printf("Time in ms for %s: %.2f\n", task, (double)(((stop.tv_sec * 1000000 + stop.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec)) / 1000.0));
 #define MIN2(A, B) ((A) < (B) ? (A) : (B))
 #define MAX2(A, B) ((A) > (B) ? (A) : (B))
@@ -42,7 +42,7 @@ using namespace std;
 
 extern int    PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT, SIMPLE_OUTPUT;
 extern double temperature;
-extern char   *ENERGY;
+extern char   *ENERGY, *PFORMAT;
 extern paramT *P;
 double RT;
 
@@ -162,27 +162,27 @@ void neighbors(char *inputSequence, int **bpList) {
   }
 
   // Initialize tables for precalculating energies.
-  double **EZ   = new double*[sequenceLength + 1];
-  double **EH   = new double*[sequenceLength + 1];
-  double **EHM  = new double*[sequenceLength + 1];
-  double **EMA  = new double*[sequenceLength + 1]; 
-  double **EMB  = new double*[sequenceLength + 1];
-  double ***EIL = new double**[sequenceLength + 1];
-  double ***EM1 = new double**[sequenceLength + 1]; 
+  long double **EZ   = new long double*[sequenceLength + 1];
+  long double **EH   = new long double*[sequenceLength + 1];
+  long double **EHM  = new long double*[sequenceLength + 1];
+  long double **EMA  = new long double*[sequenceLength + 1]; 
+  long double **EMB  = new long double*[sequenceLength + 1];
+  long double ***EIL = new long double**[sequenceLength + 1];
+  long double ***EM1 = new long double**[sequenceLength + 1]; 
   
   
   for (i = 0; i <= sequenceLength; ++i) {
-    EZ[i]  = new double[sequenceLength + 1];
-    EH[i]  = new double[sequenceLength + 1];
-    EHM[i] = new double[sequenceLength + 1];
-    EMA[i] = new double[sequenceLength + 1];
-    EMB[i] = new double[sequenceLength + 1];
-    EIL[i] = new double*[sequenceLength + 1];
-    EM1[i] = new double*[sequenceLength + 1];
+    EZ[i]  = new long double[sequenceLength + 1];
+    EH[i]  = new long double[sequenceLength + 1];
+    EHM[i] = new long double[sequenceLength + 1];
+    EMA[i] = new long double[sequenceLength + 1];
+    EMB[i] = new long double[sequenceLength + 1];
+    EIL[i] = new long double*[sequenceLength + 1];
+    EM1[i] = new long double*[sequenceLength + 1];
     for (j = 0; j <= sequenceLength; ++j) {
-      EM1[i][j] = new double[sequenceLength + 1];
+      EM1[i][j] = new long double[sequenceLength + 1];
       // Multiplied by a "twiddle" factor.
-      EIL[i][j] = new double[4 * (sequenceLength + 1)];
+      EIL[i][j] = new long double[4 * (sequenceLength + 1)];
     }
   }
   
@@ -386,7 +386,7 @@ void neighbors(char *inputSequence, int **bpList) {
   #endif
 }
 
-void calculateEnergies(char *inputSequence, char *sequence, short *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int sequenceLength, double RT, int **deltaTable, int **jPairedTo0, int **jPairedTo1, double **EH, double ***EIL, double **EHM, double ***EM1, double **EMA, double **EMB, double **EZ) {
+void calculateEnergies(char *inputSequence, char *sequence, short *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int sequenceLength, double RT, int **deltaTable, int **jPairedTo0, int **jPairedTo1, long double **EH, long double ***EIL, long double **EHM, long double ***EM1, long double **EMA, long double **EMB, long double **EZ) {
   int i, j, k, l, d, delta, pos;
 
   #pragma opm parallel for shared(default)  
@@ -456,9 +456,9 @@ void calculateEnergies(char *inputSequence, char *sequence, short *intSequence, 
   }
 }
 
-void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex *solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, short *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int inputStructureDist, int sequenceLength, int rowLength, int numRoots, double RT, dcomplex *rootToPower, int **deltaTable, int **jPairedTo0, int **jPairedTo1,double **EH, double ***EIL, double **EHM, double ***EM1, double **EMA, double **EMB, double **EZ) {  
+void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex *solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, short *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int inputStructureDist, int sequenceLength, int rowLength, int numRoots, double RT, dcomplex *rootToPower, int **deltaTable, int **jPairedTo0, int **jPairedTo1, long double **EH, long double ***EIL, long double **EHM, long double ***EM1, long double **EMA, long double **EMB, long double **EZ) {  
   int i, j, k, l, d, delta, pos;
-  double energy;
+  long double energy;
   
   flushMatrices(Z, ZB, ZM, ZM1, sequenceLength);
 
@@ -654,17 +654,14 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
 }
 
 void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, int **structure, int sequenceLength, int rowLength, int runLength, int inputStructureDist) {
-  char precisionFormat[20];
   int i, solutionLength = (int)pow((double)rowLength, 2);
-  double *probabilities = (double *)xcalloc(2 * runLength + 1, sizeof(double));
-  double scalingFactor, sum;
+  long double *probabilities = (long double *)xcalloc(2 * runLength + 1, sizeof(long double));
+  long double scalingFactor, sum;
   
-  sprintf(precisionFormat, "%%+.0%df", PRECISION ? (int)floor(log(pow(2., PRECISION)) / log(10.)) : std::numeric_limits<double>::digits);
+  fftwl_complex signal[runLength];
+  fftwl_complex result[runLength];
   
-  fftw_complex signal[runLength];
-  fftw_complex result[runLength];
-  
-  fftw_plan plan = fftw_plan_dft_1d(runLength, signal, result, FFTW_BACKWARD, FFTW_ESTIMATE);
+  fftwl_plan plan = fftwl_plan_dft_1d(runLength, signal, result, FFTW_BACKWARD, FFTW_ESTIMATE);
   sum            = 0;
   scalingFactor  = solutions[0].real();
   
@@ -679,12 +676,16 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
     std::cout << "Scaling factor: " << solutions[0] << std::endl;
     printf("Scaled solutions vector for the inverse DFT:\n");
     for (i = 0; i < runLength; ++i) {
-      printf("%d: %+f %+fi\n", i, signal[i][FFTW_REAL], signal[i][FFTW_IMAG]);
+      printf("%d: ", i);
+      printf(PFORMAT, signal[i][FFTW_REAL]);
+      printf(" ");
+      printf(PFORMAT, signal[i][FFTW_IMAG]);
+      printf("i\n");
     }
   #endif
   
-  // Calculate transform, coefficients are in fftw_complex result array.
-  fftw_execute(plan);
+  // Calculate transform, coefficients are in fftwl_complex result array.
+  fftwl_execute(plan);
   
   for (i = 0; i < runLength; ++i) {
     // Truncate to user-specified precision; if set to 0, no truncation occurs (dangerous).
@@ -704,10 +705,10 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
       for (i = 0; i < solutionLength; ++i) { 
         if (probabilities[i] != 0) {
           printf("%d\t%d\t", i / rowLength, i % rowLength);
-          printf(precisionFormat, probabilities[i]);
+          printf(PFORMAT, probabilities[i]);
           printf("\t");
           if (probabilities[i] > 0) {
-            printf(precisionFormat, -(RT / 100) * log(probabilities[i]) -(RT / 100) * log(scalingFactor));
+            printf(PFORMAT, -(RT / 100) * log(probabilities[i]) -(RT / 100) * log(scalingFactor));
           } else {
             printf("N/A");
           }
@@ -720,7 +721,7 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
           printf("\n");
         }
     
-        printf(precisionFormat, probabilities[i]);
+        printf(PFORMAT, probabilities[i]);
         printf("\t");
       }
       
@@ -730,10 +731,10 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
       
       for (i = 0; i < solutionLength; ++i) { 
         printf("%d\t%d\t", i / rowLength, i % rowLength);
-        printf(precisionFormat, probabilities[i]);
+        printf(PFORMAT, probabilities[i]);
         printf("\t");
         if (probabilities[i] > 0) {
-          printf(precisionFormat, -(RT / 100) * log(probabilities[i]) -(RT / 100) * log(scalingFactor));
+          printf(PFORMAT, -(RT / 100) * log(probabilities[i]) -(RT / 100) * log(scalingFactor));
         } else {
           printf("N/A");
         }
@@ -742,12 +743,14 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
     }
     
     #ifdef FFTBOR_DEBUG
-      printf("\nScaling factor: %.15f\n", scalingFactor);
+      printf("\nScaling factor: ");
+      printf(PFORMAT, scalingFactor);
+      printf("\n");
       std::cout << "Sum: " << sum << std::endl << std::endl;
     #endif
   #endif
   
-  fftw_destroy_plan(plan);
+  fftwl_destroy_plan(plan);
   free(probabilities);
 }
 
@@ -892,9 +895,9 @@ void initializeBasePairCounts(int **numBasePairs, int *bpList, int n) {
   }
 }
 
-inline double hairpinloop(int i, int j, int bp_type, short iplus1, short jminus1, char *a) {
+inline long double hairpinloop(int i, int j, int bp_type, short iplus1, short jminus1, char *a) {
   // char *a is intended to be 0-indexed.
-  double energy;
+  long double energy;
   energy = ((j-i-1) <= 30) ? P->hairpin[j-i-1] :
     P->hairpin[30]+(P->lxc*log((j-i-1)/30.));
   if ((j-i-1) >3) /* No mismatch for triloops */
@@ -916,8 +919,8 @@ inline double hairpinloop(int i, int j, int bp_type, short iplus1, short jminus1
   return energy;
 }
 
-inline double interiorloop(int i, int j, int k, int l, int bp_type1, int bp_type2, short iplus1, short lplus1, short jminus1, short kminus1) {
-  double energy;
+inline long double interiorloop(int i, int j, int k, int l, int bp_type1, int bp_type2, short iplus1, short lplus1, short jminus1, short kminus1) {
+  long double energy;
   int n1,n2;
   /* Interior loop, bulge or stack? */
   n1 = k-i-1;

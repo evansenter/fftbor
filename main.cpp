@@ -15,7 +15,7 @@
 
 int           PF, N, PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT, SIMPLE_OUTPUT;
 extern double temperature;
-char          *ENERGY;
+char          *ENERGY, *PFORMAT;
 paramT        *P;
 
 void read_input(int, char **, char **, int **);
@@ -71,6 +71,7 @@ void read_input(int argc, char *argv[], char **maina, int **bps) {
   MAXTHREADS    = omp_get_max_threads(); 
   PF            = 0;
   PRECISION     = (int)ceil(log(pow(10., 8)) / log(2.));
+  PFORMAT       = (char *)malloc(20 * sizeof(char));
   ROW_LENGTH    = 0;
   MATRIX_FORMAT = 0; 
   SIMPLE_OUTPUT = 0; 
@@ -218,6 +219,8 @@ void read_input(int argc, char *argv[], char **maina, int **bps) {
       }
     }
   }
+  
+  sprintf(PFORMAT, "%%+.0%dLf", PRECISION ? (int)floor(log(pow(2., PRECISION)) / log(10.)) : std::numeric_limits<long double>::digits10);
   
   /* Post-sequence / structure validations */
   if (seq == NULL || str1 == NULL || str2 == NULL) {
