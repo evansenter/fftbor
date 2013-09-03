@@ -1,0 +1,4 @@
+> ms2:
+GGGUGGGACCCCUUUCGGGGUCCUGCUCAACUUCCUGUCGAGCUAAUGCCAUUUUUAAUGUCUUUAGCGAGAC
+(((..(((((((....)))))))..)))........(((..(((((.(.(((.....))).).)))))..)))
+((((((((((((....))))))))))))........(((..(((((.((.(((...))))).)).)))..)))

@@ -1,6 +1,8 @@
 #ifndef MISC_H
 #define MISC_H
 
+#include <time.h>
+#include <sys/time.h>
 #include <stdbool.h>
 
 #define MAX_SEQ_LENGTH 610
