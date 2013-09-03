@@ -3,13 +3,15 @@
 #include <ctype.h>
 #include <math.h>
 #include <stdlib.h>
-#include "partition.h"
-#include "misc.h"
-#include <fftw3.h>
-#include "energy_const.h"
-#include "energy_par.h"
 #include <iostream>
 #include <limits>
+#include <fftw3.h>
+#include "partition.h"
+#include "misc.h"
+#include "energy_par.h"
+#include "fold_vars.h"
+#include "params.h"
+
 #ifdef _OPENMP
   #include <omp.h>
 #endif

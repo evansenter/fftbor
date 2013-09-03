@@ -3,9 +3,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <iostream>
 #include "partition.h"
 #include "misc.h"
-#include <iostream>
+#include "params.h"
 
 #ifdef _OPENMP
   #include <omp.h>
