@@ -3,15 +3,13 @@
 #include <ctype.h>
 #include <math.h>
 #include <stdlib.h>
-#include <iostream>
-#include <limits>
-#include <fftw3.h>
 #include "partition.h"
 #include "misc.h"
+#include <fftw3.h>
+#include "energy_const.h"
 #include "energy_par.h"
-#include "fold_vars.h"
-#include "params.h"
-
+#include <iostream>
+#include <limits>
 #ifdef _OPENMP
   #include <omp.h>
 #endif
@@ -34,7 +32,7 @@ using namespace std;
 
 // #define SILENCE_OUTPUT 1
 // #define TIMING_DEBUG 1
-// #define FFTBOR_DEBUG 1
+//#define FFTBOR_DEBUG 1
 // #define OPENMP_DEBUG 1
 // #define STRUCTURE_COUNT 1
 // #define ENERGY_DEBUG (1 && !root)
@@ -44,6 +42,7 @@ extern int    PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT, SIMPLE_OUTPUT;
 extern double temperature;
 extern char   *ENERGY;
 extern paramT *P;
+//extern model_detailsT md;
 double RT;
 
 extern "C" void read_parameter_file(const char energyfile[]);
@@ -66,7 +65,19 @@ void neighbors(char *inputSequence, int **bpList) {
   
   // Load energy parameters.
   read_parameter_file(energyfile);
-  P = scale_parameters();
+  //  model_detailsT md;
+  //  set_model_details(&md);
+  //  md.dangles = 0;
+  //  P = get_scaled_parameters(temperature, md);
+ P = scale_parameters();
+ P->model_details.special_hp = 1;
+ // printf("dangles = %d\n",P->model_details.dangles);
+ // printf("special = %d\n",P->model_details.special_hp);
+ // printf("nolp = %d\n", P->model_details.noLP);      //  = noLonelyPairs;
+ // printf("nogu = %d\n",P->model_details.noGU );//       = noGU;
+ // printf("noguclos = %d\n",P->model_details.noGUclosure);// = no_closingGU;
+ // printf("logml = %d\n",P->model_details.logML);//       = logML;
+ // printf("gquad = %d\n",P->model_details.gquad);//       = gquad;
 
   // Make necessary versions of the sequence for efficient processing.
   sequence[0] = '@';
@@ -448,7 +459,7 @@ void calculateEnergies(char *inputSequence, char *sequence, short *intSequence, 
       for (k = i; k < j - MIN_PAIR_DIST; ++k) { 
         // (k, j) is the rightmost base pair in (i, j)
         if (canBasePair[intSequence[k]][intSequence[j]]) {
-          EZ[j][k] = exp(-(canBasePair[intSequence[k]][intSequence[j]] > 2 ? TerminalAU : 0) / RT);
+          EZ[j][k] = exp(-(canBasePair[intSequence[k]][intSequence[j]] > 2 ? P->TerminalAU : 0) / RT);
 
         }
       }
@@ -613,7 +624,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
         // (k, j) is the rightmost base pair in (i, j)
         if (canBasePair[intSequence[k]][intSequence[j]]) {
           #ifdef DO_WORK
-            energy = EZ[j][k];//canBasePair[intSequence[k]][intSequence[j]] > 2 ? TerminalAU : 0;
+            energy = EZ[j][k];//canBasePair[intSequence[k]][intSequence[j]] > 2 ? TerminalAU37 : 0;
 
             #ifdef ENERGY_DEBUG
               printf("%+f: %c-%c == (2 || 3) ? 0 : GUAU_penalty; Delta = %d\n", energy / 100, sequence[k], sequence[j], delta);
@@ -656,10 +667,10 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
 void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, int **structure, int sequenceLength, int rowLength, int runLength, int inputStructureDist) {
   char precisionFormat[20];
   int i, solutionLength = (int)pow((double)rowLength, 2);
-  double *probabilities = (double *)xcalloc(2 * runLength + 1, sizeof(double));
+  double *probabilities = (double *)xcalloc(2*runLength+1, sizeof(double));
   double scalingFactor, sum;
   
-  sprintf(precisionFormat, "%%+.0%df", PRECISION ? (int)floor(log(pow(2., PRECISION)) / log(10.)) : std::numeric_limits<double>::digits);
+  sprintf(precisionFormat, "%%+.0%df", PRECISION ? PRECISION : std::numeric_limits<double>::digits10);
   
   fftw_complex signal[runLength];
   fftw_complex result[runLength];
@@ -671,8 +682,8 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
   // For some reason it's much more numerically stable to set the signal via real / imag components separately.
   for (i = 0; i < runLength; ++i) {
     // Convert point-value solutions of Z(root) to 10^PRECISION * Z(root) / Z
-    signal[i][FFTW_REAL] = pow(2., (double)PRECISION) * (solutions[i].real() / scalingFactor);
-    signal[i][FFTW_IMAG] = pow(2., (double)PRECISION) * (solutions[i].imag() / scalingFactor);
+    signal[i][FFTW_REAL] = (pow(10.0, (double)PRECISION) * solutions[i].real()) / scalingFactor;
+    signal[i][FFTW_IMAG] = (pow(10.0, (double)PRECISION) * solutions[i].imag()) / scalingFactor;
   }
   
   #ifdef FFTBOR_DEBUG    
@@ -687,16 +698,16 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
   fftw_execute(plan);
   
   for (i = 0; i < runLength; ++i) {
-    // Truncate to user-specified precision; if set to 0, no truncation occurs (dangerous).
+    // Truncate to user-specified precision, default is 4 and if set to 0, no truncation occurs (dangerous).
     if (!PRECISION) {
       solutions[i] = dcomplex(result[i][FFTW_REAL] / runLength, 0);
     } else {
-      solutions[i] = dcomplex(pow(2., -PRECISION) * static_cast<int>(result[i][FFTW_REAL] / runLength), 0);
+      solutions[i] = dcomplex(pow(10.0, -PRECISION) * static_cast<int>(result[i][FFTW_REAL] / runLength), 0);
     }
     
     probabilities[inputStructureDist % 2 ? 2 * i + 1 : 2 * i] = solutions[i].real();
         
-    sum += solutions[i].real() > 0 ? solutions[i].real() : 0;
+    sum += solutions[i].real();
   }
   
   #ifndef SILENCE_OUTPUT
@@ -705,9 +716,7 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
         if (probabilities[i] > 0) {
           printf("%d\t%d\t", i / rowLength, i % rowLength);
           printf(precisionFormat, probabilities[i]);
-          printf("\t");
-          printf(precisionFormat, -(RT / 100) * log(probabilities[i]) -(RT / 100) * log(scalingFactor));
-          printf("\n");
+          printf("\t%+f\n", -(RT / 100) * log(probabilities[i]) -(RT / 100) * log(scalingFactor));
         }
       }
     } else if (MATRIX_FORMAT) {
@@ -727,13 +736,7 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
       for (i = 0; i < solutionLength; ++i) { 
         printf("%d\t%d\t", i / rowLength, i % rowLength);
         printf(precisionFormat, probabilities[i]);
-        printf("\t");
-        if (probabilities[i] > 0) {
-          printf(precisionFormat, -(RT / 100) * log(probabilities[i]) -(RT / 100) * log(scalingFactor));
-        } else {
-          printf("N/A");
-        }
-        printf("\n");
+        printf("\t%+f\n", -(RT / 100) * log(probabilities[i]) -(RT / 100) * log(scalingFactor));
       }
     }
     
@@ -888,12 +891,108 @@ void initializeBasePairCounts(int **numBasePairs, int *bpList, int n) {
   }
 }
 
-inline double hairpinloop(int i, int j, int bp_type, short iplus1, short jminus1, char *a) {
+inline double hairpinloop(int i, int j, int type, short si1, short sj1, char *string){
+  double energy;
+  int size = j-i-1;
+
+  energy = (size <= 30) ? P->hairpin[size] : P->hairpin[30]+(int)(P->lxc*log((size)/30.));
+  if (P->model_details.special_hp){
+    if (size == 4) { /* check for tetraloop bonus */
+      char tl[7]={0}, *ts;
+      strncpy(tl, string, 6);
+      if ((ts=strstr(P->Tetraloops, tl)))
+        return (P->Tetraloop_E[(ts - P->Tetraloops)/7]);
+    }
+    else if (size == 6) {
+      char tl[9]={0}, *ts;
+      strncpy(tl, string, 8);
+      if ((ts=strstr(P->Hexaloops, tl)))
+        return (energy = P->Hexaloop_E[(ts - P->Hexaloops)/9]);
+    }
+    else if (size == 3) {
+      char tl[6]={0,0,0,0,0,0}, *ts;
+      strncpy(tl, string, 5);
+      if ((ts=strstr(P->Triloops, tl))) {
+        return (P->Triloop_E[(ts - P->Triloops)/6]);
+      }
+      return (energy + (type>2 ? P->TerminalAU : 0));
+    }
+  }
+  energy += P->mismatchH[type][si1][sj1];
+
+  return energy;
+}
+
+inline double interiorloop(int i, int j, int k, int l, int type, int type_2, short si1, short sq1, short sj1, short sp1){
+  /* compute energy of degree 2 loop (stack bulge or interior) */
+  int nl, ns;
+  double energy;
+  int n1 = k-i-1;
+  int n2 = j-l-1;
+  energy = INF;
+
+  if (n1>n2) { nl=n1; ns=n2;}
+  else {nl=n2; ns=n1;}
+
+  if (nl == 0)
+    return P->stack[type][type_2];  /* stack */
+
+  if (ns==0) {                      /* bulge */
+    energy = (nl<=MAXLOOP)?P->bulge[nl]:
+      (P->bulge[30]+(int)(P->lxc*log(nl/30.)));
+    if (nl==1) energy += P->stack[type][type_2];
+    else {
+      if (type>2) energy += P->TerminalAU;
+      if (type_2>2) energy += P->TerminalAU;
+    }
+    return energy;
+  }
+  else {                            /* interior loop */
+    if (ns==1) {
+      if (nl==1)                    /* 1x1 loop */
+        return P->int11[type][type_2][si1][sj1];
+      if (nl==2) {                  /* 2x1 loop */
+        if (n1==1)
+          energy = P->int21[type][type_2][si1][sq1][sj1];
+        else
+          energy = P->int21[type_2][type][sq1][si1][sp1];
+        return energy;
+      }
+      else {  /* 1xn loop */
+        energy = (nl+1<=MAXLOOP)?(P->internal_loop[nl+1]) : (P->internal_loop[30]+(int)(P->lxc*log((nl+1)/30.)));
+        energy += MIN2(MAX_NINIO, (nl-ns)*P->ninio[2]);
+        energy += P->mismatch1nI[type][si1][sj1] + P->mismatch1nI[type_2][sq1][sp1];
+        return energy;
+      }
+    }
+    else if (ns==2) {
+      if(nl==2)      {              /* 2x2 loop */
+        return P->int22[type][type_2][si1][sp1][sq1][sj1];}
+      else if (nl==3){              /* 2x3 loop */
+        energy = P->internal_loop[5]+P->ninio[2];
+        energy += P->mismatch23I[type][si1][sj1] + P->mismatch23I[type_2][sq1][sp1];
+        return energy;
+      }
+
+    }
+    { /* generic interior loop (no else here!)*/
+      energy = (n1+n2<=MAXLOOP)?(P->internal_loop[n1+n2]) : (P->internal_loop[30]+(int)(P->lxc*log((n1+n2)/30.)));
+
+      energy += MIN2(MAX_NINIO, (nl-ns)*P->ninio[2]);
+
+      energy += P->mismatchI[type][si1][sj1] + P->mismatchI[type_2][sq1][sp1];
+    }
+  }
+  return energy;
+}
+
+
+/*inline double hairpinloop(int i, int j, int bp_type, short iplus1, short jminus1, char *a) {
   // char *a is intended to be 0-indexed.
   double energy;
   energy = ((j-i-1) <= 30) ? P->hairpin[j-i-1] :
     P->hairpin[30]+(P->lxc*log((j-i-1)/30.));
-  if ((j-i-1) >3) /* No mismatch for triloops */
+  if ((j-i-1) >3) // No mismatch for triloops 
     energy += P->mismatchH[bp_type][iplus1][jminus1];
   else {
     char tl[6]={0}, *ts;
@@ -901,21 +1000,21 @@ inline double hairpinloop(int i, int j, int bp_type, short iplus1, short jminus1
     if ((ts=strstr(Triloops, tl))) 
       energy += P->Triloop_E[(ts - Triloops)/6];
     if (bp_type>2)
-      energy += TerminalAU;
+      energy += TerminalAU37;
 	}
-  if ((j-i-1) == 4) { /* check for tetraloop bonus */
+  if ((j-i-1) == 4) { // check for tetraloop bonus 
     char tl[7]={0}, *ts;
     strncpy(tl, a+i-1, 6);
     if ((ts=strstr(Tetraloops, tl))) 
       energy += P->TETRA_ENERGY[(ts - Tetraloops)/7];
   }
   return energy;
-}
+}*/
 
-inline double interiorloop(int i, int j, int k, int l, int bp_type1, int bp_type2, short iplus1, short lplus1, short jminus1, short kminus1) {
+/*inline double interiorloop(int i, int j, int k, int l, int bp_type1, int bp_type2, short iplus1, short lplus1, short jminus1, short kminus1) {
   double energy;
   int n1,n2;
-  /* Interior loop, bulge or stack? */
+  // Interior loop, bulge or stack? 
   n1 = k-i-1;
   n2 = j-l-1;
 
@@ -926,8 +1025,8 @@ inline double interiorloop(int i, int j, int k, int l, int bp_type1, int bp_type
         P->mismatchI[bp_type1][iplus1][jminus1] +
         P->mismatchI[bp_type2][lplus1][kminus1] +
         MIN2(MAX_NINIO, abs(n1-n2)*P->F_ninio[2]);
-    /* Interior loop, special cases for interior loops of 
-     * sizes 1+1, 1+2, 2+1, and 2+2. */
+    // Interior loop, special cases for interior loops of 
+     // sizes 1+1, 1+2, 2+1, and 2+2. 
     
     else if ( (n1==1) && (n2==1) )
       return P->int11[bp_type1][bp_type2][iplus1][jminus1];
@@ -939,26 +1038,26 @@ inline double interiorloop(int i, int j, int k, int l, int bp_type1, int bp_type
       return P->int22[bp_type1][bp_type2][iplus1][kminus1][lplus1][jminus1];
     
   }else if ( (n1>0) || (n2>0) ) {
-    /* Bulge */
+    // Bulge 
     energy = ((n2+n1)<=30)?P->bulge[n1+n2]:
       (P->bulge[30]+(P->lxc*log((n1+n2)/30.)));
     if ( (n1+n2)==1 )
-      /* A bulge of size one is so small that the base pairs
-       * can stack */
+      // A bulge of size one is so small that the base pairs
+       * can stack 
       return energy + P->stack[bp_type1][bp_type2];
     else {
       if ( bp_type1>2)
-	energy += TerminalAU;
+	energy += TerminalAU37;
       if ( bp_type2>2)
-	energy += TerminalAU;
+	energy += TerminalAU37;
       return energy;
     }
   }
-  else { /* n1=n2=0 */
-    /* Stacking base pair */
+  else { // n1=n2=0 
+    // Stacking base pair 
     return P->stack[bp_type1][bp_type2];
   }
   return energy;
-}
+}*/
 
 

@@ -3,11 +3,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <ctype.h>
-#include <iostream>
-#include <limits>
 #include "partition.h"
 #include "misc.h"
-#include "params.h"
+#include <iostream>
 
 #ifdef _OPENMP
   #include <omp.h>
@@ -52,9 +50,9 @@ void usage() {
   fprintf(stderr, "\tsecondary structure (2)\n\n");
   
   fprintf(stderr, "Options include the following:\n");
-  fprintf(stderr, "-E\tenergyfile,    the default is rna_turner_1.8.5.par in this executable's directory. Must be the name of a file with all energy parameters (in the same format as used in Vienna RNA).\n");
+  fprintf(stderr, "-E\tenergyfile,    the default is rna_turner_2.1.2.par in this executable's directory. Must be the name of a file with all energy parameters (in the same format as used in Vienna RNA).\n");
   fprintf(stderr, "-T\ttemperature,   the default is 37 degrees Celsius (unless an energyfile with parameters for a different temperature is used.\n");
-  fprintf(stderr, "-P\tprecision,     the default is %d, indicates the precision (base 2) of the probabilities Z_k / Z to be returned (0-%d, 0 disables precision handling).\n", (int)ceil(log(pow(10., 8)) / log(2.)), std::numeric_limits<double>::digits);
+  fprintf(stderr, "-P\tprecision,     the default is 8, indicates the precision of the probabilities Z_k / Z to be returned (0-9, 0 disables precision handling).\n");
   fprintf(stderr, "-R\trow length,    the default is 100, takes an integer 0 < R <= 100 that describes the dimensions of the 2D matrix in terms of the percentage sequence length.\n");
   fprintf(stderr, "-M\tmatrix format, the default is disabled, presents output in a matrix format instead of a column format.\n");
   fprintf(stderr, "-S\tsimple output, the default is disabled, presents output in column format, for non-zero entries only with no header output (columns are: k, l, p(Z_{k,l}/Z), -RTln(Z_{k,l})).\n");
@@ -70,11 +68,11 @@ void read_input(int argc, char *argv[], char **maina, int **bps) {
  
   MAXTHREADS    = omp_get_max_threads(); 
   PF            = 0;
-  PRECISION     = (int)ceil(log(pow(10., 8)) / log(2.));
+  PRECISION     = 4;
   ROW_LENGTH    = 0;
   MATRIX_FORMAT = 0; 
   SIMPLE_OUTPUT = 0; 
-  ENERGY        = (char *)"rna_turner_1.8.5.par";
+  ENERGY        = (char *)"rna_turner_2.1.2.par";
 
   /* Function to retrieve RNA sequence and structure, when
    * either input in command line or in a file, where the first
@@ -116,7 +114,7 @@ void read_input(int argc, char *argv[], char **maina, int **bps) {
           usage();
         } else if (!sscanf(argv[++i], "%d", &PRECISION)) {
           usage();
-        } else if (PRECISION < 0 || PRECISION > std::numeric_limits<double>::digits) {
+        } else if (PRECISION < 0 || PRECISION > 9) {
           usage();
         }
       } else {
