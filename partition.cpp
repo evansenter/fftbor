@@ -659,7 +659,7 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
   double *probabilities = (double *)xcalloc(2 * runLength + 1, sizeof(double));
   double scalingFactor, sum;
   
-  sprintf(precisionFormat, "%%+.0%df", PRECISION ? PRECISION : std::numeric_limits<double>::digits);
+  sprintf(precisionFormat, "%%+.0%df", PRECISION ? (int)floor(log(pow(2., PRECISION)) / log(10.)) : std::numeric_limits<double>::digits);
   
   fftw_complex signal[runLength];
   fftw_complex result[runLength];
