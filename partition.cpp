@@ -705,7 +705,9 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
         if (probabilities[i] > 0) {
           printf("%d\t%d\t", i / rowLength, i % rowLength);
           printf(precisionFormat, probabilities[i]);
-          printf("\t%+f\n", -(RT / 100) * log(probabilities[i]) -(RT / 100) * log(scalingFactor));
+          printf("\t");
+          printf(precisionFormat, -(RT / 100) * log(probabilities[i]) -(RT / 100) * log(scalingFactor));
+          printf("\n");
         }
       }
     } else if (MATRIX_FORMAT) {
@@ -725,7 +727,9 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
       for (i = 0; i < solutionLength; ++i) { 
         printf("%d\t%d\t", i / rowLength, i % rowLength);
         printf(precisionFormat, probabilities[i]);
-        printf("\t%+f\n", -(RT / 100) * log(probabilities[i]) -(RT / 100) * log(scalingFactor));
+        printf("\t");
+        printf(precisionFormat, -(RT / 100) * log(probabilities[i]) -(RT / 100) * log(scalingFactor));
+        printf("\n");
       }
     }
     

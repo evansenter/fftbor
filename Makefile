@@ -22,4 +22,4 @@ clean:
 
 install:
 	cp FFTbor2D $(BINDIR)
-	cp rna_turner1999.par $(BINDIR)
+	cp rna_turner_1.8.5.par $(BINDIR)
