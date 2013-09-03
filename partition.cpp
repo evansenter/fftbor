@@ -656,10 +656,10 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
 void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, int **structure, int sequenceLength, int rowLength, int runLength, int inputStructureDist) {
   char precisionFormat[20];
   int i, solutionLength = (int)pow((double)rowLength, 2);
-  double *probabilities = (double *)xcalloc(2*runLength+1, sizeof(double));
+  double *probabilities = (double *)xcalloc(2 * runLength + 1, sizeof(double));
   double scalingFactor, sum;
   
-  sprintf(precisionFormat, "%%+.0%df", PRECISION ? PRECISION : std::numeric_limits<double>::digits10);
+  sprintf(precisionFormat, "%%+.0%df", PRECISION ? PRECISION : std::numeric_limits<double>::digits);
   
   fftw_complex signal[runLength];
   fftw_complex result[runLength];
@@ -671,8 +671,8 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
   // For some reason it's much more numerically stable to set the signal via real / imag components separately.
   for (i = 0; i < runLength; ++i) {
     // Convert point-value solutions of Z(root) to 10^PRECISION * Z(root) / Z
-    signal[i][FFTW_REAL] = (pow(10.0, (double)PRECISION) * solutions[i].real()) / scalingFactor;
-    signal[i][FFTW_IMAG] = (pow(10.0, (double)PRECISION) * solutions[i].imag()) / scalingFactor;
+    signal[i][FFTW_REAL] = pow(2., (double)PRECISION) * (solutions[i].real() / scalingFactor);
+    signal[i][FFTW_IMAG] = pow(2., (double)PRECISION) * (solutions[i].imag() / scalingFactor);
   }
   
   #ifdef FFTBOR_DEBUG    
@@ -687,26 +687,30 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
   fftw_execute(plan);
   
   for (i = 0; i < runLength; ++i) {
-    // Truncate to user-specified precision, default is 4 and if set to 0, no truncation occurs (dangerous).
+    // Truncate to user-specified precision; if set to 0, no truncation occurs (dangerous).
     if (!PRECISION) {
       solutions[i] = dcomplex(result[i][FFTW_REAL] / runLength, 0);
     } else {
-      solutions[i] = dcomplex(pow(10.0, -PRECISION) * static_cast<int>(result[i][FFTW_REAL] / runLength), 0);
+      solutions[i] = dcomplex(pow(2., -PRECISION) * static_cast<int>(result[i][FFTW_REAL] / runLength), 0);
     }
     
     probabilities[inputStructureDist % 2 ? 2 * i + 1 : 2 * i] = solutions[i].real();
         
-    sum += solutions[i].real();
+    sum += solutions[i].real() > 0 ? solutions[i].real() : 0;
   }
   
   #ifndef SILENCE_OUTPUT
     if (SIMPLE_OUTPUT) {
       for (i = 0; i < solutionLength; ++i) { 
-        if (probabilities[i] > 0) {
+        if (probabilities[i] != 0) {
           printf("%d\t%d\t", i / rowLength, i % rowLength);
           printf(precisionFormat, probabilities[i]);
           printf("\t");
-          printf(precisionFormat, -(RT / 100) * log(probabilities[i]) -(RT / 100) * log(scalingFactor));
+          if (probabilities[i] > 0) {
+            printf(precisionFormat, -(RT / 100) * log(probabilities[i]) -(RT / 100) * log(scalingFactor));
+          } else {
+            printf("N/A");
+          }
           printf("\n");
         }
       }
@@ -728,7 +732,11 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
         printf("%d\t%d\t", i / rowLength, i % rowLength);
         printf(precisionFormat, probabilities[i]);
         printf("\t");
-        printf(precisionFormat, -(RT / 100) * log(probabilities[i]) -(RT / 100) * log(scalingFactor));
+        if (probabilities[i] > 0) {
+          printf(precisionFormat, -(RT / 100) * log(probabilities[i]) -(RT / 100) * log(scalingFactor));
+        } else {
+          printf("N/A");
+        }
         printf("\n");
       }
     }
