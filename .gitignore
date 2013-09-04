@@ -3,7 +3,7 @@ scripts/
 FFTbor
 RNAbor
 RNAcentral
-FFTbor2D
+FFTbor2D*
 rna.ps
 *.a
 *.o
