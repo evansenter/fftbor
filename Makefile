@@ -1,12 +1,12 @@
 # Makefile for FFTbor2D
 
 CFLAGS  = -c -O3 -fopenmp
-LDFLAGS = -lfftw3 -L. -lgomp 
+LDFLAGS = -lfftw3 -L. -lgomp -lRNA_1.8.5
 BINDIR  = /usr/local/bin # Change this to the BINDIR
 CC      = g++
 
-FFTbor2D : partition.o misc.o main.o
-	$(CC) partition.o misc.o main.o $(LDFLAGS) -lRNA -o FFTbor2D
+FFTbor2D_185 : partition.o misc.o main.o
+	$(CC) partition.o misc.o main.o $(LDFLAGS) -o FFTbor2D_185
 	
 main.o : main.cpp partition.h
 	$(CC) $(CFLAGS) main.cpp
@@ -18,8 +18,8 @@ partition.o: partition.cpp partition.h params.h energy_par.h energy_const.h
 	$(CC) $(CFLAGS) partition.cpp
 
 clean:
-	rm -f *.o FFTbor2D
+	rm -f *.o FFTbor2D_185
 
 install:
-	cp FFTbor2D $(BINDIR)
+	cp FFTbor2D_185 $(BINDIR)
 	cp rna_turner_1.8.5.par $(BINDIR)
