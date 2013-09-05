@@ -6,7 +6,7 @@
 #define   VRNA_GQUAD_MIN_LINKER_LENGTH  1
 #define   VRNA_GQUAD_MIN_BOX_SIZE       ((4*VRNA_GQUAD_MIN_STACK_SIZE)+(3*VRNA_GQUAD_MIN_LINKER_LENGTH))
 #define   VRNA_GQUAD_MAX_BOX_SIZE       ((4*VRNA_GQUAD_MAX_STACK_SIZE)+(3*VRNA_GQUAD_MAX_LINKER_LENGTH))
-#define  INF 10000
+// #define  INF 10000
 
 /**
  *  \brief The data structure that contains the complete model details used throughout the calculations

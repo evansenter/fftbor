@@ -1,14 +1,12 @@
-#ifndef DELTA_H
-#define DELTA_H
+#ifndef PARTITION_H
+#define PARTITION_H
 
-#include "params.h"
 #include <complex>
-
 typedef std::complex<double> dcomplex;
 
 void   neighbors(char *, int **);
 int    numbp(int, int, int *);
-short    bn(char);
+short  bn(char);
 void   initializeCanBasePair(int **);
 void   translateToIntSequence(char *, short *);
 void   initializeBasePairCounts(int **, int *, int );
