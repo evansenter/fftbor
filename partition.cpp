@@ -44,10 +44,11 @@ extern int    PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT, SIMPLE_OUTPUT;
 extern double temperature;
 extern char   *ENERGY;
 extern paramT *P;
-//extern model_detailsT md;
 double RT;
 
 extern "C" void read_parameter_file(const char energyfile[]);
+extern "C" int *get_iindx(unsigned int sequenceLength);
+extern "C" unsigned int *maximumMatchingConstraint(const char *sequence, short *viennaBP);
 
 void neighbors(char *inputSequence, int **bpList) {
   #ifdef TIMING_DEBUG
@@ -56,30 +57,20 @@ void neighbors(char *inputSequence, int **bpList) {
     gettimeofday(&start, NULL);
   #endif
   
-  int i, j, root, requestedRowLength, rowLength, runLength, numRoots, sequenceLength = strlen(inputSequence), inputStructureDist = 0;
+  int i, j, root, minimalRowLength, requestedRowLength, rowLength, runLength, numRoots, sequenceLength = strlen(inputSequence), inputStructureDist = 0;
   RT = 0.0019872370936902486 * (temperature + K0) * 100; // 0.01 * (kcal K) / mol
 
-  char *energyfile    = ENERGY;
-  char *sequence      = new char[sequenceLength + 1];
-  short *intSequence  = (short *)xcalloc(sequenceLength + 1, sizeof(short));
-  int ***numBasePairs = new int**[2];
-  int **canBasePair;
+  char  *energyfile     = ENERGY;
+  char  *sequence       = new char[sequenceLength + 1];
+  short *intSequence    = (short *)xcalloc(sequenceLength + 1, sizeof(short));
+  short **viennaBP      = new short*[2];
+  int   ***numBasePairs = new int**[2];
+  int   **canBasePair;
   
   // Load energy parameters.
   read_parameter_file(energyfile);
-  //  model_detailsT md;
-  //  set_model_details(&md);
-  //  md.dangles = 0;
-  //  P = get_scaled_parameters(temperature, md);
- P = scale_parameters();
- P->model_details.special_hp = 1;
- // printf("dangles = %d\n",P->model_details.dangles);
- // printf("special = %d\n",P->model_details.special_hp);
- // printf("nolp = %d\n", P->model_details.noLP);      //  = noLonelyPairs;
- // printf("nogu = %d\n",P->model_details.noGU );//       = noGU;
- // printf("noguclos = %d\n",P->model_details.noGUclosure);// = no_closingGU;
- // printf("logml = %d\n",P->model_details.logML);//       = logML;
- // printf("gquad = %d\n",P->model_details.gquad);//       = gquad;
+  P = scale_parameters();
+  P -> model_details.special_hp = 1;
 
   // Make necessary versions of the sequence for efficient processing.
   sequence[0] = '@';
@@ -109,8 +100,31 @@ void neighbors(char *inputSequence, int **bpList) {
     inputStructureDist += (bpList[1][i] > i && bpList[1][i] != bpList[0][i] ? 1 : 0);
   }
   
+  // Secondary structure data structure in the slightly different format that Vienna uses.
+  for (i = 0; i < 2; ++i) {
+    viennaBP[i] = new short[sequenceLength + 1];
+    
+    viennaBP[i][0] = sequenceLength;
+    for (j = 1; j <= sequenceLength; ++j) {
+      viennaBP[i][j] = bpList[i][j] > 0 ? bpList[i][j] : 0;
+    }
+  }
+  
+  // Index for moving in quadratic distancy dimensions (from Vienna 2.1.2)
+  int *index = get_iindx((unsigned)sequenceLength);
+  
+  // Maximally saturated structure constrained with the input structures.
+  unsigned int *maxBPConstrained1 = maximumMatchingConstraint(inputSequence, viennaBP[0]);
+  unsigned int *maxBPConstrained2 = maximumMatchingConstraint(inputSequence, viennaBP[1]);
+  
+  // Minimize the row size to the max BP distance.
+  minimalRowLength = MAX2(
+    bpList[0][0] + maxBPConstrained1[index[1] - sequenceLength], 
+    bpList[1][0] + maxBPConstrained2[index[1] - sequenceLength]
+  );
+  
   // Initialize the row length and matrix size variables for the 2D evaluation.
-  requestedRowLength = ROW_LENGTH > 0 ? (int)ceil(sequenceLength * ROW_LENGTH / 100.) : sequenceLength;
+  requestedRowLength = ROW_LENGTH > 0 ? (int)ceil(sequenceLength * ROW_LENGTH / 100.) : minimalRowLength;
   // Note: rowLength = (least even number >= sequenceLength) + 1 (for a seq. of length 9 rowLength = (0..10).length = 11)
   rowLength = (requestedRowLength % 2 ? requestedRowLength + 1 : requestedRowLength) + 1;
   // Note: runLength = (least number div. 4 >= rowLength ^ 2) / 2 (for a seq. of length 9 runLength = (11 ^ 2 + 3) / 2 = 62)
