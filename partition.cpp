@@ -915,6 +915,7 @@ void initializeBasePairCounts(int **numBasePairs, int *bpList, int n) {
   }
 }
 
+// INLINE  PRIVATE int E_Hairpin(int size, int type, int si1, int sj1, const char *string, paramT *P){
 inline double hairpinloop(int i, int j, int type, short si1, short sj1, char *string){
   double energy;
   int size = j-i-1;
@@ -947,6 +948,7 @@ inline double hairpinloop(int i, int j, int type, short si1, short sj1, char *st
   return energy;
 }
 
+// INLINE  PRIVATE int E_IntLoop(int n1, int n2, int type, int type_2, int si1, int sj1, int sp1, int sq1, paramT *P){
 inline double interiorloop(int i, int j, int k, int l, int type, int type_2, short si1, short sq1, short sj1, short sp1){
   /* compute energy of degree 2 loop (stack bulge or interior) */
   int nl, ns;
