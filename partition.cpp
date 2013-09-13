@@ -389,7 +389,7 @@ void neighbors(char *inputSequence, int **bpList) {
 void calculateEnergies(char *inputSequence, char *sequence, short *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int sequenceLength, double RT, int **deltaTable, int **jPairedTo0, int **jPairedTo1, double **EH, double ***EIL, double **EHM, double ***EM1, double **EMA, double **EMB, double **EZ) {
   int i, j, k, l, d, delta, pos;
 
-  #pragma opm parallel for shared(default)  
+  #pragma omp parallel for default(shared)
   for (i = 1; i <= sequenceLength; ++i) {
      for (d = MIN_PAIR_DIST + 1; d <= sequenceLength-i; ++d) {
       j = i + d;

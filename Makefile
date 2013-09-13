@@ -6,7 +6,7 @@ BINDIR  = /usr/local/bin # Change this to the BINDIR
 CC      = g++
 
 FFTbor2D : partition.o misc.o main.o
-	$(CC) partition.o misc.o main.o $(LDFLAGS) -lRNA -o FFTbor2D
+	$(CC) partition.o misc.o main.o $(LDFLAGS) -lRNA_1.8.5 -o FFTbor2D
 	
 main.o : main.cpp partition.h
 	$(CC) $(CFLAGS) main.cpp
