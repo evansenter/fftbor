@@ -209,7 +209,7 @@ void neighbors(char *inputSequence, int **bpList) {
     for (j = 0; j <= sequenceLength; ++j) {
       EM1[i][j] = new double[sequenceLength + 1];
       // Multiplied by a "twiddle" factor.
-      EIL[i][j] = new double[4 * (sequenceLength + 1)];
+      EIL[i][j] = new double[5 * (sequenceLength + 1)];
     }
   }
   
@@ -339,6 +339,7 @@ void neighbors(char *inputSequence, int **bpList) {
   delete []EZ;
   delete []EIL;
   delete []EM1;
+  
   for (i = 0; i < 2; ++i) {
     for (j = 0; j < sequenceLength + 1; ++j) {
       free(numBasePairs[i][j]);
