@@ -209,7 +209,7 @@ void neighbors(char *inputSequence, int **bpList) {
     for (j = 0; j <= sequenceLength; ++j) {
       EM1[i][j] = new double[sequenceLength + 1];
       // Multiplied by a "twiddle" factor.
-      EIL[i][j] = new double[5 * (sequenceLength + 1)];
+      EIL[i][j] = new double[6 * (sequenceLength + 1)];
     }
   }
   
@@ -436,6 +436,10 @@ void calculateEnergies(char *inputSequence, char *sequence, short *intSequence, 
           for (l = MAX2(k + MIN_PAIR_DIST + 1, j - (MAX_INTERIOR_DIST - (k - i))); l < j; ++l) { 
             // l needs to at least have room to pair with k, and there can be at most 30 unpaired bases between (i, k) + (l, j), with l < j
             if (canBasePair[intSequence[k]][intSequence[l]]) {
+              if (pos >= 6 * (sequenceLength + 1)) {
+                fprintf(stderr, "Trying to access non-existant memory in EIL at index %d.\n", pos);
+              }
+              
               // In interior loop / bulge / stack with (i, j) and (k, l), (i + 1, k - 1) and (l + 1, j - 1) are all unpaired.
               EIL[i][j][pos] = exp(-interiorloop(i, j, k, l, canBasePair[intSequence[i]][intSequence[j]], canBasePair[intSequence[l]][intSequence[k]], intSequence[i + 1], intSequence[l + 1], intSequence[j - 1], intSequence[k - 1]) / RT);      
               pos++;
