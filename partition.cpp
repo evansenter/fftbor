@@ -693,9 +693,9 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
 
 void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, int **structure, int sequenceLength, int rowLength, int runLength, int inputStructureDist) {
   char precisionFormat[20];
-  int i, solutionLength = (int)pow((double)rowLength, 2);
-  double *probabilities = (double *)xcalloc(2*runLength+1, sizeof(double));
-  double scalingFactor, sum;
+  int i, x, y, solutionLength = (int)pow((double)rowLength, 2), offset = inputStructureDist % 2 ? 1 : 0;
+  double *probabilities = (double *)xcalloc(2 * runLength + 1, sizeof(double));
+  double scalingFactor, sum = 0, normalSum = 0;
   
   sprintf(precisionFormat, "%%+.0%df", PRECISION ? (int)floor(log(pow(2., PRECISION)) / log(10.)) : std::numeric_limits<double>::digits);
   
@@ -732,9 +732,26 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
       solutions[i] = dcomplex(pow(2., -PRECISION) * static_cast<int>(result[i][FFTW_REAL] / runLength), 0);
     }
     
-    probabilities[inputStructureDist % 2 ? 2 * i + 1 : 2 * i] = solutions[i].real();
+    x = (2 * i + offset) / rowLength;
+    y = (2 * i + offset) % rowLength;
+    
+    // Probabilities must be > 0 and satisfy the triangle inequality.
+    if (
+      solutions[i].real() > 0     && 
+      x + y >= inputStructureDist &&
+      x + inputStructureDist >= y &&
+      y + inputStructureDist >= x
+    ) {
+      probabilities[2 * i + offset] = solutions[i].real();
         
-    sum += solutions[i].real() > 0 ? solutions[i].real() : 0;
+      sum += solutions[i].real();
+    }
+  }
+  
+  // Normalizing pass.
+  for (i = 0; i < solutionLength; ++i) {
+    probabilities[i] /= sum;
+    normalSum        += probabilities[i];
   }
   
   #ifndef SILENCE_OUTPUT
@@ -776,8 +793,13 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
     }
     
     #ifdef FFTBOR_DEBUG
-      printf("\nScaling factor: %.15f\n", scalingFactor);
-      std::cout << "Sum: " << sum << std::endl << std::endl;
+      printf("\nScaling factor: ");
+      printf(precisionFormat, scalingFactor);
+      printf("\nSum of eligible probabilities > 0: ");
+      printf(precisionFormat, sum);
+      printf("\nSum of normalized probabilities: ");
+      printf(precisionFormat, normalSum);
+      printf("\n");
     #endif
   #endif
   
