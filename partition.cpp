@@ -770,17 +770,11 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
   }
   
   #ifndef SILENCE_OUTPUT
-    if (SIMPLE_OUTPUT) {
-      for (i = 0; i < solutionLength; ++i) { 
-        if (probabilities[i] > 0) {
-          printf("%d\t%d\t", i / rowLength, i % rowLength);
-          printf(precisionFormat, probabilities[i]);
-          printf("\t");
-          printf(precisionFormat, -(RT / 100) * log(probabilities[i]) -(RT / 100) * log(scalingFactor));
-          printf("\n");
-        }
-      }
-    } else if (MATRIX_FORMAT) {
+    if (!SIMPLE_OUTPUT && !MATRIX_FORMAT) {
+      printf("\nk\tl\tp(Z_{k,l}/Z)\t-RTln(Z_{k,l})\n");
+    }
+  
+    if (MATRIX_FORMAT) {
       for (i = 0; i < solutionLength; ++i) {
         if (!(i % rowLength)) {
           printf("\n");
@@ -792,18 +786,14 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
       
       printf("\n");
     } else {
-      printf("\nk\tl\tp(Z_{k,l}/Z)\t-RTln(Z_{k,l})\n");
-      
       for (i = 0; i < solutionLength; ++i) { 
-        printf("%d\t%d\t", i / rowLength, i % rowLength);
-        printf(precisionFormat, probabilities[i]);
-        printf("\t");
         if (probabilities[i] > 0) {
+          printf("%d\t%d\t", i / rowLength, i % rowLength);
+          printf(precisionFormat, probabilities[i]);
+          printf("\t");
           printf(precisionFormat, -(RT / 100) * log(probabilities[i]) -(RT / 100) * log(scalingFactor));
-        } else {
-          printf("N/A");
+          printf("\n");
         }
-        printf("\n");
       }
     }
     
