@@ -35,6 +35,7 @@ using namespace std;
 // #define SILENCE_OUTPUT 1
 // #define TIMING_DEBUG 1
 // #define FFTBOR_DEBUG 1
+#define TWIDDLE_DEBUG 1
 // #define OPENMP_DEBUG 1
 // #define STRUCTURE_COUNT 1
 // #define ENERGY_DEBUG (1 && !root)
@@ -254,6 +255,7 @@ void neighbors(char *inputSequence, int **bpList) {
     printf("runLength:          %d\n", runLength);
     printf("numRoots:           %d\n", numRoots);
     printf("inputStructureDist: %d\n", inputStructureDist);
+    printf("TWIDDLE:            %d\n", TWIDDLE);
     printf("Roots of unity:\n");
     for (root = 0; root < numRoots; ++root) {
       PRINT_COMPLEX(root, rootsOfUnity);
@@ -438,9 +440,9 @@ void calculateEnergies(char *inputSequence, char *sequence, short *intSequence, 
           for (l = MAX2(k + MIN_PAIR_DIST + 1, j - (MAX_INTERIOR_DIST - (k - i))); l < j; ++l) { 
             // l needs to at least have room to pair with k, and there can be at most 30 unpaired bases between (i, k) + (l, j), with l < j
             if (canBasePair[intSequence[k]][intSequence[l]]) {
-              #ifdef FFTBOR_DEBUG
+              #ifdef TWIDDLE_DEBUG
                 if (pos >= TWIDDLE * (sequenceLength + 1)) {
-                  printf("Trying to access non-existant memory in EIL at index %d.\n", pos);
+                  printf("Trying to access non-existant memory in EIL at index %d (%f).\n", pos, pos / (sequenceLength + 1.));
                 }
               #endif
               
