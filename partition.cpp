@@ -37,6 +37,7 @@ using namespace std;
 // #define FFTBOR_DEBUG 1
 #define TWIDDLE_DEBUG 1
 // #define OPENMP_DEBUG 1
+// #define SINGLE_THREAD 1
 // #define STRUCTURE_COUNT 1
 // #define ENERGY_DEBUG (1 && !root)
 #define DO_WORK
@@ -136,6 +137,11 @@ void neighbors(char *inputSequence, int **bpList) {
   
   #if defined(_OPENMP) && defined(OPENMP_DEBUG)
     printf("Max threads possible: %d\n", omp_get_max_threads());
+    
+    #ifdef SINGLE_THREAD
+      MAXTHREADS = 1;
+    #endif
+    
     printf("Setting number of threads: %d\n", MAXTHREADS);
   #endif
     
@@ -421,9 +427,8 @@ void neighbors(char *inputSequence, int **bpList) {
 void calculateEnergies(char *inputSequence, char *sequence, short *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int sequenceLength, double RT, int **deltaTable, int **jPairedTo0, int **jPairedTo1, double **EH, double ***EIL, double **EHM, double ***EM1, double **EMA, double **EMB, double **EZ) {
   int i, j, k, l, d, delta, pos;
 
-  #pragma omp parallel for default(shared)
   for (i = 1; i <= sequenceLength; ++i) {
-     for (d = MIN_PAIR_DIST + 1; d <= sequenceLength-i; ++d) {
+     for (d = MIN_PAIR_DIST + 1; d <= sequenceLength - i; ++d) {
       j = i + d;
       
       if (canBasePair[intSequence[i]][intSequence[j]]) {
