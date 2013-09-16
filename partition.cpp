@@ -32,14 +32,15 @@ using namespace std;
 #define MIN2(A, B) ((A) < (B) ? (A) : (B))
 #define MAX2(A, B) ((A) > (B) ? (A) : (B))
 
-// #define SILENCE_OUTPUT 1
-// #define TIMING_DEBUG 1
-// #define FFTBOR_DEBUG 1
-#define TWIDDLE_DEBUG 1
-// #define OPENMP_DEBUG 1
-// #define SINGLE_THREAD 1
+// #define SILENCE_OUTPUT  1
+// #define TIMING_DEBUG    1
+// #define FFTBOR_DEBUG    1
+#define TWIDDLE_DEBUG   1
+// #define MEASURE_TWIDDLE 1
+// #define OPENMP_DEBUG    1
+// #define SINGLE_THREAD   1
 // #define STRUCTURE_COUNT 1
-// #define ENERGY_DEBUG (1 && !root)
+// #define ENERGY_DEBUG   (1 && !root)
 #define DO_WORK
 
 extern int    PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT, SIMPLE_OUTPUT;
@@ -426,6 +427,7 @@ void neighbors(char *inputSequence, int **bpList) {
 
 void calculateEnergies(char *inputSequence, char *sequence, short *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int sequenceLength, double RT, int **deltaTable, int **jPairedTo0, int **jPairedTo1, double **EH, double ***EIL, double **EHM, double ***EM1, double **EMA, double **EMB, double **EZ) {
   int i, j, k, l, d, delta, pos;
+  double maxTwiddle = 0;
 
   for (i = 1; i <= sequenceLength; ++i) {
      for (d = MIN_PAIR_DIST + 1; d <= sequenceLength - i; ++d) {
@@ -449,6 +451,10 @@ void calculateEnergies(char *inputSequence, char *sequence, short *intSequence, 
                 if (pos >= TWIDDLE * (sequenceLength + 1)) {
                   printf("Trying to access non-existant memory in EIL at index %d (%f).\n", pos, pos / (sequenceLength + 1.));
                 }
+              #endif
+                
+              #ifdef MEASURE_TWIDDLE
+                maxTwiddle = pos / (sequenceLength + 1.) > maxTwiddle ? pos / (sequenceLength + 1.) : maxTwiddle;
               #endif
               
               // In interior loop / bulge / stack with (i, j) and (k, l), (i + 1, k - 1) and (l + 1, j - 1) are all unpaired.
@@ -497,6 +503,10 @@ void calculateEnergies(char *inputSequence, char *sequence, short *intSequence, 
       }
     }
   }
+  
+  #ifdef MEASURE_TWIDDLE
+    printf("Max twiddle distance seen: %f\n", maxTwiddle);
+  #endif
 }
 
 void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex *solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, short *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int inputStructureDist, int sequenceLength, int rowLength, int numRoots, double RT, dcomplex *rootToPower, int **deltaTable, int **jPairedTo0, int **jPairedTo1,double **EH, double ***EIL, double **EHM, double ***EM1, double **EMA, double **EMB, double **EZ) {  
