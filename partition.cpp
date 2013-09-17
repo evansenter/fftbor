@@ -449,7 +449,7 @@ void calculateEnergies(char *inputSequence, char *sequence, short *intSequence, 
             if (canBasePair[intSequence[k]][intSequence[l]]) {
               #ifdef TWIDDLE_DEBUG
                 if (pos >= TWIDDLE * (sequenceLength + 1)) {
-                  printf("Trying to access non-existant memory in EIL at index %d (%f).\n", pos, pos / (sequenceLength + 1.));
+                  fprintf(stderr, "Trying to access non-existant memory in EIL at index %d (%f).\n", pos, pos / (sequenceLength + 1.));
                 }
               #endif
                 
