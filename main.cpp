@@ -13,7 +13,7 @@
   #include <omp.h>
 #endif
 
-int           PF, N, PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT, SIMPLE_OUTPUT;
+int           PF, N, PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT, SIMPLE_OUTPUT, TRANSITION_OUTPUT;
 extern double temperature;
 char          *ENERGY;
 paramT        *P;
@@ -58,6 +58,7 @@ void usage() {
   fprintf(stderr, "-R\trow length,    the default is 100, takes an integer 0 < R <= 100 that describes the dimensions of the 2D matrix in terms of the percentage sequence length.\n");
   fprintf(stderr, "-M\tmatrix format, the default is disabled, presents output in a matrix format instead of a column format.\n");
   fprintf(stderr, "-S\tsimple output, the default is disabled, presents output in column format, for non-zero entries only with no header output (columns are: k, l, p(Z_{k,l}/Z), -RTln(Z_{k,l})).\n");
+  fprintf(stderr, "-X\ttransition matrix output, the default is disabled...\n");
   
   exit(1);
 }
@@ -111,6 +112,11 @@ void read_input(int argc, char *argv[], char **maina, int **bps) {
           usage();
         }
         SIMPLE_OUTPUT = 1;
+      } else if (strcmp(argv[i], "-X") == 0) {
+        if (i == argc - 1) {
+          usage();
+        }
+        TRANSITION_OUTPUT = 1;
       } else if (strcmp(argv[i], "-P") == 0) {
         if (i == argc - 1) {
           usage();

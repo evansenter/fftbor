@@ -29,6 +29,7 @@ using namespace std;
 #define ROOT_POW(i, pow, n) (rootsOfUnity[((i) * (pow)) % (n)])
 #define PRINT_COMPLEX(i, complex) printf("%d: %+f %+fi\n", i, complex[i].real(), complex[i].imag())
 #define TIMING(start, stop, task) printf("Time in ms for %s: %.2f\n", task, (double)(((stop.tv_sec * 1000000 + stop.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec)) / 1000.0));
+#define REMAP_1D(value, oldMod, newMod) (((newMod) * ((value) / (oldMod))) + ((value) % (oldMod)))
 #define MIN2(A, B) ((A) < (B) ? (A) : (B))
 #define MAX2(A, B) ((A) > (B) ? (A) : (B))
 
@@ -43,7 +44,7 @@ using namespace std;
 // #define ENERGY_DEBUG   (1 && !root)
 #define DO_WORK
 
-extern int    PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT, SIMPLE_OUTPUT;
+extern int    PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT, SIMPLE_OUTPUT, TRANSITION_OUTPUT;
 extern double temperature;
 extern char   *ENERGY;
 extern paramT *P;
@@ -708,9 +709,17 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
 
 void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, int **structure, int sequenceLength, int rowLength, int runLength, int inputStructureDist, int minimalRowLength) {
   char precisionFormat[20];
-  int i, x, y, solutionLength = (int)pow((double)rowLength, 2), offset = inputStructureDist % 2 ? 1 : 0;
-  double *probabilities = (double *)xcalloc(2 * runLength + 1, sizeof(double));
-  double scalingFactor, sum = 0, normalSum = 0;
+  int i, j, x, y, nonZeroCount = 0;
+  double scalingFactor, rowSum, sum = 0, normalSum = 0;
+  
+  int solutionLength     = (int)pow((double)rowLength, 2);
+  int offset             = inputStructureDist % 2 ? 1 : 0;
+  double *probabilities  = (double *)xcalloc(2 * runLength + 1, sizeof(double));
+  int *nonZeroIndices;
+  
+  if (TRANSITION_OUTPUT) {
+    nonZeroIndices = (int *)xcalloc((int)pow(rowLength, 2.) + 1, sizeof(int));
+  }
   
   sprintf(precisionFormat, "%%+.0%df", PRECISION ? (int)floor(log(pow(2., PRECISION)) / log(10.)) : std::numeric_limits<double>::digits);
   
@@ -758,8 +767,13 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
       y + inputStructureDist >= x
     ) {
       probabilities[2 * i + offset] = solutions[i].real();
-        
+      
+      // Housekeeping.  
       sum += solutions[i].real();
+      
+      if (TRANSITION_OUTPUT) {
+        nonZeroIndices[nonZeroCount++] = REMAP_1D(2 * i + offset, rowLength, sequenceLength + 1);
+      }
     }
   }
   
@@ -770,7 +784,7 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
   }
   
   #ifndef SILENCE_OUTPUT
-    if (!SIMPLE_OUTPUT && !MATRIX_FORMAT) {
+    if (!(SIMPLE_OUTPUT || MATRIX_FORMAT)) {
       printf("%d,%d\nk\tl\tp(Z_{k,l}/Z)\t-RTln(Z_{k,l})\n", inputStructureDist, minimalRowLength);
     }
   
@@ -785,6 +799,34 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
       }
       
       printf("\n");
+    } else if (TRANSITION_OUTPUT) {
+      double **transitionProbabilities = new double*[nonZeroCount];
+      for (i = 0; i < nonZeroCount; ++i) {
+        rowSum                     = 0;
+        transitionProbabilities[i] = new double[nonZeroCount];
+        
+        for (j = 0; j < nonZeroCount; ++j) { 
+          if (i != j) {
+            transitionProbabilities[i][j] = MIN2(
+              1., 
+              probabilities[REMAP_1D(nonZeroIndices[j], sequenceLength + 1, rowLength)] / 
+                probabilities[REMAP_1D(nonZeroIndices[i], sequenceLength + 1, rowLength)]
+            ) / (nonZeroCount - 1);
+              
+            rowSum += transitionProbabilities[i][j];
+          }
+        }
+        
+        transitionProbabilities[i][i] = abs(1 - rowSum);
+      }
+      
+      for (i = 0; i < nonZeroCount; ++i) {
+        for (j = 0; j < nonZeroCount; ++j) { 
+          printf("%d\t%d\t", nonZeroIndices[j], nonZeroIndices[i]);
+          printf(precisionFormat, transitionProbabilities[j][i]);
+          printf("\n");
+        }
+      }
     } else {
       for (i = 0; i < solutionLength; ++i) { 
         if (probabilities[i] > 0) {
@@ -810,6 +852,10 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
   
   fftw_destroy_plan(plan);
   free(probabilities);
+  
+  if (TRANSITION_OUTPUT) {
+    free(nonZeroIndices);
+  }
 }
 
 inline int jPairedTo(int i, int j, int *basePairs) {
