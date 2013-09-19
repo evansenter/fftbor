@@ -408,7 +408,7 @@ void neighbors(char *inputSequence, int **bpList) {
     gettimeofday(&start, NULL);
   #endif
 
-  solveSystem(solutions, rootsOfUnity, sequence, bpList, sequenceLength, rowLength, runLength, inputStructureDist);
+  solveSystem(solutions, rootsOfUnity, sequence, bpList, sequenceLength, rowLength, runLength, inputStructureDist, minimalRowLength);
 
   #ifdef TIMING_DEBUG
     gettimeofday(&stop, NULL);
@@ -706,7 +706,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
   #endif
 }
 
-void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, int **structure, int sequenceLength, int rowLength, int runLength, int inputStructureDist) {
+void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, int **structure, int sequenceLength, int rowLength, int runLength, int inputStructureDist, int minimalRowLength) {
   char precisionFormat[20];
   int i, x, y, solutionLength = (int)pow((double)rowLength, 2), offset = inputStructureDist % 2 ? 1 : 0;
   double *probabilities = (double *)xcalloc(2 * runLength + 1, sizeof(double));
@@ -771,7 +771,7 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
   
   #ifndef SILENCE_OUTPUT
     if (!SIMPLE_OUTPUT && !MATRIX_FORMAT) {
-      printf("\nk\tl\tp(Z_{k,l}/Z)\t-RTln(Z_{k,l})\n");
+      printf("%d,%d\nk\tl\tp(Z_{k,l}/Z)\t-RTln(Z_{k,l})\n", inputStructureDist, minimalRowLength);
     }
   
     if (MATRIX_FORMAT) {
