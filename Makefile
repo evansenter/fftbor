@@ -1,7 +1,7 @@
 # Makefile for FFTbor2D
 
-CFLAGS  = -c -O3 -fopenmp
-LDFLAGS = -lfftw3 -L. -lgomp -lRNA_2.1.2
+CCFLAGS = -c -O3 -fopenmp
+LDFLAGS = -lfftw3 -L. -lgomp -lRNA_2.1.2 -L/usr/local/Cellar/lapack/3.4.2/lib -llapack
 BINDIR  = /usr/local/bin # Change this to the BINDIR
 CC      = g++
 
@@ -9,13 +9,13 @@ FFTbor2D : partition.o misc.o main.o
 	$(CC) partition.o misc.o main.o $(LDFLAGS) -o FFTbor2D
 	
 main.o : main.cpp partition.h
-	$(CC) $(CFLAGS) main.cpp
+	$(CC) $(CCFLAGS) main.cpp
 
 misc.o : misc.cpp misc.h
-	$(CC) $(CFLAGS) misc.cpp
+	$(CC) $(CCFLAGS) misc.cpp
 
 partition.o: partition.cpp partition.h params.h energy_par.h energy_const.h
-	$(CC) $(CFLAGS) partition.cpp
+	$(CC) $(CCFLAGS) partition.cpp
 
 clean:
 	rm -f *.o FFTbor2D
