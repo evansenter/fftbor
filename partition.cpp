@@ -809,7 +809,7 @@ void printOutput(double *probabilities, dcomplex *solutions, int inputStructureD
   int solutionLength = (int)pow((double)rowLength, 2);
   
   if (!(SIMPLE_OUTPUT || MATRIX_FORMAT)) {
-    printf("%d,%d\nk\tl\tp(Z_{k,l}/Z)\t-RTln(Z_{k,l})\n", inputStructureDist, minimalRowLength);
+    printf("%d,%d,%d\nk\tl\tp(Z_{k,l}/Z)\t-RTln(Z_{k,l})\n", inputStructureDist, minimalRowLength, rowLength);
   }
 
   if (MATRIX_FORMAT) {
@@ -879,8 +879,8 @@ void computeTransitionMatrix(int *nonZeroIndices, int nonZeroCount, double *prob
   }
 }
 
-void computeMFPT(double **transitionProbabilities) {
-  
+void computeMFPT(double **transitionProbabilities, int indexForStrB) {
+  // inputStructureDist * rowLength = indexForStrB
 }
 
 inline int jPairedTo(int i, int j, int *basePairs) {
