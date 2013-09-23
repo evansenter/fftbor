@@ -1,6 +1,6 @@
 # Makefile for FFTbor2D
 
-CCFLAGS = -c -O3 -fopenmp
+CCFLAGS = -c -O3 -fopenmp -Wall -W
 LDFLAGS = -lfftw3 -L. -lgomp -lRNA_2.1.2 -L/usr/local/Cellar/lapack/3.4.2/lib -llapack
 BINDIR  = /usr/local/bin # Change this to the BINDIR
 CC      = g++

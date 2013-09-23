@@ -29,7 +29,6 @@ using namespace std;
 #define ROOT_POW(i, pow, n) (rootsOfUnity[((i) * (pow)) % (n)])
 #define PRINT_COMPLEX(i, complex) printf("%d: %+f %+fi\n", i, complex[i].real(), complex[i].imag())
 #define TIMING(start, stop, task) printf("Time in ms for %s: %.2f\n", task, (double)(((stop.tv_sec * 1000000 + stop.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec)) / 1000.0));
-#define REMAP_1D(value, oldMod, newMod) (((newMod) * ((value) / (oldMod))) + ((value) % (oldMod)))
 #define MIN2(A, B) ((A) < (B) ? (A) : (B))
 #define MAX2(A, B) ((A) > (B) ? (A) : (B))
 
@@ -62,7 +61,8 @@ void neighbors(char *inputSequence, int **bpList) {
     gettimeofday(&start, NULL);
   #endif
   
-  int i, j, root, minimalRowLength, requestedRowLength, rowLength, runLength, numRoots, sequenceLength = strlen(inputSequence), inputStructureDist = 0;
+  int i, j, root, minimalRowLength, requestedRowLength, rowLength, runLength, numRoots, sequenceLength = strlen(inputSequence), inputStructureDist = 0, nonZeroCount = 0;
+  double scalingFactor;
   RT      = 0.0019872370936902486 * (temperature + K0) * 100; // 0.01 * (kcal K) / mol
   TWIDDLE = 6;
 
@@ -72,6 +72,7 @@ void neighbors(char *inputSequence, int **bpList) {
   short **viennaBP      = new short*[2];
   int   ***numBasePairs = new int**[2];
   int   **canBasePair;
+  int   *nonZeroIndices;
   
   // Load energy parameters.
   read_parameter_file(energyfile);
@@ -165,9 +166,14 @@ void neighbors(char *inputSequence, int **bpList) {
     populateZMatrices(Z[i], ZB[i], ZM[i], ZM1[i], sequenceLength);
   }
 
-  // Initialize convenience tables for storing solutions, roots of unity.
+  // Initialize convenience tables for storing solutions, roots of unity, probabilities and non-zero indices.
   dcomplex *solutions    = new dcomplex[runLength + 1];
   dcomplex *rootsOfUnity = new dcomplex[numRoots];
+  double *probabilities  = (double *)xcalloc(2 * runLength + 1, sizeof(double));
+  
+  if (TRANSITION_OUTPUT) {
+    nonZeroIndices = (int *)xcalloc((int)pow(rowLength, 2.) + 1, sizeof(int));
+  }
   
   // Populate convenience tables.
   populateMatrices(solutions, rootsOfUnity, sequenceLength, numRoots);
@@ -409,13 +415,18 @@ void neighbors(char *inputSequence, int **bpList) {
     gettimeofday(&start, NULL);
   #endif
 
-  solveSystem(solutions, rootsOfUnity, sequence, bpList, sequenceLength, rowLength, runLength, inputStructureDist, minimalRowLength);
+  solveSystem(probabilities, solutions, rootsOfUnity, sequence, bpList, sequenceLength, rowLength, runLength, inputStructureDist, minimalRowLength, nonZeroIndices, nonZeroCount, scalingFactor);
 
   #ifdef TIMING_DEBUG
     gettimeofday(&stop, NULL);
     TIMING(start, stop, "FFT")
   #endif
+      
+  #ifndef SILENCE_OUTPUT
+    printOutput(probabilities, solutions, inputStructureDist, minimalRowLength, rowLength, nonZeroIndices, nonZeroCount, scalingFactor);
+  #endif
 
+  delete []probabilities;
   delete []solutions;
   delete []rootsOfUnity;
   delete []sequence; 
@@ -707,21 +718,12 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
   #endif
 }
 
-void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, int **structure, int sequenceLength, int rowLength, int runLength, int inputStructureDist, int minimalRowLength) {
-  char precisionFormat[20];
-  int i, j, x, y, nonZeroCount = 0;
-  double scalingFactor, rowSum, sum = 0, normalSum = 0;
+void solveSystem(double *probabilities, dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, int **structure, int sequenceLength, int rowLength, int runLength, int inputStructureDist, int minimalRowLength, int *nonZeroIndices, int& nonZeroCount, double& scalingFactor) {
+  int i, j, x, y;
+  double rowSum, sum = 0, normalSum = 0;
   
-  int solutionLength     = (int)pow((double)rowLength, 2);
-  int offset             = inputStructureDist % 2 ? 1 : 0;
-  double *probabilities  = (double *)xcalloc(2 * runLength + 1, sizeof(double));
-  int *nonZeroIndices;
-  
-  if (TRANSITION_OUTPUT) {
-    nonZeroIndices = (int *)xcalloc((int)pow(rowLength, 2.) + 1, sizeof(int));
-  }
-  
-  sprintf(precisionFormat, "%%+.0%df", PRECISION ? (int)floor(log(pow(2., PRECISION)) / log(10.)) : std::numeric_limits<double>::digits);
+  int solutionLength = (int)pow((double)rowLength, 2);
+  int offset         = inputStructureDist % 2 ? 1 : 0;
   
   fftw_complex signal[runLength];
   fftw_complex result[runLength];
@@ -772,7 +774,7 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
       sum += solutions[i].real();
       
       if (TRANSITION_OUTPUT) {
-        nonZeroIndices[nonZeroCount++] = REMAP_1D(2 * i + offset, rowLength, sequenceLength + 1);
+        nonZeroIndices[nonZeroCount++] = 2 * i + offset;
       }
     }
   }
@@ -783,78 +785,95 @@ void solveSystem(dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, in
     normalSum        += probabilities[i];
   }
   
-  #ifndef SILENCE_OUTPUT
-    if (!(SIMPLE_OUTPUT || MATRIX_FORMAT)) {
-      printf("%d,%d\nk\tl\tp(Z_{k,l}/Z)\t-RTln(Z_{k,l})\n", inputStructureDist, minimalRowLength);
-    }
+  fftw_destroy_plan(plan);
   
-    if (MATRIX_FORMAT) {
-      for (i = 0; i < solutionLength; ++i) {
-        if (!(i % rowLength)) {
-          printf("\n");
-        }
+  #ifdef FFTBOR_DEBUG
+    printf("\nScaling factor: ");
+    printf(precisionFormat, scalingFactor);
+    printf("\nSum of eligible probabilities > 0: ");
+    printf(precisionFormat, sum);
+    printf("\nSum of normalized probabilities: ");
+    printf(precisionFormat, normalSum);
+    printf("\n");
+  #endif
+}
+
+void printOutput(double *probabilities, dcomplex *solutions, int inputStructureDist, int minimalRowLength, int rowLength, int *nonZeroIndices, int& nonZeroCount, double& scalingFactor) {
+  int i, j;
+  double **transitionProbabilities;
+  char precisionFormat[20];
+  sprintf(precisionFormat, "%%+.0%df", PRECISION ? (int)floor(log(pow(2., PRECISION)) / log(10.)) : std::numeric_limits<double>::digits);
+  
+  int solutionLength = (int)pow((double)rowLength, 2);
+  
+  if (!(SIMPLE_OUTPUT || MATRIX_FORMAT)) {
+    printf("%d,%d\nk\tl\tp(Z_{k,l}/Z)\t-RTln(Z_{k,l})\n", inputStructureDist, minimalRowLength);
+  }
+
+  if (MATRIX_FORMAT) {
+    for (i = 0; i < solutionLength; ++i) {
+      if (!(i % rowLength)) {
+        printf("\n");
+      }
+  
+      printf(precisionFormat, probabilities[i]);
+      printf("\t");
+    }
     
+    printf("\n");
+  } else if (TRANSITION_OUTPUT) {
+    transitionProbabilities = (double **)malloc(nonZeroCount * sizeof(double *));
+    for (i = 0; i < nonZeroCount; ++i) {
+      transitionProbabilities[i] = (double *)xcalloc(nonZeroCount, sizeof(double));
+    }
+    
+    computeTransitionMatrix(nonZeroIndices, nonZeroCount, probabilities, transitionProbabilities);
+    
+    for (i = 0; i < nonZeroCount; ++i) {
+      for (j = 0; j < nonZeroCount; ++j) { 
+        printf("%d\t%d\t", nonZeroIndices[j], nonZeroIndices[i]);
+        printf(precisionFormat, transitionProbabilities[j][i]);
+        printf("\n");
+      }
+    }
+    
+    for (i = 0; i < nonZeroCount; ++i) {
+      free(transitionProbabilities[i]);
+    }
+    free(transitionProbabilities);
+    free(nonZeroIndices);
+  } else {
+    for (i = 0; i < solutionLength; ++i) { 
+      if (probabilities[i] > 0) {
+        printf("%d\t%d\t", i / rowLength, i % rowLength);
         printf(precisionFormat, probabilities[i]);
         printf("\t");
-      }
-      
-      printf("\n");
-    } else if (TRANSITION_OUTPUT) {
-      double **transitionProbabilities = new double*[nonZeroCount];
-      for (i = 0; i < nonZeroCount; ++i) {
-        rowSum                     = 0;
-        transitionProbabilities[i] = new double[nonZeroCount];
-        
-        for (j = 0; j < nonZeroCount; ++j) { 
-          if (i != j) {
-            transitionProbabilities[i][j] = MIN2(
-              1., 
-              probabilities[REMAP_1D(nonZeroIndices[j], sequenceLength + 1, rowLength)] / 
-                probabilities[REMAP_1D(nonZeroIndices[i], sequenceLength + 1, rowLength)]
-            ) / (nonZeroCount - 1);
-              
-            rowSum += transitionProbabilities[i][j];
-          }
-        }
-        
-        transitionProbabilities[i][i] = abs(1 - rowSum);
-      }
-      
-      for (i = 0; i < nonZeroCount; ++i) {
-        for (j = 0; j < nonZeroCount; ++j) { 
-          printf("%d\t%d\t", nonZeroIndices[j], nonZeroIndices[i]);
-          printf(precisionFormat, transitionProbabilities[j][i]);
-          printf("\n");
-        }
-      }
-    } else {
-      for (i = 0; i < solutionLength; ++i) { 
-        if (probabilities[i] > 0) {
-          printf("%d\t%d\t", i / rowLength, i % rowLength);
-          printf(precisionFormat, probabilities[i]);
-          printf("\t");
-          printf(precisionFormat, -(RT / 100) * log(probabilities[i]) -(RT / 100) * log(scalingFactor));
-          printf("\n");
-        }
+        printf(precisionFormat, -(RT / 100) * log(probabilities[i]) -(RT / 100) * log(scalingFactor));
+        printf("\n");
       }
     }
+  }
+}
+
+void computeTransitionMatrix(int *nonZeroIndices, int nonZeroCount, double *probabilities, double **transitionProbabilities) {
+  int i, j;
+  double rowSum;
+  
+  for (i = 0; i < nonZeroCount; ++i) {
+    rowSum = 0;
     
-    #ifdef FFTBOR_DEBUG
-      printf("\nScaling factor: ");
-      printf(precisionFormat, scalingFactor);
-      printf("\nSum of eligible probabilities > 0: ");
-      printf(precisionFormat, sum);
-      printf("\nSum of normalized probabilities: ");
-      printf(precisionFormat, normalSum);
-      printf("\n");
-    #endif
-  #endif
+    for (j = 0; j < nonZeroCount; ++j) { 
+      if (i != j) {
+        transitionProbabilities[i][j] = MIN2(
+          1., 
+          probabilities[nonZeroIndices[j]] / probabilities[nonZeroIndices[i]]
+        ) / (nonZeroCount - 1);
+        
+        rowSum += transitionProbabilities[i][j];
+      }
+    }
   
-  fftw_destroy_plan(plan);
-  free(probabilities);
-  
-  if (TRANSITION_OUTPUT) {
-    free(nonZeroIndices);
+    transitionProbabilities[i][i] = abs(1 - rowSum);
   }
 }
 
