@@ -68,8 +68,10 @@ void read_input(int argc, char *argv[], char **maina, int **bps) {
   char line[MAX_SEQ_LENGTH];
   int i, k;
   char *seq = NULL, *str1 = NULL, *str2 = NULL;
- 
-  MAXTHREADS    = omp_get_max_threads(); 
+  
+  #ifdef _OPENMP
+    MAXTHREADS  = omp_get_max_threads(); 
+  #endif
   PF            = 0;
   PRECISION     = (int)ceil(log(pow(10., 8)) / log(2.));
   ROW_LENGTH    = 0;

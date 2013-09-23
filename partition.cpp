@@ -148,8 +148,10 @@ void neighbors(char *inputSequence, int **bpList) {
     printf("Setting number of threads: %d\n", MAXTHREADS);
   #endif
     
-  // Set number of threads for OpenMP
-  omp_set_num_threads(MAXTHREADS);
+  #ifdef _OPENMP
+    // Set number of threads for OpenMP
+    omp_set_num_threads(MAXTHREADS);
+  #endif
   
   // Initialize matricies for dynamic programming.
   dcomplex ***Z   = new dcomplex**[MAXTHREADS];
@@ -875,6 +877,10 @@ void computeTransitionMatrix(int *nonZeroIndices, int nonZeroCount, double *prob
   
     transitionProbabilities[i][i] = abs(1 - rowSum);
   }
+}
+
+void computeMFPT(double **transitionProbabilities) {
+  
 }
 
 inline int jPairedTo(int i, int j, int *basePairs) {
