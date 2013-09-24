@@ -18,28 +18,27 @@ void read_input(int, char **, char **, int **);
 void usage();
 
 int main(int argc, char *argv[]) {
-  char *a;  /* a points to array a[0], ..., a[n] where a[0] = n, and a[1],...,a[n] are RNA nucleotides and where n <= Nseq - 2 */
-  int **bps = new int*[2]; /* bps is an array of basepairs, where a base pair is defined by two integers */
+  char *sequence;            // sequence points to array a[0], ..., a[n] where a[0] = n, and a[1],...,a[n] are RNA nucleotides and where n <= Nseq - 2
+  int **intBP = new int*[2]; // intBP is an array of basepairs, where a base pair is defined by two integers
   
   if (argc == 1) {
     usage();
     exit(1);
   }
   
-  read_input(argc, argv, &a, bps);
-  neighbors(a, bps);
+  read_input(argc, argv, &sequence, intBP);
+  neighbors(sequence, intBP);
 
-  free(a);
-  free(bps[0]);
-  free(bps[1]);
-  delete []bps;
+  delete sequence;
+  delete[] intBP[0];
+  delete[] intBP[1];
+  delete[] intBP;
 
   return 0;
 }
 
 void usage() {
   fprintf(stderr, "FFTbor2D [options] sequence structure_1 structure_2\n\n");
-  
   fprintf(stderr, "FFTbor2D [options] filename\n");
   fprintf(stderr, "where filename is a file of the format:\n");
   fprintf(stderr, "\t>comment (optional line)\n");
@@ -59,7 +58,7 @@ void usage() {
   exit(1);
 }
 
-void read_input(int argc, char *argv[], char **maina, int **bps) {
+void read_input(int argc, char *argv[], char **sequence, int **intBP) {
   FILE *infile;
   char line[MAX_SEQ_LENGTH];
   int i, k;
@@ -131,19 +130,19 @@ void read_input(int argc, char *argv[], char **maina, int **bps) {
       infile = fopen(argv[i], "r");
       if (infile == NULL) { 
         /* Input is not a file */
-	      /* arMAX_SEQ_LENGTH[i] should be the sequence and argv[i+1] should be the structure */
+	      /* argv[i] should be the sequence and argv[i+1] should be the structure */
         if (argc <= i + 1) {
           usage();
         }
-        N        = strlen(argv[i]);
-        (*maina) = (char *)xcalloc(N + 1, sizeof(char));
-	      seq      = *maina;
-	      str1     = (char *)xcalloc(N + 1, sizeof(char));
-	      str2     = (char *)xcalloc(N + 1, sizeof(char));
-	      (void)sscanf(argv[i++], "%s", seq);
-	      (void)sscanf(argv[i++], "%s", str1);
-	      (void)sscanf(argv[i], "%s", str2);
-	      N = strlen(seq);
+        N            = strlen(argv[i]);
+        (*sequence)  = (char *)xcalloc(N + 1, sizeof(char));
+        seq          = *sequence;
+        str1         = (char *)xcalloc(N + 1, sizeof(char));
+        str2         = (char *)xcalloc(N + 1, sizeof(char));
+        (void)sscanf(argv[i++], "%s", seq);
+        (void)sscanf(argv[i++], "%s", str1);
+        (void)sscanf(argv[i], "%s", str2);
+        N = strlen(seq);
         
         if (!TRIEQUALS(strlen(seq), strlen(str1), strlen(str2))) {
           printf("%s\n%s\n%s\n", seq, str1, str2);
@@ -179,9 +178,9 @@ void read_input(int argc, char *argv[], char **maina, int **bps) {
           usage();
         }
         
-        N        = strlen(line);
-        (*maina) = (char *)xcalloc(N + 1, sizeof(char));
-        seq      = *maina;
+        N           = strlen(line);
+        (*sequence) = (char *)xcalloc(N + 1, sizeof(char));
+        seq         = *sequence;
         (void)sscanf(line, "%s", seq);
         
         for (k = 0; k < N; k++) {
@@ -233,6 +232,6 @@ void read_input(int argc, char *argv[], char **maina, int **bps) {
     printf("%s\n%s\n%s\n", seq, str1, str2);
   }
 
-    bps[0] = getBasePairList(str1);
-    bps[1] = getBasePairList(str2);
+    intBP[0] = getBasePairList(str1);
+    intBP[1] = getBasePairList(str2);
 } 
