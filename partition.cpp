@@ -900,7 +900,7 @@ double computeMFPT(int *nonZeroIndices, int nonZeroCount, double **transitionPro
   int i, j, x, y, remappedIndexForStrA = -1, remappedIndexForStrB = -1, transitionMatrixRowLength = nonZeroCount - 1;
   
   double *mfpt            = (double *)xcalloc(transitionMatrixRowLength, sizeof(double));
-  double *inversionMatrix = (double *)xcalloc((int)pow(transitionMatrixRowLength, 2), sizeof(double));
+  double *inversionMatrix = (double *)xcalloc((int)pow((double)transitionMatrixRowLength, 2.), sizeof(double));
   
   for (i = 0; i < nonZeroCount; ++i) {
     if (nonZeroIndices[i] == inputStructureDist * rowLength) {
