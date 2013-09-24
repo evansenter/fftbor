@@ -58,7 +58,7 @@ void usage() {
   fprintf(stderr, "-R\trow length,    the default is 100, takes an integer 0 < R <= 100 that describes the dimensions of the 2D matrix in terms of the percentage sequence length.\n");
   fprintf(stderr, "-M\tmatrix format, the default is disabled, presents output in a matrix format instead of a column format.\n");
   fprintf(stderr, "-S\tsimple output, the default is disabled, presents output in column format, for non-zero entries only with no header output (columns are: k, l, p(Z_{k,l}/Z), -RTln(Z_{k,l})).\n");
-  fprintf(stderr, "-X\ttransition matrix output, the default is disabled...\n");
+  fprintf(stderr, "-X\tMFPT, the default is disabled, estimates the mean-first passage time of the input RNA from structure 1 to structure 2.\n");
   
   exit(1);
 }
@@ -232,7 +232,7 @@ void read_input(int argc, char *argv[], char **maina, int **bps) {
     usage();
   }
   
-  if (!(SIMPLE_OUTPUT || TRANSITION_OUTPUT)) {
+  if (!(SIMPLE_OUTPUT || MATRIX_FORMAT || TRANSITION_OUTPUT)) {
     /* Print sequence length, sequence and starting structure */
     printf("%s\n%s\n%s\n", seq, str1, str2);
   }

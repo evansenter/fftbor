@@ -183,7 +183,7 @@ void neighbors(char *inputSequence, int **bpList) {
   }
   
   // Populate convenience tables.
-  populateMatrices(solutions, rootsOfUnity, sequenceLength, numRoots);
+  populateMatrices(rootsOfUnity, numRoots);
   
   // Create convenience table for looking up powers of roots.
   dcomplex **rootToPower = new dcomplex*[MAXTHREADS];
@@ -245,16 +245,10 @@ void neighbors(char *inputSequence, int **bpList) {
   
   calculateEnergies(
     inputSequence, 
-    sequence, 
     intSequence,
-    bpList,
     canBasePair, 
-    numBasePairs, 
     sequenceLength,
     RT, 
-    deltaTable,
-    jPairedTo0,
-    jPairedTo1,
     EH,
     EIL,
     EHM,
@@ -303,17 +297,13 @@ void neighbors(char *inputSequence, int **bpList) {
       ZM1[threadId], 
       solutions, 
       rootsOfUnity, 
-      inputSequence, 
-      sequence, 
       intSequence, 
       bpList, 
       canBasePair, 
       numBasePairs, 
-      inputStructureDist, 
       sequenceLength, 
       rowLength, 
       numRoots, 
-      RT, 
       rootToPower[threadId], 
       deltaTable, 
       jPairedTo0, 
@@ -422,7 +412,7 @@ void neighbors(char *inputSequence, int **bpList) {
     gettimeofday(&start, NULL);
   #endif
 
-  solveSystem(probabilities, solutions, rootsOfUnity, sequence, bpList, sequenceLength, rowLength, runLength, inputStructureDist, minimalRowLength, nonZeroIndices, nonZeroCount, scalingFactor, inputStrsAreNonZero);
+  solveSystem(probabilities, solutions, rowLength, runLength, inputStructureDist, nonZeroIndices, nonZeroCount, scalingFactor, inputStrsAreNonZero);
 
   #ifdef TIMING_DEBUG
     gettimeofday(&stop, NULL);
@@ -430,7 +420,7 @@ void neighbors(char *inputSequence, int **bpList) {
   #endif
       
   #ifndef SILENCE_OUTPUT
-    printOutput(probabilities, solutions, inputStructureDist, minimalRowLength, rowLength, nonZeroIndices, nonZeroCount, scalingFactor, inputStrsAreNonZero);
+    printOutput(probabilities, inputStructureDist, minimalRowLength, rowLength, nonZeroIndices, nonZeroCount, scalingFactor, inputStrsAreNonZero);
   #endif
 
   delete []probabilities;
@@ -444,9 +434,12 @@ void neighbors(char *inputSequence, int **bpList) {
   #endif
 }
 
-void calculateEnergies(char *inputSequence, char *sequence, short *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int sequenceLength, double RT, int **deltaTable, int **jPairedTo0, int **jPairedTo1, double **EH, double ***EIL, double **EHM, double ***EM1, double **EMA, double **EMB, double **EZ) {
-  int i, j, k, l, d, delta, pos;
-  double maxTwiddle = 0;
+void calculateEnergies(char *inputSequence, short *intSequence, int *canBasePair[5], int sequenceLength, double RT, double **EH, double ***EIL, double **EHM, double ***EM1, double **EMA, double **EMB, double **EZ) {
+  int i, j, k, l, d, pos;
+  
+  #if MEASURE_TWIDDLE
+    double maxTwiddle = 0;
+  #endif
 
   for (i = 1; i <= sequenceLength; ++i) {
      for (d = MIN_PAIR_DIST + 1; d <= sequenceLength - i; ++d) {
@@ -528,7 +521,7 @@ void calculateEnergies(char *inputSequence, char *sequence, short *intSequence, 
   #endif
 }
 
-void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex *solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, short *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int inputStructureDist, int sequenceLength, int rowLength, int numRoots, double RT, dcomplex *rootToPower, int **deltaTable, int **jPairedTo0, int **jPairedTo1,double **EH, double ***EIL, double **EHM, double ***EM1, double **EMA, double **EMB, double **EZ) {  
+void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex *solutions, dcomplex *rootsOfUnity, short *intSequence, int *bpList[2], int *canBasePair[5], int **numBasePairs[2], int sequenceLength, int rowLength, int numRoots, dcomplex *rootToPower, int **deltaTable, int **jPairedTo0, int **jPairedTo1,double **EH, double ***EIL, double **EHM, double ***EM1, double **EMA, double **EMB, double **EZ) {  
   int i, j, k, l, d, delta, pos;
   double energy;
   
@@ -725,15 +718,15 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
   #endif
 }
 
-void solveSystem(double *probabilities, dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, int **structure, int sequenceLength, int rowLength, int runLength, int inputStructureDist, int minimalRowLength, int *nonZeroIndices, int& nonZeroCount, double& scalingFactor, int& inputStrsAreNonZero) {
-  int i, j, x, y, nonZeroA = 0, nonZeroB = 0;
-  double rowSum, sum = 0, normalSum = 0;
+void solveSystem(double *probabilities, dcomplex *solutions, int rowLength, int runLength, int inputStructureDist, int *nonZeroIndices, int& nonZeroCount, double& scalingFactor, int& inputStrsAreNonZero) {
+  int i, x, y, nonZeroA = 0, nonZeroB = 0;
+  double sum = 0, normalSum = 0;
   
   int solutionLength = (int)pow((double)rowLength, 2);
   int offset         = inputStructureDist % 2 ? 1 : 0;
   
-  fftw_complex signal[runLength];
-  fftw_complex result[runLength];
+  fftw_complex *signal = (fftw_complex *)malloc(runLength * sizeof(fftw_complex));
+  fftw_complex *result = (fftw_complex *)malloc(runLength * sizeof(fftw_complex));
   
   fftw_plan plan = fftw_plan_dft_1d(runLength, signal, result, FFTW_BACKWARD, FFTW_ESTIMATE);
   sum            = 0;
@@ -817,8 +810,8 @@ void solveSystem(double *probabilities, dcomplex *solutions, dcomplex *rootsOfUn
   #endif
 }
 
-void printOutput(double *probabilities, dcomplex *solutions, int inputStructureDist, int minimalRowLength, int rowLength, int *nonZeroIndices, int& nonZeroCount, double& scalingFactor, int& inputStrsAreNonZero) {
-  int i, j;
+void printOutput(double *probabilities, int inputStructureDist, int minimalRowLength, int rowLength, int *nonZeroIndices, int& nonZeroCount, double& scalingFactor, int& inputStrsAreNonZero) {
+  int i;
   double **transitionProbabilities;
   char precisionFormat[20];
   sprintf(precisionFormat, "%%+.0%df", PRECISION ? (int)floor(log(pow(2., PRECISION)) / log(10.)) : std::numeric_limits<double>::digits);
@@ -831,7 +824,7 @@ void printOutput(double *probabilities, dcomplex *solutions, int inputStructureD
 
   if (MATRIX_FORMAT) {
     for (i = 0; i < solutionLength; ++i) {
-      if (!(i % rowLength)) {
+      if (i && !(i % rowLength)) {
         printf("\n");
       }
   
@@ -898,6 +891,7 @@ void computeTransitionMatrix(int *nonZeroIndices, int nonZeroCount, double *prob
 
 double computeMFPT(int *nonZeroIndices, int nonZeroCount, double **transitionProbabilities, int inputStructureDist, int rowLength) {
   int i, j, x, y, remappedIndexForStrA = -1, remappedIndexForStrB = -1, transitionMatrixRowLength = nonZeroCount - 1;
+  double mpftFromAtoB;
   
   double *mfpt            = (double *)xcalloc(transitionMatrixRowLength, sizeof(double));
   double *inversionMatrix = (double *)xcalloc((int)pow((double)transitionMatrixRowLength, 2.), sizeof(double));
@@ -970,8 +964,12 @@ double computeMFPT(int *nonZeroIndices, int nonZeroCount, double **transitionPro
       printf("%d\t%+.08f\n", i, mfpt[i]);
     }
   #endif
+    
+  mpftFromAtoB = mfpt[remappedIndexForStrA];
+  delete []inversionMatrix;
+  delete []mfpt;
   
-  return mfpt[remappedIndexForStrA];
+  return mpftFromAtoB;
 }
 
 inline int jPairedTo(int i, int j, int *basePairs) {
@@ -1034,7 +1032,7 @@ void populateZMatrices(dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM
   }
 }
 
-void populateMatrices(dcomplex *solutions, dcomplex *rootsOfUnity, int sequenceLength, int numRoots) {
+void populateMatrices(dcomplex *rootsOfUnity, int numRoots) {
   int i;
   #pragma omp parallel for default(shared)
   for (i = 0; i < numRoots; ++i) {
