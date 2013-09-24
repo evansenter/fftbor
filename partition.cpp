@@ -35,7 +35,8 @@ using namespace std;
 // #define SILENCE_OUTPUT  1
 // #define TIMING_DEBUG    1
 // #define FFTBOR_DEBUG    1
-#define TWIDDLE_DEBUG   1
+// #define TWIDDLE_DEBUG   1
+// #define MFPT_DEBUG      1
 // #define MEASURE_TWIDDLE 1
 // #define OPENMP_DEBUG    1
 // #define SINGLE_THREAD   1
@@ -50,9 +51,13 @@ extern paramT *P;
 double RT;
 int    TWIDDLE;
 
-extern "C" void read_parameter_file(const char energyfile[]);
-extern "C" int *get_iindx(unsigned int sequenceLength);
-extern "C" unsigned int *maximumMatchingConstraint(const char *sequence, short *viennaBP);
+extern "C" {
+  void read_parameter_file(const char energyfile[]);
+  int *get_iindx(unsigned int sequenceLength);
+  unsigned int *maximumMatchingConstraint(const char *sequence, short *viennaBP);
+  void dgetrf_(int* M, int *N, double* A, int* lda, int* IPIV, int* INFO);
+  void dgetri_(int* N, double* A, int* lda, int* IPIV, double* WORK, int* lwork, int* INFO);
+}
 
 void neighbors(char *inputSequence, int **bpList) {
   #ifdef TIMING_DEBUG
@@ -61,7 +66,7 @@ void neighbors(char *inputSequence, int **bpList) {
     gettimeofday(&start, NULL);
   #endif
   
-  int i, j, root, minimalRowLength, requestedRowLength, rowLength, runLength, numRoots, sequenceLength = strlen(inputSequence), inputStructureDist = 0, nonZeroCount = 0;
+  int i, j, root, minimalRowLength, requestedRowLength, rowLength, runLength, numRoots, sequenceLength = strlen(inputSequence), inputStructureDist = 0, nonZeroCount = 0, inputStrsAreNonZero = 0;
   double scalingFactor;
   RT      = 0.0019872370936902486 * (temperature + K0) * 100; // 0.01 * (kcal K) / mol
   TWIDDLE = 6;
@@ -417,7 +422,7 @@ void neighbors(char *inputSequence, int **bpList) {
     gettimeofday(&start, NULL);
   #endif
 
-  solveSystem(probabilities, solutions, rootsOfUnity, sequence, bpList, sequenceLength, rowLength, runLength, inputStructureDist, minimalRowLength, nonZeroIndices, nonZeroCount, scalingFactor);
+  solveSystem(probabilities, solutions, rootsOfUnity, sequence, bpList, sequenceLength, rowLength, runLength, inputStructureDist, minimalRowLength, nonZeroIndices, nonZeroCount, scalingFactor, inputStrsAreNonZero);
 
   #ifdef TIMING_DEBUG
     gettimeofday(&stop, NULL);
@@ -425,7 +430,7 @@ void neighbors(char *inputSequence, int **bpList) {
   #endif
       
   #ifndef SILENCE_OUTPUT
-    printOutput(probabilities, solutions, inputStructureDist, minimalRowLength, rowLength, nonZeroIndices, nonZeroCount, scalingFactor);
+    printOutput(probabilities, solutions, inputStructureDist, minimalRowLength, rowLength, nonZeroIndices, nonZeroCount, scalingFactor, inputStrsAreNonZero);
   #endif
 
   delete []probabilities;
@@ -716,12 +721,12 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
   solutions[root] = Z[1][sequenceLength];
 
   #ifdef FFTBOR_DEBUG
-    std::cout << '.' << std::flush;
+    printf('.');
   #endif
 }
 
-void solveSystem(double *probabilities, dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, int **structure, int sequenceLength, int rowLength, int runLength, int inputStructureDist, int minimalRowLength, int *nonZeroIndices, int& nonZeroCount, double& scalingFactor) {
-  int i, j, x, y;
+void solveSystem(double *probabilities, dcomplex *solutions, dcomplex *rootsOfUnity, char *sequence, int **structure, int sequenceLength, int rowLength, int runLength, int inputStructureDist, int minimalRowLength, int *nonZeroIndices, int& nonZeroCount, double& scalingFactor, int& inputStrsAreNonZero) {
+  int i, j, x, y, nonZeroA = 0, nonZeroB = 0;
   double rowSum, sum = 0, normalSum = 0;
   
   int solutionLength = (int)pow((double)rowLength, 2);
@@ -741,8 +746,8 @@ void solveSystem(double *probabilities, dcomplex *solutions, dcomplex *rootsOfUn
     signal[i][FFTW_IMAG] = pow(2., (double)PRECISION) * (solutions[i].imag() / scalingFactor);
   }
   
-  #ifdef FFTBOR_DEBUG    
-    std::cout << "Scaling factor: " << solutions[0] << std::endl;
+  #ifdef FFTBOR_DEBUG
+    printf("Scaling factor: %f:\n", solutions[0].real());
     printf("Scaled solutions vector for the inverse DFT:\n");
     for (i = 0; i < runLength; ++i) {
       printf("%d: %+f %+fi\n", i, signal[i][FFTW_REAL], signal[i][FFTW_IMAG]);
@@ -777,6 +782,14 @@ void solveSystem(double *probabilities, dcomplex *solutions, dcomplex *rootsOfUn
       
       if (TRANSITION_OUTPUT) {
         nonZeroIndices[nonZeroCount++] = 2 * i + offset;
+        
+        if (x == 0 && y == inputStructureDist) {
+          nonZeroA = 1;
+        }
+        
+        if (x == inputStructureDist && y == 0) {
+          nonZeroB = 1;
+        }
       }
     }
   }
@@ -785,6 +798,10 @@ void solveSystem(double *probabilities, dcomplex *solutions, dcomplex *rootsOfUn
   for (i = 0; i < solutionLength; ++i) {
     probabilities[i] /= sum;
     normalSum        += probabilities[i];
+  }
+  
+  if (TRANSITION_OUTPUT) {
+    inputStrsAreNonZero = nonZeroA && nonZeroB;
   }
   
   fftw_destroy_plan(plan);
@@ -800,7 +817,7 @@ void solveSystem(double *probabilities, dcomplex *solutions, dcomplex *rootsOfUn
   #endif
 }
 
-void printOutput(double *probabilities, dcomplex *solutions, int inputStructureDist, int minimalRowLength, int rowLength, int *nonZeroIndices, int& nonZeroCount, double& scalingFactor) {
+void printOutput(double *probabilities, dcomplex *solutions, int inputStructureDist, int minimalRowLength, int rowLength, int *nonZeroIndices, int& nonZeroCount, double& scalingFactor, int& inputStrsAreNonZero) {
   int i, j;
   double **transitionProbabilities;
   char precisionFormat[20];
@@ -808,7 +825,7 @@ void printOutput(double *probabilities, dcomplex *solutions, int inputStructureD
   
   int solutionLength = (int)pow((double)rowLength, 2);
   
-  if (!(SIMPLE_OUTPUT || MATRIX_FORMAT)) {
+  if (!(SIMPLE_OUTPUT || MATRIX_FORMAT || TRANSITION_OUTPUT)) {
     printf("%d,%d,%d\nk\tl\tp(Z_{k,l}/Z)\t-RTln(Z_{k,l})\n", inputStructureDist, minimalRowLength, rowLength);
   }
 
@@ -824,25 +841,25 @@ void printOutput(double *probabilities, dcomplex *solutions, int inputStructureD
     
     printf("\n");
   } else if (TRANSITION_OUTPUT) {
-    transitionProbabilities = (double **)malloc(nonZeroCount * sizeof(double *));
-    for (i = 0; i < nonZeroCount; ++i) {
-      transitionProbabilities[i] = (double *)xcalloc(nonZeroCount, sizeof(double));
-    }
-    
-    computeTransitionMatrix(nonZeroIndices, nonZeroCount, probabilities, transitionProbabilities);
-    
-    for (i = 0; i < nonZeroCount; ++i) {
-      for (j = 0; j < nonZeroCount; ++j) { 
-        printf("%d\t%d\t", nonZeroIndices[j], nonZeroIndices[i]);
-        printf(precisionFormat, transitionProbabilities[j][i]);
-        printf("\n");
+    if (inputStrsAreNonZero) {
+      transitionProbabilities = (double **)malloc(nonZeroCount * sizeof(double *));
+      for (i = 0; i < nonZeroCount; ++i) {
+        transitionProbabilities[i] = (double *)xcalloc(nonZeroCount, sizeof(double));
       }
+    
+      computeTransitionMatrix(nonZeroIndices, nonZeroCount, probabilities, transitionProbabilities);
+      double mfpt = computeMFPT(nonZeroIndices, nonZeroCount, transitionProbabilities, inputStructureDist, rowLength);
+      
+      printf("%08f\n", mfpt);
+    
+      for (i = 0; i < nonZeroCount; ++i) {
+        free(transitionProbabilities[i]);
+      }
+      free(transitionProbabilities);
+    } else {
+      printf("INFINITY\n");
     }
     
-    for (i = 0; i < nonZeroCount; ++i) {
-      free(transitionProbabilities[i]);
-    }
-    free(transitionProbabilities);
     free(nonZeroIndices);
   } else {
     for (i = 0; i < solutionLength; ++i) { 
@@ -879,8 +896,82 @@ void computeTransitionMatrix(int *nonZeroIndices, int nonZeroCount, double *prob
   }
 }
 
-void computeMFPT(double **transitionProbabilities, int indexForStrB) {
-  // inputStructureDist * rowLength = indexForStrB
+double computeMFPT(int *nonZeroIndices, int nonZeroCount, double **transitionProbabilities, int inputStructureDist, int rowLength) {
+  int i, j, x, y, remappedIndexForStrA = -1, remappedIndexForStrB = -1, transitionMatrixRowLength = nonZeroCount - 1;
+  
+  double *mfpt            = (double *)xcalloc(transitionMatrixRowLength, sizeof(double));
+  double *inversionMatrix = (double *)xcalloc((int)pow(transitionMatrixRowLength, 2), sizeof(double));
+  
+  for (i = 0; i < nonZeroCount; ++i) {
+    if (nonZeroIndices[i] == inputStructureDist * rowLength) {
+      remappedIndexForStrB = i;
+    } else if (nonZeroIndices[i] == inputStructureDist) {
+      remappedIndexForStrA = i;
+    }
+  }
+  
+  if (remappedIndexForStrA < 0) {
+    printf("Something has gone horribly wrong. We can not find which transition probabilities correspond to the starting state.");
+    return -1;
+  }
+  
+  if (remappedIndexForStrB < 0) {
+    printf("Something has gone horribly wrong. We can not find which transition probabilities correspond to the finish state.");
+    return -1;
+  }
+  
+  // If remappedIndexForStrA > remappedIndexForStrB, we need to shift to the left by one because the remappedIndexForStrB
+  // row / column is being removed.
+  remappedIndexForStrA = (remappedIndexForStrA > remappedIndexForStrB ? remappedIndexForStrA - 1 : remappedIndexForStrA);
+  
+  #if MFPT_DEBUG
+    printf("remappedIndexForStrA: %d\n", remappedIndexForStrA);
+    printf("remappedIndexForStrB: %d\n", remappedIndexForStrB);
+  
+    printf("Mapping values:\nx\tRMOI(x)\n");
+    for (i = 0; i < nonZeroCount; ++i) {
+      printf("%d\t%d\n", i, nonZeroIndices[i]);
+    }
+    
+    printf("Transition matrix values:\nx\ty\tRMOI(i)\tRMOI(j)\tinversionMatrix[x][y]\n");
+  #endif
+  
+  for (i = 0; i < nonZeroCount; ++i) {
+    for (j = 0; j < nonZeroCount; ++j) { 
+      if (i != remappedIndexForStrB && j != remappedIndexForStrB) {
+        x = (i > remappedIndexForStrB ? i - 1 : i);
+        y = (j > remappedIndexForStrB ? j - 1 : j);
+        
+        // Be VERY careful changing anything here. nonZeroIndices has a mapping of all the positions in the energy grid (using 
+        // row major ordering with a row length of rowLength) that have non-zero probabilities. Of these, we throw out anything
+        // at base pair distance 0 from the second structure (the target of the MFPT calculation) and maximally distant from the
+        // first structure. Because of this, there's a chunk of indices that need to get shifted to the left by one, to keep the
+        // array tight (this is what x, y are doing). Hence, x and y are used for indexing into inversionMatrix and i, j are 
+        // used for indexing into transitionProbabilities.
+        inversionMatrix[x * transitionMatrixRowLength + y] = (i == j ? 1 - transitionProbabilities[i][j] : -transitionProbabilities[i][j]);
+        
+        #if MFPT_DEBUG
+          printf("%d\t%d\t%d\t%d\t%+.08f\n", x, y, nonZeroIndices[i], nonZeroIndices[j], inversionMatrix[x * transitionMatrixRowLength + y]);
+        #endif
+      }
+    }
+  }
+  
+  inverse(inversionMatrix, transitionMatrixRowLength);
+  
+  for (i = 0; i < transitionMatrixRowLength; ++i) {
+    for (j = 0; j < transitionMatrixRowLength; ++j) {
+      mfpt[i] += inversionMatrix[i * transitionMatrixRowLength + j];
+    }
+  }
+  
+  #if MFPT_DEBUG
+    for (i = 0; i < transitionMatrixRowLength; ++i) {
+      printf("%d\t%+.08f\n", i, mfpt[i]);
+    }
+  #endif
+  
+  return mfpt[remappedIndexForStrA];
 }
 
 inline int jPairedTo(int i, int j, int *basePairs) {
@@ -1119,4 +1210,18 @@ inline double interiorloop(int i, int j, int k, int l, int type, int type_2, sho
     }
   }
   return energy;
+}
+
+void inverse(double* A, int N) {
+  // http://stackoverflow.com/questions/3519959/computing-the-inverse-of-a-matrix-using-lapack-in-c
+  int *IPIV = new int[N+1];
+  int LWORK = N*N;
+  double *WORK = new double[LWORK];
+  int INFO;
+
+  dgetrf_(&N,&N,A,&N,IPIV,&INFO);
+  dgetri_(&N,A,&N,IPIV,WORK,&LWORK,&INFO);
+
+  delete IPIV;
+  delete WORK;
 }

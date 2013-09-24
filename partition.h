@@ -12,9 +12,10 @@ void   translateToIntSequence(char *, short *);
 void   initializeBasePairCounts(int **, int *, int );
 double hairpinloop(int, int, int, short, short, char *);
 double interiorloop(int, int, int, int, int, int, short, short, short, short);
-void   solveSystem(double *, dcomplex *, dcomplex *, char *, int **, int, int, int, int, int, int *, int&, double&);
-void   printOutput(double *, dcomplex *, int, int, int, int *, int&, double&);
+void   solveSystem(double *, dcomplex *, dcomplex *, char *, int **, int, int, int, int, int, int *, int&, double&, int&);
+void   printOutput(double *, dcomplex *, int, int, int, int *, int&, double&, int&);
 void   computeTransitionMatrix(int *, int, double *, double **);
+double computeMFPT(int *, int, double **, int, int);
 int    jPairedTo(int, int, int *);
 int    jPairedIn(int, int, int *);
 void   populateRemainingRoots(dcomplex *, dcomplex *, int, int);
@@ -23,4 +24,5 @@ void   populateZMatrices(dcomplex **, dcomplex **, dcomplex **, dcomplex **, int
 void   flushMatrices(dcomplex **, dcomplex **, dcomplex **, dcomplex **, int);
 void   calculateEnergies(char *, char *, short *, int **, int **, int ***, int, double, int **, int **, int **, double **, double ***, double **, double ***, double **, double **, double **);
 void   evaluateZ(int, dcomplex **, dcomplex **, dcomplex **, dcomplex **, dcomplex *, dcomplex *, char *, char *, short *, int **, int **, int ***, int, int, int, int, double, dcomplex *, int **, int **, int **,double **, double ***, double **, double ***, double **, double **, double **);
+void   inverse(double*, int);
 #endif

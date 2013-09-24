@@ -232,7 +232,7 @@ void read_input(int argc, char *argv[], char **maina, int **bps) {
     usage();
   }
   
-  if (!SIMPLE_OUTPUT) {
+  if (!(SIMPLE_OUTPUT || TRANSITION_OUTPUT)) {
     /* Print sequence length, sequence and starting structure */
     printf("%s\n%s\n%s\n", seq, str1, str2);
   }
