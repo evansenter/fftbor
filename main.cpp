@@ -10,7 +10,7 @@
   #include <omp.h>
 #endif
 
-int           PF, N, PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT, SIMPLE_OUTPUT, TRANSITION_OUTPUT;
+int           PF, N, PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT, SIMPLE_OUTPUT, TRANSITION_OUTPUT, EXPLICIT_ENERGY_FILE;
 extern double temperature;
 char          *ENERGY;
 paramT        *P;
@@ -48,7 +48,7 @@ void usage() {
   fprintf(stderr, "\tsecondary structure (2)\n\n");
   
   fprintf(stderr, "Options include the following:\n");
-  fprintf(stderr, "-E\tenergyfile,    the default is rna_turner_2.1.2.par in this executable's directory. Must be the name of a file with all energy parameters (in the same format as used in Vienna RNA).\n");
+  fprintf(stderr, "-E\tenergyfile,    the default is rna_turner1999.par in this executable's directory. Must be the name of a file with all energy parameters (in the same format as used in Vienna RNA).\n");
   fprintf(stderr, "-T\ttemperature,   the default is 37 degrees Celsius (unless an energyfile with parameters for a different temperature is used.\n");
   fprintf(stderr, "-P\tprecision,     the default is %d, indicates the precision (base 2) of the probabilities Z_k / Z to be returned (0-%d, 0 disables precision handling).\n", (int)ceil(log(pow(10., 8)) / log(2.)), std::numeric_limits<double>::digits);
   fprintf(stderr, "-R\trow length,    the default is 100, takes an integer 0 < R <= 100 that describes the dimensions of the 2D matrix in terms of the percentage sequence length.\n");
@@ -68,16 +68,9 @@ void read_input(int argc, char *argv[], char **sequence, int **intBP) {
   #ifdef _OPENMP
     MAXTHREADS  = omp_get_max_threads(); 
   #endif
-  PF            = 0;
   PRECISION     = (int)ceil(log(pow(10., 8)) / log(2.));
   ROW_LENGTH    = 0;
-  MATRIX_FORMAT = 0; 
-  SIMPLE_OUTPUT = 0; 
-  ENERGY        = (char *)"rna_turner_2.1.2.par";
-
-  /* Function to retrieve RNA sequence and structure, when
-   * either input in command line or in a file, where the first
-   * line can be a comment (after a >). */
+  ENERGY        = (char*)"rna_turner1999.par";
  
   for (i = 1; i < argc; i++) {
     if (argv[i][0] == '-') {
@@ -91,7 +84,8 @@ void read_input(int argc, char *argv[], char **sequence, int **intBP) {
         if (i == argc - 1) {
           usage();
         }
-        ENERGY = argv[++i];
+        ENERGY               = argv[++i];
+        EXPLICIT_ENERGY_FILE = 1;
       } else if (strcmp(argv[i], "-R") == 0) {
         if (i == argc - 1) {
           usage();

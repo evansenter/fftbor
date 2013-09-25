@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <fftw3.h>
 #include <limits>
 #include "partition.h"
@@ -38,7 +39,7 @@ using namespace std;
 // #define STRUCTURE_COUNT 1
 #define DO_WORK
 
-extern int    PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT, SIMPLE_OUTPUT, TRANSITION_OUTPUT;
+extern int    PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT, SIMPLE_OUTPUT, TRANSITION_OUTPUT, EXPLICIT_ENERGY_FILE;
 extern double temperature;
 extern char   *ENERGY;
 extern paramT *P;
@@ -68,7 +69,7 @@ void neighbors(char *inputSequence, int **bpList) {
   char precisionFormat[20];
   sprintf(precisionFormat, "%%+.0%df", PRECISION ? (int)floor(log(pow(2., PRECISION)) / log(10.)) : std::numeric_limits<double>::digits);
 
-  char  *energyfile     = ENERGY;
+  char  *energyfile     = findEnergyFile();
   char  *sequence       = new char[sequenceLength + 1];
   short *intSequence    = (short *)xcalloc(sequenceLength + 1, sizeof(short));
   short **viennaBP      = new short*[2];
@@ -1191,4 +1192,36 @@ void inverse(double* A, int N) {
 
   delete IPIV;
   delete WORK;
+}
+
+char* findEnergyFile() {
+  if (EXPLICIT_ENERGY_FILE) {
+    return ENERGY;
+  } else {
+    char* envPath, *splitPath, *energyLocation, *possiblePath;
+    envPath = getenv("PATH");
+  
+    if (envPath != NULL) {
+      splitPath = strtok(envPath, ":");
+    
+      while (splitPath != NULL) {
+        possiblePath = (char*)malloc((strlen(splitPath) + 1 + strlen(ENERGY)) * sizeof(char));
+      
+        strcpy(possiblePath, splitPath);
+        strcat(possiblePath, "/");
+        strcat(possiblePath, ENERGY);
+      
+        if (access(possiblePath, R_OK) != -1) {
+          energyLocation = possiblePath;
+          splitPath = NULL;
+        } else {
+          splitPath = strtok(NULL, ":");
+        }
+      
+        free(possiblePath);
+      }
+    }
+    
+    return (energyLocation != NULL ? energyLocation : ENERGY);
+  }
 }

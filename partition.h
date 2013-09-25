@@ -25,4 +25,5 @@ void   flushMatrices(dcomplex **, dcomplex **, dcomplex **, dcomplex **, int);
 void   calculateEnergies(char *, short *, int **, int, double, double **, double ***, double **, double ***, double **, double **, double **);
 void   evaluateZ(int, dcomplex **, dcomplex **, dcomplex **, dcomplex **, dcomplex *, dcomplex *, char *, short *, int **, int **, int ***, int, int, int, dcomplex *, int **, int **, int **,double **, double ***, double **, double ***, double **, double **, double **);
 void   inverse(double*, int);
+char*  findEnergyFile();
 #endif
