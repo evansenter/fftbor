@@ -1198,8 +1198,11 @@ char* findEnergyFile() {
   if (EXPLICIT_ENERGY_FILE) {
     return ENERGY;
   } else {
-    char* envPath, *splitPath, *energyLocation, *possiblePath;
-    envPath = getenv("PATH");
+    char* envPath, *tempPath, *splitPath, *energyLocation, *possiblePath;
+    tempPath = getenv("PATH");
+    envPath  = (char*)malloc((strlen(tempPath) + 2) * sizeof(char));
+    strcpy(envPath, ".:");
+    strcat(envPath, tempPath);
   
     if (envPath != NULL) {
       splitPath = strtok(envPath, ":");
@@ -1221,6 +1224,8 @@ char* findEnergyFile() {
         free(possiblePath);
       }
     }
+    
+    free(envPath);
     
     return (energyLocation != NULL ? energyLocation : ENERGY);
   }
