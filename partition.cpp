@@ -1213,9 +1213,10 @@ char* findEnergyFile() {
         strcpy(possiblePath, splitPath);
         strcat(possiblePath, "/");
         strcat(possiblePath, ENERGY);
-      
+
         if (access(possiblePath, R_OK) != -1) {
-          energyLocation = possiblePath;
+          energyLocation = (char*)malloc(strlen(possiblePath) * sizeof(char));
+          strcpy(energyLocation, possiblePath);
           splitPath = NULL;
         } else {
           splitPath = strtok(NULL, ":");
