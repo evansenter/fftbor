@@ -17,16 +17,19 @@ else
 	CCFLAGS += -O3
 endif
 
-FFTbor2D : partition.o misc.o main.o
-	$(CC) partition.o misc.o main.o $(LDFLAGS) FFTbor2D
+FFTbor2D : partition.o energy_grid_mfpt.o misc.o main.o
+	$(CC) partition.o energy_grid_mfpt.o misc.o main.o $(LDFLAGS) FFTbor2D
 	
 main.o : main.cpp partition.h
 	$(CC) $(CCFLAGS) main.cpp
 
 misc.o : misc.cpp misc.h
 	$(CC) $(CCFLAGS) misc.cpp
+	
+energy_grid_mfpt.o : energy_grid_mfpt.c energy_grid_mfpt.h
+	$(CC) $(CCFLAGS) energy_grid_mfpt.c
 
-partition.o: partition.cpp partition.h params.h energy_par.h energy_const.h
+partition.o: partition.cpp partition.h energy_grid_mfpt.h misc.h energy_par.h params.h
 	$(CC) $(CCFLAGS) partition.cpp
 
 clean:
