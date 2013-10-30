@@ -4,7 +4,7 @@
 #include <fftw3.h>
 #include <limits>
 #include "partition.h"
-#include "energy_grid_mfpt.h"
+#include "libmfpt_header.h"
 #include "misc.h"
 #include "energy_par.h"
 #include "params.h"
@@ -811,21 +811,26 @@ void calculateKinetics(int *nonZeroIndices, int& nonZeroCount, double *probabili
   double* p = (double*)malloc(nonZeroCount * sizeof(double));
   double** transitionMatrix;
   double mfpt;
+  unsigned long length;
+  GlobalParameters parameters;
   
-  for (i = 0; i < nonZeroCount; ++i) {
+  parameters = init_params();
+  length     = nonZeroCount;
+  
+  for (i = 0; i < (int)length; ++i) {
     k[i] = nonZeroIndices[i] / rowLength;
     l[i] = nonZeroIndices[i] % rowLength;
     p[i] = probabilities[nonZeroIndices[i]];
   }
   
-  transitionMatrix = convertEnergyGridToTransitionMatrix(p, nonZeroCount);
+  transitionMatrix = convert_energy_grid_to_transition_matrix(&k, &l, &p, &length, parameters);
   
   #if MFPT_DEBUG
     printf("Transition matrix:\n");
     printf("i\tj\t(x, y)\t(a, b)\tp((x, y) -> (a, b))\n");
     
-    for (i = 0; i < nonZeroCount; ++i) {
-      for (j = 0; j < nonZeroCount; ++j) {
+    for (i = 0; i < (int)length; ++i) {
+      for (j = 0; j < (int)length; ++j) {
         printf("%d\t%d\t(%d, %d)\t(%d, %d)\t", i, j, nonZeroIndices[i] / rowLength, nonZeroIndices[i] % rowLength, nonZeroIndices[j] / rowLength, nonZeroIndices[j] % rowLength);
         printf(precisionFormat, transitionMatrix[i][j]);
         printf("\n");
@@ -836,18 +841,19 @@ void calculateKinetics(int *nonZeroIndices, int& nonZeroCount, double *probabili
   #endif
     
   #if MFPT_DEBUG
-    mfpt = computeMFPT(k, l, transitionMatrix, nonZeroCount, 1);
+    mfpt = compute_mfpt(k, l, transitionMatrix, length, parameters);
   #else
-    mfpt = computeMFPT(k, l, transitionMatrix, nonZeroCount, 0);
+    mfpt = compute_mfpt(k, l, transitionMatrix, length, parameters);
   #endif
   
   printf(precisionFormat, mfpt);
+  printf("\n");
   
   delete[] k;
   delete[] l;
   delete[] p;
   
-  for (i = 0; i < nonZeroCount; ++i) {
+  for (i = 0; i < (int)length; ++i) {
     delete[] transitionMatrix[i];
   }
   
