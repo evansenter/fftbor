@@ -805,7 +805,7 @@ void printOutput(double *probabilities, int inputStructureDist, int minimalRowLe
 }
 
 void calculateKinetics(int *nonZeroIndices, int& nonZeroCount, double *probabilities, int rowLength, char *precisionFormat) {
-  int i, j;
+  int i, j, error;
   int* k    = (int*)malloc(nonZeroCount * sizeof(int));
   int* l    = (int*)malloc(nonZeroCount * sizeof(int));
   double* p = (double*)malloc(nonZeroCount * sizeof(double));
@@ -815,7 +815,13 @@ void calculateKinetics(int *nonZeroIndices, int& nonZeroCount, double *probabili
   GlobalParameters parameters;
   
   parameters = init_params();
+  error      = error_handling(parameters);
   length     = nonZeroCount;
+  
+  if (error) {
+    fprintf(stderr, "Errors occured when calling the libMFPT files, terminating:\n");
+    exit(0);
+  }
   
   for (i = 0; i < (int)length; ++i) {
     k[i] = nonZeroIndices[i] / rowLength;
