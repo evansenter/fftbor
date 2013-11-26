@@ -13,6 +13,7 @@
 
 #define GASCONST 1.98717  /* in [cal/K] */
 #define K0  273.15
+#define INF 1000000
 #define FORBIDDEN 9999
 #define BONUS 10000
 #define NBPAIRS 7

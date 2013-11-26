@@ -1,7 +1,6 @@
 #ifndef DELTA_H
 #define DELTA_H
 
-#include "params.h"
 #include <complex>
 
 typedef std::complex<double> dcomplex;
@@ -12,8 +11,8 @@ int    bn(char);
 void   initializeCanBasePair(int **);
 void   translateToIntSequence(char *, int *);
 void   initializeBasePairCounts(int **, int *, int );
-double hairpinloop(int, int, int, int *, char *);
-double interiorloop(int, int, int, int, int, int, int *);
+double hairpinloop(int, int, int, short, short, char *);
+double interiorloop(int, int, int, int, int, int, short, short, short, short);
 void   solveSystem(dcomplex ***, char *, int *, int, int);
 int    jPairedTo(int, int, int *);
 int    jPairedIn(int, int, int *);

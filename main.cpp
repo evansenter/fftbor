@@ -5,6 +5,7 @@
 #include <ctype.h>
 #include "delta.h"
 #include "misc.h"
+#include "params.h"
 
 int           PF, N, PRECISION, WINDOW_SIZE, MIN_WINDOW_SIZE;
 extern double temperature;
@@ -42,7 +43,7 @@ void usage() {
   fprintf(stderr, "\tsecondary structure\n\n");
   
   fprintf(stderr, "Options include the following:\n");
-  fprintf(stderr, "-E\tenergyfile,  the default is energy.par in this executable's directory. Must be the name of a file with all energy parameters (in the same format as used in Vienna RNA).\n");
+  fprintf(stderr, "-E\tenergyfile,  the default is rna_turner2004.par in this executable's directory. Must be the name of a file with all energy parameters (in the same format as used in Vienna RNA).\n");
   fprintf(stderr, "-T\ttemperature, the default is 37 degrees Celsius (unless an energyfile with parameters for a different temperature is used.\n");
   fprintf(stderr, "-P\tprecision,   the default is 4, indicates the precision of the probabilities Z_k / Z to be returned (0-9, 0 disables precision handling).\n");
   
@@ -59,7 +60,7 @@ void read_input(int argc,char *argv[], char **maina, int **bps) {
   PRECISION       = 4;
   WINDOW_SIZE     = 0;
   MIN_WINDOW_SIZE = 0;
-  ENERGY          = (char *)"energy.par";
+  ENERGY          = (char *)"rna_turner2004.par";
 
   /* Function to retrieve RNA sequence and structure, when
    * either input in command line or in a file, where the first

@@ -1,12 +1,12 @@
 # Makefile for FFTbor
 
 CFLAGS  = -c -O3
-LDFLAGS = -lfftw3 -lm -L.
+LDFLAGS = -L. -lm -lfftw3 -lgomp -lRNA -o
 BINDIR  = /usr/local/bin # Change this to the BINDIR
 CC      = g++
 
 FFTbor : delta.o misc.o main.o
-	 $(CC) -g delta.o misc.o main.o $(LDFLAGS) -lRNA -o FFTbor
+	 $(CC) -g delta.o misc.o main.o $(LDFLAGS) FFTbor
 	
 main.o : main.cpp delta.h
 	   $(CC) -Wall -W $(CFLAGS) main.cpp
@@ -22,4 +22,4 @@ clean:
 
 install:
 	cp FFTbor $(BINDIR)
-	cp energy.par $(BINDIR)
+	cp rna_turner2004.par $(BINDIR)
