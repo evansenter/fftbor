@@ -31,8 +31,8 @@ int main(int argc, char *argv[]) {
   neighbors(sequence, intBP);
 
   delete sequence;
-  delete[] intBP[0];
-  delete[] intBP[1];
+  delete intBP[0];
+  delete intBP[1];
   delete[] intBP;
 
   return 0;
