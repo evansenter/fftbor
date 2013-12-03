@@ -373,18 +373,18 @@ void neighbors(char *inputSequence, int **bpList) {
 
   for (i = 0; i < 2; ++i) {
     for (j = 0; j < sequenceLength + 1; ++j) {
-      delete numBasePairs[i][j];
+      free(numBasePairs[i][j]);
     }
-    delete numBasePairs[i];
+    free(numBasePairs[i]);
   }
 
   delete[] numBasePairs;
 
   for (i = 0; i < 5; ++i) {
-    delete canBasePair[i];
+    free(canBasePair[i]);
   }
-  delete canBasePair;
-  delete intSequence;
+  free(canBasePair);
+  free(intSequence);
 
   for (i = 0; i < MAXTHREADS; ++i) {
     for (j = 0; j <= sequenceLength; ++j) {
@@ -422,7 +422,7 @@ void neighbors(char *inputSequence, int **bpList) {
   delete[] jPairedTo0;
   delete[] jPairedTo1;
 
-  delete probabilities;
+  free(probabilities);
   delete[] solutions;
   delete[] rootsOfUnity;
   delete[] sequence; 

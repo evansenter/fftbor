@@ -75,7 +75,7 @@ int *getBasePairList(char *secStr) {
     L[0] = -2;
   }
   
-  delete S;
+  free(S);
 
   return L;
 }

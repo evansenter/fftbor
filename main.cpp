@@ -30,9 +30,9 @@ int main(int argc, char *argv[]) {
   read_input(argc, argv, &sequence, intBP);
   neighbors(sequence, intBP);
 
-  delete sequence;
-  delete intBP[0];
-  delete intBP[1];
+  free(sequence);
+  free(intBP[0]);
+  free(intBP[1]);
   delete[] intBP;
 
   return 0;
