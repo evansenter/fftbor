@@ -10,9 +10,9 @@
   #include <omp.h>
 #endif
 
-int           PF, N, PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT, SIMPLE_OUTPUT, TRANSITION_OUTPUT, EXPLICIT_ENERGY_FILE;
+int           PF, N, PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT, SIMPLE_OUTPUT, TRANSITION_OUTPUT, EXPLICIT_ENERGY_FILE, GLOBAL_SEQ_LENGTH;
 extern double temperature;
-char          *ENERGY;
+char          *ENERGY, *GLOBAL_SEQ, *GLOBAL_STR_1, *GLOBAL_STR_2;
 paramT        *P;
 
 void read_input(int, char **, char **, int **);
@@ -222,11 +222,16 @@ void read_input(int argc, char *argv[], char **sequence, int **intBP) {
     usage();
   }
   
+  GLOBAL_SEQ        = seq;
+  GLOBAL_STR_1      = str1;
+  GLOBAL_STR_2      = str2;
+  GLOBAL_SEQ_LENGTH = strlen(seq);
+  
   if (!(SIMPLE_OUTPUT || MATRIX_FORMAT || TRANSITION_OUTPUT)) {
     /* Print sequence length, sequence and starting structure */
-    printf("%s\n%s\n%s\n", seq, str1, str2);
+    printf("%s\n%s\n%s\n", GLOBAL_SEQ, GLOBAL_STR_1, GLOBAL_STR_2);
   }
-
-    intBP[0] = getBasePairList(str1);
-    intBP[1] = getBasePairList(str2);
+  
+  intBP[0] = getBasePairList(str1);
+  intBP[1] = getBasePairList(str2);
 } 

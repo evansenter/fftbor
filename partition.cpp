@@ -40,12 +40,12 @@ using namespace std;
 // #define STRUCTURE_COUNT 1
 #define DO_WORK
 
-extern int    PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT, SIMPLE_OUTPUT, TRANSITION_OUTPUT, EXPLICIT_ENERGY_FILE;
+extern int    PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT, SIMPLE_OUTPUT, TRANSITION_OUTPUT, EXPLICIT_ENERGY_FILE, GLOBAL_SEQ_LENGTH;
 extern double temperature;
-extern char   *ENERGY;
+extern char   *ENERGY, *GLOBAL_SEQ, *GLOBAL_STR_1, *GLOBAL_STR_2;
 extern paramT *P;
 double RT;
-int    TWIDDLE;
+int    TWIDDLE, GLOBAL_BP_DIST;
 
 extern "C" {
   void read_parameter_file(const char energyfile[]);
@@ -108,6 +108,7 @@ void neighbors(char *inputSequence, int **bpList) {
     inputStructureDist += (bpList[0][i] > i && bpList[0][i] != bpList[1][i] ? 1 : 0);
     inputStructureDist += (bpList[1][i] > i && bpList[1][i] != bpList[0][i] ? 1 : 0);
   }
+  GLOBAL_BP_DIST = inputStructureDist;
   
   // Secondary structure data structure in the slightly different format that Vienna uses.
   for (i = 0; i < 2; ++i) {
@@ -814,9 +815,14 @@ void calculateKinetics(int *nonZeroIndices, int& nonZeroCount, double *probabili
   unsigned long length;
   MFPT_PARAMETERS parameters;
   
-  parameters = init_mfpt_params();
-  // error      = mfpt_error_handling(parameters);
-  length     = nonZeroCount;
+  parameters                      = init_mfpt_params();  
+  parameters.sequence_length      = GLOBAL_SEQ_LENGTH;
+  parameters.distributed_epsilon  = 1e-8;
+  parameters.bp_dist              = GLOBAL_BP_DIST;
+  parameters.single_bp_moves_only = 1;
+  parameters.hastings             = 1;  
+  error                           = mfpt_error_handling(parameters);
+  length                          = nonZeroCount;
   
   if (error) {
     fprintf(stderr, "Errors occured when calling the libMFPT files, terminating:\n");

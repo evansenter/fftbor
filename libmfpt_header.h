@@ -5,6 +5,7 @@ typedef struct {
   int start_state;
   int end_state;
   int sequence_length;
+  int bp_dist;
   short energy_based;
   short transition_matrix_input;
   short pseudoinverse;
