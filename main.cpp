@@ -48,7 +48,7 @@ void usage() {
   fprintf(stderr, "\tsecondary structure (2)\n\n");
   
   fprintf(stderr, "Options include the following:\n");
-  fprintf(stderr, "-E\tenergyfile,    the default is rna_turner1999.par in this current directory. Must be the name of a file with all energy parameters (in the same format as used in Vienna RNA). Energy file lookup first checks the current directory, and then iterates through the PATH shell variable until a matching file is found. If no file is found, the default ViennaRNA parameters are used and a warning is presented to the user. If the -E switch is explicitly provided, that file is used in lieu of searching for the rna_turner1999.par file.\n");
+  fprintf(stderr, "-E\tenergyfile,    the default is rna_turner2004.par in this current directory. Must be the name of a file with all energy parameters (in the same format as used in Vienna RNA). Energy file lookup first checks the current directory, and then iterates through the PATH shell variable until a matching file is found. If no file is found, the default ViennaRNA parameters are used and a warning is presented to the user. If the -E switch is explicitly provided, that file is used in lieu of searching for the rna_turner2004.par file.\n");
   fprintf(stderr, "-T\ttemperature,   the default is 37 degrees Celsius (unless an energyfile with parameters for a different temperature is used.\n");
   fprintf(stderr, "-P\tprecision,     the default is %d, indicates the precision (base 2) of the probabilities Z_k / Z to be returned (0-%d, 0 disables precision handling).\n", (int)ceil(log(pow(10., 8)) / log(2.)), std::numeric_limits<double>::digits);
   fprintf(stderr, "-R\trow length,    the default is 100, takes an integer 0 < R <= 100 that describes the dimensions of the 2D matrix in terms of the percentage sequence length.\n");
@@ -70,7 +70,7 @@ void read_input(int argc, char *argv[], char **sequence, int **intBP) {
   #endif
   PRECISION     = (int)ceil(log(pow(10., 8)) / log(2.));
   ROW_LENGTH    = 0;
-  ENERGY        = (char*)"rna_turner1999.par";
+  ENERGY        = (char*)"rna_turner2004.par";
  
   for (i = 1; i < argc; i++) {
     if (argv[i][0] == '-') {

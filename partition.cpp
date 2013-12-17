@@ -805,17 +805,17 @@ void printOutput(double *probabilities, int inputStructureDist, int minimalRowLe
 }
 
 void calculateKinetics(int *nonZeroIndices, int& nonZeroCount, double *probabilities, int rowLength, char *precisionFormat) {
-  int i, j, error;
+  int i, j, error = 0;
   int* k    = (int*)malloc(nonZeroCount * sizeof(int));
   int* l    = (int*)malloc(nonZeroCount * sizeof(int));
   double* p = (double*)malloc(nonZeroCount * sizeof(double));
   double** transitionMatrix;
   double mfpt;
   unsigned long length;
-  GlobalParameters parameters;
+  MFPT_PARAMETERS parameters;
   
-  parameters = init_params();
-  error      = error_handling(parameters);
+  parameters = init_mfpt_params();
+  // error      = mfpt_error_handling(parameters);
   length     = nonZeroCount;
   
   if (error) {

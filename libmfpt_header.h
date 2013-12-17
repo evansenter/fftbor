@@ -1,7 +1,7 @@
 #ifndef LIBMFPT_HEADER_H
 #define LIBMFPT_HEADER_H
 
-typedef struct GlobalParameters {
+typedef struct {
   int start_state;
   int end_state;
   int sequence_length;
@@ -13,20 +13,20 @@ typedef struct GlobalParameters {
   short verbose;
   double additive_epsilon;
   double distributed_epsilon;
-} GlobalParameters;
+} MFPT_PARAMETERS;
 
 #ifdef __cplusplus
   extern "C" {
-    GlobalParameters init_params();
-    int error_handling(GlobalParameters);
-    double** convert_energy_grid_to_transition_matrix(int**, int**, double**, unsigned long*, GlobalParameters);
-    double compute_mfpt(int*, int*, double**, unsigned long, GlobalParameters);
+    MFPT_PARAMETERS init_mfpt_params();
+    int mfpt_error_handling(MFPT_PARAMETERS);
+    double** convert_energy_grid_to_transition_matrix(int**, int**, double**, unsigned long*, MFPT_PARAMETERS);
+    double compute_mfpt(int*, int*, double**, unsigned long, MFPT_PARAMETERS);
   }
 #else
-  extern GlobalParameters init_params();
-  int error_handling(GlobalParameters);
-  extern double** convert_energy_grid_to_transition_matrix(int**, int**, double**, unsigned long*, GlobalParameters);
-  extern double compute_mfpt(int*, int*, double**, unsigned long, GlobalParameters);
+  extern MFPT_PARAMETERS init_mfpt_params();
+  int mfpt_error_handling(MFPT_PARAMETERS);
+  extern double** convert_energy_grid_to_transition_matrix(int**, int**, double**, unsigned long*, MFPT_PARAMETERS);
+  extern double compute_mfpt(int*, int*, double**, unsigned long, MFPT_PARAMETERS);
 #endif
 
 #endif

@@ -1,7 +1,7 @@
 # Makefile for FFTbor2D
 
 CCFLAGS           = -c -ansi -pedantic -fopenmp -funroll-loops -Wall -Wextra -Wa,-q
-LDFLAGS           = -L. -lfftw3 -lgomp -llapack -lRNA -lMFPT -o
+LDFLAGS           = -L. -lfftw3 -lgomp -llapack -lRNA -lmfpt -o
 BINDIR            = ~/bin # Change this to the BINDIR
 CC                = g++
 GCC_VERSION      := $(shell expr `$(CC) -dumpversion`)
@@ -34,5 +34,5 @@ clean:
 
 install:
 	cp FFTbor2D $(BINDIR)
-	cp rna_turner1999.par $(BINDIR)
+	cp rna_turner1999.par rna_turner2004.par $(BINDIR)
 	
