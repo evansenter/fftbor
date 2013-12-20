@@ -10,7 +10,7 @@
   #include <omp.h>
 #endif
 
-int           PF, N, PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT, SIMPLE_OUTPUT, TRANSITION_OUTPUT, EXPLICIT_ENERGY_FILE, GLOBAL_SEQ_LENGTH;
+int           PF, N, PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT, SIMPLE_OUTPUT, TRANSITION_OUTPUT, SPECTRAL_OUTPUT, EXPLICIT_ENERGY_FILE, GLOBAL_SEQ_LENGTH;
 extern double temperature;
 char          *ENERGY, *GLOBAL_SEQ, *GLOBAL_STR_1, *GLOBAL_STR_2;
 paramT        *P;
@@ -55,6 +55,7 @@ void usage() {
   fprintf(stderr, "-M\tmatrix format, the default is disabled, presents output in a matrix format instead of a column format.\n");
   fprintf(stderr, "-S\tsimple output, the default is disabled, presents output in column format, for non-zero entries only with no header output (columns are: k, l, p(Z_{k,l}/Z), -RTln(Z_{k,l})).\n");
   fprintf(stderr, "-X\tMFPT, the default is disabled, estimates the mean-first passage time of the input RNA from structure 1 to structure 2.\n");
+  fprintf(stderr, "-Y\tspectral decomposition, the default is disabled, estimates the population proportion of the input structures over time.\n");
   
   exit(1);
 }
@@ -109,6 +110,11 @@ void read_input(int argc, char *argv[], char **sequence, int **intBP) {
           usage();
         }
         TRANSITION_OUTPUT = 1;
+      } else if (strcmp(argv[i], "-Y") == 0) {
+        if (i == argc - 1) {
+          usage();
+        }
+        SPECTRAL_OUTPUT = 1;
       } else if (strcmp(argv[i], "-P") == 0) {
         if (i == argc - 1) {
           usage();

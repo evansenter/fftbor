@@ -5,6 +5,7 @@
 #include <limits>
 #include "partition.h"
 #include "libmfpt_header.h"
+#include "libspectral_header.h"
 #include "misc.h"
 #include "energy_par.h"
 #include "params.h"
@@ -40,7 +41,7 @@ using namespace std;
 // #define STRUCTURE_COUNT 1
 #define DO_WORK
 
-extern int    PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT, SIMPLE_OUTPUT, TRANSITION_OUTPUT, EXPLICIT_ENERGY_FILE, GLOBAL_SEQ_LENGTH;
+extern int    PRECISION, MAXTHREADS, ROW_LENGTH, MATRIX_FORMAT, SIMPLE_OUTPUT, TRANSITION_OUTPUT, SPECTRAL_OUTPUT, EXPLICIT_ENERGY_FILE, GLOBAL_SEQ_LENGTH;
 extern double temperature;
 extern char   *ENERGY, *GLOBAL_SEQ, *GLOBAL_STR_1, *GLOBAL_STR_2;
 extern paramT *P;

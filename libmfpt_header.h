@@ -25,7 +25,7 @@ typedef struct {
   }
 #else
   extern MFPT_PARAMETERS init_mfpt_params();
-  int mfpt_error_handling(MFPT_PARAMETERS);
+  extern int mfpt_error_handling(MFPT_PARAMETERS);
   extern double** convert_energy_grid_to_transition_matrix(int**, int**, double**, unsigned long*, MFPT_PARAMETERS);
   extern double compute_mfpt(int*, int*, double**, unsigned long, MFPT_PARAMETERS);
 #endif

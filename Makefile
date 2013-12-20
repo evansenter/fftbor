@@ -26,7 +26,7 @@ main.o : main.cpp partition.h
 misc.o : misc.cpp misc.h
 	$(CC) $(CCFLAGS) misc.cpp
 
-partition.o: partition.cpp partition.h libmfpt_header.h misc.h energy_par.h params.h
+partition.o: partition.cpp partition.h libmfpt_header.h libspectral_header.h misc.h energy_par.h params.h
 	$(CC) $(CCFLAGS) partition.cpp
 
 clean:
