@@ -233,7 +233,7 @@ void read_input(int argc, char *argv[], char **sequence, int **intBP) {
   GLOBAL_STR_2      = str2;
   GLOBAL_SEQ_LENGTH = strlen(seq);
   
-  if (!(SIMPLE_OUTPUT || MATRIX_FORMAT || TRANSITION_OUTPUT)) {
+  if (!(SIMPLE_OUTPUT || MATRIX_FORMAT || TRANSITION_OUTPUT || SPECTRAL_OUTPUT)) {
     /* Print sequence length, sequence and starting structure */
     printf("%s\n%s\n%s\n", GLOBAL_SEQ, GLOBAL_STR_1, GLOBAL_STR_2);
   }

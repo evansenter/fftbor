@@ -35,6 +35,7 @@ using namespace std;
 // #define FFTBOR_DEBUG    1
 // #define TWIDDLE_DEBUG   1
 // #define MFPT_DEBUG      1
+// #define SPECTRAL_DEBUG      1
 // #define MEASURE_TWIDDLE 1
 // #define OPENMP_DEBUG    1
 // #define SINGLE_THREAD   1
@@ -177,7 +178,7 @@ void neighbors(char *inputSequence, int **bpList) {
   dcomplex *rootsOfUnity = new dcomplex[numRoots];
   double *probabilities  = (double *)xcalloc(2 * runLength + 1, sizeof(double));
   
-  if (TRANSITION_OUTPUT) {
+  if (TRANSITION_OUTPUT || SPECTRAL_OUTPUT) {
     nonZeroIndices = (int *)xcalloc((int)pow(rowLength, 2.) + 1, sizeof(int));
   }
   
@@ -748,7 +749,7 @@ void solveSystem(double *probabilities, dcomplex *solutions, int rowLength, int 
       // Housekeeping.  
       sum += solutions[i].real();
       
-      if (TRANSITION_OUTPUT) {
+      if (TRANSITION_OUTPUT || SPECTRAL_OUTPUT) {
         nonZeroIndices[nonZeroCount++] = 2 * i + offset;
       }
     }
@@ -776,7 +777,7 @@ void solveSystem(double *probabilities, dcomplex *solutions, int rowLength, int 
 void printOutput(double *probabilities, int inputStructureDist, int minimalRowLength, int rowLength, int *nonZeroIndices, int& nonZeroCount, double& scalingFactor, char *precisionFormat) {
   int i, solutionLength = (int)pow((double)rowLength, 2);
   
-  if (!(SIMPLE_OUTPUT || MATRIX_FORMAT || TRANSITION_OUTPUT)) {
+  if (!(SIMPLE_OUTPUT || MATRIX_FORMAT || TRANSITION_OUTPUT || SPECTRAL_OUTPUT)) {
     printf("%d,%d,%d\nk\tl\tp(Z_{k,l}/Z)\t-RTln(Z_{k,l})\n", inputStructureDist, minimalRowLength, rowLength);
   }
 
@@ -793,6 +794,8 @@ void printOutput(double *probabilities, int inputStructureDist, int minimalRowLe
     printf("\n");
   } else if (TRANSITION_OUTPUT) {
     calculateKinetics(nonZeroIndices, nonZeroCount, probabilities, rowLength, precisionFormat);
+  } else if (SPECTRAL_OUTPUT) {
+    populationProportion(nonZeroIndices, nonZeroCount, probabilities, rowLength, precisionFormat);
   } else {
     for (i = 0; i < solutionLength; ++i) { 
       if (probabilities[i] > 0) {
@@ -826,7 +829,7 @@ void calculateKinetics(int *nonZeroIndices, int& nonZeroCount, double *probabili
   length                          = nonZeroCount;
   
   if (error) {
-    fprintf(stderr, "Errors occured when calling the libMFPT files, terminating:\n");
+    fprintf(stderr, "Errors occured when calling the libmfpt files, terminating:\n");
     exit(0);
   }
   
@@ -853,11 +856,7 @@ void calculateKinetics(int *nonZeroIndices, int& nonZeroCount, double *probabili
     }
   #endif
     
-  #if MFPT_DEBUG
-    mfpt = compute_mfpt(k, l, transitionMatrix, length, parameters);
-  #else
-    mfpt = compute_mfpt(k, l, transitionMatrix, length, parameters);
-  #endif
+  mfpt = compute_mfpt(k, l, transitionMatrix, length, parameters);
   
   printf(precisionFormat, mfpt);
   printf("\n");
@@ -871,6 +870,86 @@ void calculateKinetics(int *nonZeroIndices, int& nonZeroCount, double *probabili
   }
   
   delete[] transitionMatrix;
+  delete[] nonZeroIndices;
+}
+
+void populationProportion(int *nonZeroIndices, int& nonZeroCount, double *probabilities, int rowLength, char *precisionFormat) {
+  int i, j, startIndex = -1, endIndex = -1, error = 0;
+  double step_counter, colSum;
+  double* transitionMatrix;
+  EIGENSYSTEM eigensystem;
+  SPECTRAL_PARAMS parameters;
+  
+  parameters = init_spectral_params();  
+  error      = spectral_error_handling(parameters);
+  
+  if (error) {
+    fprintf(stderr, "Errors occured when calling the libspectral files, terminating:\n");
+    exit(0);
+  }
+  
+  for (i = 0; i < nonZeroCount; ++i) {
+    if (nonZeroIndices[i] / rowLength == 0 && nonZeroIndices[i] % rowLength == GLOBAL_BP_DIST) {
+      startIndex = i;
+    }
+    
+    if (nonZeroIndices[i] / rowLength == GLOBAL_BP_DIST && nonZeroIndices[i] % rowLength == 0) {
+      endIndex = i;
+    }
+  }
+  
+  if (startIndex < 0 || endIndex < 0) {
+    printf("The start index (%d) or the end index (%d) in the nonZeroIndices array doesn't exist, committing digital hari-kiri.\n", startIndex, endIndex);    
+    printf("\n");
+    printf("        /                    \n");
+    printf("*//////{<>==================-\n");
+    printf("        \\                   \n");
+    exit(0);
+  }
+  
+  transitionMatrix = (double*)malloc((int)pow(nonZeroCount, 2) * sizeof(double));
+  
+  for (i = 0; i < nonZeroCount; ++i) {
+    colSum = 0;
+    
+    for (j = 0; j < nonZeroCount; ++j) {
+      if (i != j) {
+        transitionMatrix[i + nonZeroCount * j] = MIN2(1., probabilities[nonZeroIndices[j]] / probabilities[nonZeroIndices[i]]);
+        colSum                          += transitionMatrix[i + nonZeroCount * j];
+      }
+      
+      transitionMatrix[i + nonZeroCount * i] = -colSum;
+    }
+  }
+  
+  #if SPECTRAL_DEBUG
+    printf("Transition matrix:\n");
+    printf("i\tj\t(x, y)\t(a, b)\tp((x, y) -> (a, b))\n");
+    
+    for (i = 0; i < nonZeroCount; ++i) {
+      for (j = 0; j < nonZeroCount; ++j) {
+        printf("%d\t%d\t(%d, %d)\t(%d, %d)\t", i, j, nonZeroIndices[i] / rowLength, nonZeroIndices[i] % rowLength, nonZeroIndices[j] / rowLength, nonZeroIndices[j] % rowLength);
+        printf(precisionFormat, transitionMatrix[i + nonZeroCount * j]);
+        printf("\n");
+      }
+      
+      printf("\n");
+    }
+  #endif
+  
+  eigensystem = convert_transition_matrix_to_eigenvectors(transitionMatrix, nonZeroCount);
+  invert_matrix(eigensystem, nonZeroCount);
+  
+  for (step_counter = parameters.start_time; step_counter <= parameters.end_time; step_counter += parameters.step_size) {
+    printf(
+      "%f\t%+.8f\t%+.8f\n", 
+      step_counter, 
+      probability_at_time(eigensystem, pow(10, step_counter), startIndex, endIndex, nonZeroCount),
+      probability_at_time(eigensystem, pow(10, step_counter), startIndex, startIndex, nonZeroCount)
+    );
+  }
+
+  free_eigensystem(eigensystem);
   delete[] nonZeroIndices;
 }
 

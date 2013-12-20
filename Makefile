@@ -1,7 +1,7 @@
 # Makefile for FFTbor2D
 
 CCFLAGS           = -c -ansi -pedantic -fopenmp -funroll-loops -Wall -Wextra -Wa,-q
-LDFLAGS           = -L. -lfftw3 -lgomp -llapack -lRNA -lmfpt -o
+LDFLAGS           = -L. -lfftw3 -lgomp -llapack -lgslcblas -lgsl -lRNA -lmfpt -lspectral -o
 BINDIR            = ~/bin # Change this to the BINDIR
 CC                = g++
 GCC_VERSION      := $(shell expr `$(CC) -dumpversion`)

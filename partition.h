@@ -15,6 +15,7 @@ double interiorloop(int, int, int, int, int, int, short, short, short, short);
 void   solveSystem(double *, dcomplex *, int, int, int, int *, int&, double&, char *);
 void   printOutput(double *, int, int, int, int *, int&, double&, char *);
 void   calculateKinetics(int *, int&, double *, int, char *);
+void   populationProportion(int *, int&, double *, int, char *);
 int    jPairedTo(int, int, int *);
 int    jPairedIn(int, int, int *);
 void   populateRemainingRoots(dcomplex *, dcomplex *, int, int);

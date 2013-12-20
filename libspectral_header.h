@@ -30,6 +30,7 @@ typedef struct {
     EIGENSYSTEM convert_transition_matrix_to_eigenvectors(double*, int);
     void invert_matrix(EIGENSYSTEM, int);
     double probability_at_time(EIGENSYSTEM, double, int, int, int);
+    void free_eigensystem(EIGENSYSTEM);
   }
 #else
   extern SPECTRAL_PARAMS init_spectral_params();
@@ -37,6 +38,7 @@ typedef struct {
   extern EIGENSYSTEM convert_transition_matrix_to_eigenvectors(double*, int);
   extern void invert_matrix(EIGENSYSTEM, int);
   extern double probability_at_time(EIGENSYSTEM, double, int, int, int);
+  extern void free_eigensystem(EIGENSYSTEM);
 #endif
 
 #endif
