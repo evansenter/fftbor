@@ -3,11 +3,11 @@
 #include <unistd.h>
 #include <fftw3.h>
 #include <limits>
-#include "partition.h"
+#include "fftbor2d_params.h"
+#include "fftbor2d_functions.h"
 #include "libmfpt_header.h"
 #include "libspectral_header.h"
-#include "misc.h"
-#include "energy_par.h"
+#include "rna_misc_functions.h"
 #include "vienna_functions.h"
 
 #ifdef _OPENMP
@@ -35,7 +35,7 @@ using namespace std;
 // #define FFTBOR_DEBUG    1
 // #define TWIDDLE_DEBUG   1
 // #define MFPT_DEBUG      1
-// #define SPECTRAL_DEBUG      1
+// #define SPECTRAL_DEBUG  1
 // #define MEASURE_TWIDDLE 1
 // #define OPENMP_DEBUG    1
 // #define SINGLE_THREAD   1

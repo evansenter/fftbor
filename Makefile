@@ -24,17 +24,20 @@ ifeq "$(GCC_GTEQ_4.9.0)" "1"
 	CCFLAGS += -fdiagnostics-color=always
 endif
 
-FFTbor2D.out: partition.o misc.o main.o
-	$(CC) partition.o misc.o main.o $(LDFLAGS) FFTbor2D.out
+FFTbor2D.out: fftbor2d_functions.o rna_misc_functions.o fftbor2d_params.o fftbor2d.o
+	$(CC) fftbor2d_functions.o rna_misc_functions.o fftbor2d_params.o fftbor2d.o $(LDFLAGS) FFTbor2D.out
 	
-main.o: main.cpp $(H)/partition.h $(H)/misc.h $(H)/vienna_data_structures.h
-	$(CC) $(CCFLAGS) main.cpp
+fftbor2d.o: fftbor2d.cpp $(H)/fftbor2d_functions.h $(H)/fftbor2d_params.h
+	$(CC) $(CCFLAGS) fftbor2d.cpp
 
-misc.o: misc.cpp $(H)/misc.h
-	$(CC) $(CCFLAGS) misc.cpp
+fftbor2d_params.o: fftbor2d_params.cpp $(H)/fftbor2d_params.h $(H)/rna_misc_functions.h $(H)/vienna_data_structures.h
+	$(CC) $(CCFLAGS) fftbor2d_params.cpp
+  
+rna_misc_functions.o: rna_misc_functions.cpp $(H)/rna_misc_functions.h
+	$(CC) $(CCFLAGS) rna_misc_functions.cpp
 
-partition.o: partition.cpp $(H)/partition.h $(H)/libmfpt_header.h $(LIB)/libmfpt.a $(H)/libspectral_header.h $(LIB)/libspectral.a $(H)/misc.h $(H)/energy_par.h $(H)/vienna_functions.h
-	$(CC) $(CCFLAGS) partition.cpp
+fftbor2d_functions.o: fftbor2d_functions.cpp $(H)/fftbor2d_functions.h $(H)/libmfpt_header.h $(LIB)/libmfpt.a $(H)/libspectral_header.h $(LIB)/libspectral.a $(H)/rna_misc_functions.h $(H)/energy_par.h $(H)/vienna_functions.h
+	$(CC) $(CCFLAGS) fftbor2d_functions.cpp
   
 $(LIB)/libmfpt.a:
 	cd ../mfpt; make

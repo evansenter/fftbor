@@ -1,5 +1,5 @@
 /*************************************************
-misc.c
+rna_misc_functions.c
 P. Clote
 Miscellaneous routines for reading in RNA either as
 string from command line or FASTA file, etc.
@@ -16,7 +16,7 @@ NOTES:
 #include <stdlib.h>
 #include <math.h>
 #include <limits.h>     //for INT_MAX
-#include "misc.h"
+#include "rna_misc_functions.h"
 #include <ctype.h>   	// character handling, eg toupper()
 #include <stdbool.h>
 
