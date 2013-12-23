@@ -1,4 +1,0 @@
-> Spliced_leader:
-AACUAAAACAAUUUUUGAAGAACAGUUUCUGUACUUCAUUGGUAUGUAGAGACUUC
-..((...((((((..(((((.((((...)))).)))))..))).)))..)).....
-.......................((((((((((((.....)))))..)))))))..

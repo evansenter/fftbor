@@ -1,7 +1,7 @@
 # Makefile for FFTbor2D
 
-CCFLAGS           = -c -ansi -pedantic -fopenmp -funroll-loops -Wall -Wextra -Wa,-q
-LDFLAGS           = -L. -lfftw3 -lgomp -llapack -lgslcblas -lgsl -lRNA -lmfpt -lspectral -o
+CCFLAGS           = -c -ansi -pedantic -fopenmp -funroll-loops -Wall -Wextra -Wa,-q -I ../../h
+LDFLAGS           = -L . -L ../../lib -lfftw3 -lgomp -llapack -lgslcblas -lgsl -lRNA -lmfpt -lspectral -o
 BINDIR            = ~/bin # Change this to the BINDIR
 CC                = g++
 GCC_VERSION      := $(shell expr `$(CC) -dumpversion`)
@@ -17,22 +17,28 @@ else
 	CCFLAGS += -O3
 endif
 
-FFTbor2D : partition.o misc.o main.o
-	$(CC) partition.o misc.o main.o $(LDFLAGS) FFTbor2D
+FFTbor2D.out: partition.o misc.o main.o
+	$(CC) partition.o misc.o main.o $(LDFLAGS) FFTbor2D.out
 	
-main.o : main.cpp partition.h
+main.o: main.cpp ../../h/partition.h
 	$(CC) $(CCFLAGS) main.cpp
 
-misc.o : misc.cpp misc.h
+misc.o: misc.cpp ../../h/misc.h
 	$(CC) $(CCFLAGS) misc.cpp
 
-partition.o: partition.cpp partition.h libmfpt_header.h libspectral_header.h misc.h energy_par.h params.h
+partition.o: partition.cpp ../../h/partition.h ../../h/libmfpt_header.h ../../lib/libmfpt.a ../../h/libspectral_header.h ../../lib/libspectral.a ../../h/misc.h ../../h/energy_par.h ../../h/params.h
 	$(CC) $(CCFLAGS) partition.cpp
+  
+../../lib/libmfpt.a:
+	cd ../mfpt; make
+	
+../../lib/libspectral.a:
+	cd ../spectral; make
 
 clean:
-	rm -f *.o FFTbor2D
+	rm -f *.o FFTbor2D.out
 
-install:
-	cp FFTbor2D $(BINDIR)
-	cp rna_turner1999.par rna_turner2004.par $(BINDIR)
+install: FFTbor2D.out
+	cp FFTbor2D.out $(BINDIR)/FFTbor2D
+	cp ../../misc/rna_turner1999.par ../../misc/rna_turner2004.par $(BINDIR)
 	

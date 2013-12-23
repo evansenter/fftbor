@@ -1,4 +1,0 @@
-> RB4:
-GACUCGGGGUGCCCUUCUGCGUGAAGGCUGAGAAAUACCCGUAUCACCUGAUCUGGAUAAUGCCAGCGUAGGGAAGUCACGGACCACCAGGUCAUUGCUUCUUCACGUUAUGGCAGGAGCAAACUAUGCAAGUCGACCUGUGGUCC
-((((((((.((((.(((.....))))))......)..)))).....(((...((((......))))...)))..))))..((((((.((((((.(((((((((((.....))).))))))))............))))))))))))
-....((((.((((.(((.....))))))......)..)))).....(((...((((......))))...)))........((((((.((((((.(((....((((.....))).)....)))............))))))))))))

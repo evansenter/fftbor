@@ -1,13 +1,18 @@
-*.out
-scripts/
-FFTbor
-RNAbor
-RNAcentral
-FFTbor2D*
-rna.ps
-*.a
+# Object files
 *.o
-test*.txt
-debug*.txt
-rnabor_benchmarking_seqs
-spliced_leader_lists
+*.ko
+
+# Libraries
+*.lib
+*.a
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
