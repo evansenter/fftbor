@@ -8,7 +8,7 @@
 #include "libspectral_header.h"
 #include "misc.h"
 #include "energy_par.h"
-#include "params.h"
+#include "vienna_functions.h"
 
 #ifdef _OPENMP
   #include <omp.h>
@@ -810,13 +810,12 @@ void printOutput(double *probabilities, int inputStructureDist, int minimalRowLe
 }
 
 void calculateKinetics(int *nonZeroIndices, int& nonZeroCount, double *probabilities, int rowLength, char *precisionFormat) {
-  int i, j, error = 0;
+  int i, j, length, error = 0;
   int* k    = (int*)malloc(nonZeroCount * sizeof(int));
   int* l    = (int*)malloc(nonZeroCount * sizeof(int));
   double* p = (double*)malloc(nonZeroCount * sizeof(double));
   double** transitionMatrix;
   double mfpt;
-  unsigned long length;
   MFPT_PARAMETERS parameters;
   
   parameters                      = init_mfpt_params();  
@@ -826,7 +825,7 @@ void calculateKinetics(int *nonZeroIndices, int& nonZeroCount, double *probabili
   parameters.single_bp_moves_only = 1;
   parameters.hastings             = 1;  
   error                           = mfpt_error_handling(parameters);
-  length                          = nonZeroCount;
+  length                          = (int)nonZeroCount;
   
   if (error) {
     fprintf(stderr, "Errors occured when calling the libmfpt files, terminating:\n");

@@ -4,7 +4,7 @@
 #include <limits>
 #include "partition.h"
 #include "misc.h"
-#include "params.h"
+#include "vienna_data_structures.h"
 
 #ifdef _OPENMP
   #include <omp.h>
