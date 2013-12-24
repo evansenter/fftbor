@@ -34,8 +34,6 @@ using namespace std;
 // #define TIMING_DEBUG    1
 // #define FFTBOR_DEBUG    1
 // #define TWIDDLE_DEBUG   1
-// #define MFPT_DEBUG      1
-// #define SPECTRAL_DEBUG  1
 // #define MEASURE_TWIDDLE 1
 // #define OPENMP_DEBUG    1
 // #define SINGLE_THREAD   1
@@ -424,6 +422,8 @@ void neighbors(char *inputSequence, int **bpList) {
 
   delete[] jPairedTo0;
   delete[] jPairedTo1;
+  
+  delete[] nonZeroIndices;
 
   free(probabilities);
   delete[] solutions;
@@ -810,7 +810,7 @@ void printOutput(double *probabilities, int inputStructureDist, int minimalRowLe
 }
 
 void calculateKinetics(int *nonZeroIndices, int nonZeroCount, double *probabilities, int rowLength, char *precisionFormat) {
-  int i, j, error = 0;
+  int error = 0;
   double mfpt;
   double** transitionMatrix;
   MFPT_PARAMETERS parameters;
@@ -839,7 +839,6 @@ void calculateKinetics(int *nonZeroIndices, int nonZeroCount, double *probabilit
   
   free_transition_matrix(transitionMatrix, nonZeroCount);
   free_klp_matrix(klpMatrix);
-  free(nonZeroIndices);
 }
 
 void convert_fftbor2d_energy_grid_to_klp_matrix(int *nonZeroIndices, double *probabilities, int rowLength, KLP_MATRIX klpMatrix) {
@@ -853,8 +852,8 @@ void convert_fftbor2d_energy_grid_to_klp_matrix(int *nonZeroIndices, double *pro
 }
 
 void populationProportion(int *nonZeroIndices, int nonZeroCount, double *probabilities, int rowLength, char *precisionFormat) {
-  int i, j, startIndex = -1, endIndex = -1, error = 0;
-  double step_counter, colSum;
+  int i, startIndex = -1, endIndex = -1, error = 0;
+  double step_counter;
   double* transitionMatrix;
   EIGENSYSTEM eigensystem;
   SPECTRAL_PARAMS parameters;
@@ -886,7 +885,28 @@ void populationProportion(int *nonZeroIndices, int nonZeroCount, double *probabi
     exit(0);
   }
   
-  transitionMatrix = (double*)malloc((int)pow(nonZeroCount, 2) * sizeof(double));
+  transitionMatrix = convert_fftbor2d_energy_grid_to_transition_rate_matrix(nonZeroIndices, nonZeroCount, probabilities);
+  eigensystem      = convert_transition_matrix_to_eigenvectors(transitionMatrix, nonZeroCount);
+  invert_matrix(eigensystem);
+  
+  for (step_counter = parameters.start_time; step_counter <= parameters.end_time; step_counter += parameters.step_size) {
+    printf(precisionFormat, step_counter);
+    printf("\t");
+    printf(precisionFormat, probability_at_time(eigensystem, pow(10, step_counter), startIndex, endIndex));
+    printf("\t");
+    printf(precisionFormat, probability_at_time(eigensystem, pow(10, step_counter), startIndex, startIndex));
+    printf("\n");
+  }
+
+  free_eigensystem(eigensystem);
+}
+
+double* convert_fftbor2d_energy_grid_to_transition_rate_matrix(int *nonZeroIndices, int nonZeroCount, double *probabilities) {
+  int i, j;
+  double colSum;
+  double* transitionMatrix;
+  
+  transitionMatrix = (double*)malloc(nonZeroCount * nonZeroCount * sizeof(double));
   
   for (i = 0; i < nonZeroCount; ++i) {
     colSum = 0;
@@ -894,43 +914,16 @@ void populationProportion(int *nonZeroIndices, int nonZeroCount, double *probabi
     for (j = 0; j < nonZeroCount; ++j) {
       if (i != j) {
         transitionMatrix[i + nonZeroCount * j] = MIN2(1., probabilities[nonZeroIndices[j]] / probabilities[nonZeroIndices[i]]);
-        colSum                          += transitionMatrix[i + nonZeroCount * j];
+        colSum                                += transitionMatrix[i + nonZeroCount * j];
       }
       
       transitionMatrix[i + nonZeroCount * i] = -colSum;
     }
   }
   
-  #if SPECTRAL_DEBUG
-    printf("Transition matrix:\n");
-    printf("i\tj\t(x, y)\t(a, b)\tp((x, y) -> (a, b))\n");
-    
-    for (i = 0; i < nonZeroCount; ++i) {
-      for (j = 0; j < nonZeroCount; ++j) {
-        printf("%d\t%d\t(%d, %d)\t(%d, %d)\t", i, j, nonZeroIndices[i] / rowLength, nonZeroIndices[i] % rowLength, nonZeroIndices[j] / rowLength, nonZeroIndices[j] % rowLength);
-        printf(precisionFormat, transitionMatrix[i + nonZeroCount * j]);
-        printf("\n");
-      }
-      
-      printf("\n");
-    }
-  #endif
-  
-  eigensystem = convert_transition_matrix_to_eigenvectors(transitionMatrix, nonZeroCount);
-  invert_matrix(eigensystem, nonZeroCount);
-  
-  for (step_counter = parameters.start_time; step_counter <= parameters.end_time; step_counter += parameters.step_size) {
-    printf(
-      "%f\t%+.8f\t%+.8f\n", 
-      step_counter, 
-      probability_at_time(eigensystem, pow(10, step_counter), startIndex, endIndex, nonZeroCount),
-      probability_at_time(eigensystem, pow(10, step_counter), startIndex, startIndex, nonZeroCount)
-    );
-  }
-
-  free_eigensystem(eigensystem);
-  delete[] nonZeroIndices;
+  return transitionMatrix;
 }
+
 
 inline int jPairedTo(int i, int j, int *basePairs) {
   return basePairs[i] == j ? -1 : 1;
