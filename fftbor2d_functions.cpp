@@ -809,14 +809,12 @@ void printOutput(double *probabilities, int inputStructureDist, int minimalRowLe
   }
 }
 
-void calculateKinetics(int *nonZeroIndices, int& nonZeroCount, double *probabilities, int rowLength, char *precisionFormat) {
-  int i, j, length, error = 0;
-  int* k    = (int*)malloc(nonZeroCount * sizeof(int));
-  int* l    = (int*)malloc(nonZeroCount * sizeof(int));
-  double* p = (double*)malloc(nonZeroCount * sizeof(double));
-  double** transitionMatrix;
+void calculateKinetics(int *nonZeroIndices, int nonZeroCount, double *probabilities, int rowLength, char *precisionFormat) {
+  int i, j, error = 0;
   double mfpt;
+  double** transitionMatrix;
   MFPT_PARAMETERS parameters;
+  KLP_MATRIX klpMatrix;
   
   parameters                      = init_mfpt_params();  
   parameters.sequence_length      = GLOBAL_SEQ_LENGTH;
@@ -825,54 +823,36 @@ void calculateKinetics(int *nonZeroIndices, int& nonZeroCount, double *probabili
   parameters.single_bp_moves_only = 1;
   parameters.hastings             = 1;  
   error                           = mfpt_error_handling(parameters);
-  length                          = (int)nonZeroCount;
+  klpMatrix                       = init_klp_matrix(nonZeroCount);
   
   if (error) {
     fprintf(stderr, "Errors occured when calling the libmfpt files, terminating:\n");
     exit(0);
   }
   
-  for (i = 0; i < (int)length; ++i) {
-    k[i] = nonZeroIndices[i] / rowLength;
-    l[i] = nonZeroIndices[i] % rowLength;
-    p[i] = probabilities[nonZeroIndices[i]];
-  }
-  
-  transitionMatrix = convert_energy_grid_to_transition_matrix(&k, &l, &p, &length, parameters);
-  
-  #if MFPT_DEBUG
-    printf("Transition matrix:\n");
-    printf("i\tj\t(x, y)\t(a, b)\tp((x, y) -> (a, b))\n");
-    
-    for (i = 0; i < (int)length; ++i) {
-      for (j = 0; j < (int)length; ++j) {
-        printf("%d\t%d\t(%d, %d)\t(%d, %d)\t", i, j, nonZeroIndices[i] / rowLength, nonZeroIndices[i] % rowLength, nonZeroIndices[j] / rowLength, nonZeroIndices[j] % rowLength);
-        printf(precisionFormat, transitionMatrix[i][j]);
-        printf("\n");
-      }
-      
-      printf("\n");
-    }
-  #endif
-    
-  mfpt = compute_mfpt(k, l, transitionMatrix, length, parameters);
+  convert_fftbor2d_energy_grid_to_klp_matrix(nonZeroIndices, probabilities, rowLength, klpMatrix);
+  transitionMatrix = convert_energy_grid_to_transition_matrix(&klpMatrix, parameters);
+  mfpt             = compute_mfpt(klpMatrix, parameters, transitionMatrix);
   
   printf(precisionFormat, mfpt);
   printf("\n");
   
-  delete[] k;
-  delete[] l;
-  delete[] p;
-  
-  for (i = 0; i < (int)length; ++i) {
-    delete[] transitionMatrix[i];
-  }
-  
-  delete[] transitionMatrix;
-  delete[] nonZeroIndices;
+  free_transition_matrix(transitionMatrix, nonZeroCount);
+  free_klp_matrix(klpMatrix);
+  free(nonZeroIndices);
 }
 
-void populationProportion(int *nonZeroIndices, int& nonZeroCount, double *probabilities, int rowLength, char *precisionFormat) {
+void convert_fftbor2d_energy_grid_to_klp_matrix(int *nonZeroIndices, double *probabilities, int rowLength, KLP_MATRIX klpMatrix) {
+  int i;
+  
+  for (i = 0; i < klpMatrix.length; ++i) {
+    klpMatrix.k[i] = nonZeroIndices[i] / rowLength;
+    klpMatrix.l[i] = nonZeroIndices[i] % rowLength;
+    klpMatrix.p[i] = probabilities[nonZeroIndices[i]];
+  }
+}
+
+void populationProportion(int *nonZeroIndices, int nonZeroCount, double *probabilities, int rowLength, char *precisionFormat) {
   int i, j, startIndex = -1, endIndex = -1, error = 0;
   double step_counter, colSum;
   double* transitionMatrix;
