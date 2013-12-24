@@ -3,12 +3,12 @@
 #include <unistd.h>
 #include <fftw3.h>
 #include <limits>
-#include "fftbor2d_params.h"
-#include "fftbor2d_functions.h"
-#include "libmfpt_header.h"
-#include "libspectral_header.h"
+#include "params.h"
+#include "functions.h"
+#include "shared/libmfpt_header.h"
+#include "shared/libspectral_header.h"
 #include "rna_misc_functions.h"
-#include "vienna_functions.h"
+#include "vienna/functions.h"
 
 #ifdef _OPENMP
   #include <omp.h>

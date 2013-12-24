@@ -4,9 +4,9 @@
 #include <math.h>
 #include <cctype>
 #include <limits>
-#include "fftbor2d_params.h"
+#include "params.h"
 #include "rna_misc_functions.h"
-#include "vienna_data_structures.h"
+#include "vienna/data_structures.h"
 
 #ifdef _OPENMP
   #include <omp.h>

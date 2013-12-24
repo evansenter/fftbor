@@ -1,6 +1,6 @@
 #include <stdlib.h>
-#include "fftbor2d_params.h"
-#include "fftbor2d_functions.h"
+#include "params.h"
+#include "functions.h"
 
 int main(int argc, char *argv[]) {
   char *sequence;            // sequence points to array a[0], ..., a[n] where a[0] = n, and a[1],...,a[n] are RNA nucleotides and where n <= Nseq - 2
