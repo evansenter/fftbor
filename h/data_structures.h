@@ -14,6 +14,7 @@ typedef struct {
   int   precision;
   int   max_threads;
   char  format;
+  short benchmark;
   short verbose;
 } FFTBOR2D_PARAMS;
 

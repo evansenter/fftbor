@@ -26,11 +26,12 @@ FFTBOR2D_PARAMS init_fftbor2d_params() {
     (int)ceil(log(pow(10., 8)) / log(2.)), // precision
     0,                                     // max_threads
     'B',                                   // format
+    0,                                     // benchmark
     0                                      // verbose
   };
-  #ifdef _OPENMP
+#ifdef _OPENMP
   parameters.max_threads = omp_get_max_threads();
-  #endif
+#endif
   return parameters;
 }
 
@@ -41,37 +42,48 @@ void free_fftbor2d_params(FFTBOR2D_PARAMS parameters) {
 FFTBOR2D_PARAMS parse_fftbor2d_args(int argc, char** argv) {
   int c;
   FFTBOR2D_PARAMS parameters;
-  
   parameters = init_fftbor2d_params();
   
-  while ((c = getopt(argc, argv, "VvMmSsXxYyT:t:E:e:P:p:")) != -1) {
+  while ((c = getopt(argc, argv, "VvBbMmSsXxYyT:t:E:e:P:p:")) != -1) {
     switch (c) {
       case 'V':
       case 'v':
         parameters.verbose = 1;
         break;
+        
+      case 'B':
+      case 'b':
+        parameters.benchmark = 1;
+        break;
+        
       case 'M':
       case 'm':
         parameters.format = 'M';
         break;
+        
       case 'S':
       case 's':
         parameters.format = 'S';
         break;
+        
       case 'X':
       case 'x':
         parameters.format = 'X';
         break;
+        
       case 'Y':
       case 'y':
         parameters.format = 'Y';
         break;
+        
       case 'T':
       case 't':
         if (!sscanf(optarg, "%lf", &temperature)) {
           fftbor2d_usage();
         }
+        
         break;
+        
       case 'P':
       case 'p':
         if (!sscanf(optarg, "%d", &parameters.precision)) {
@@ -79,11 +91,14 @@ FFTBOR2D_PARAMS parse_fftbor2d_args(int argc, char** argv) {
         } else if (parameters.precision < 0 || parameters.precision > std::numeric_limits<double>::digits) {
           fftbor2d_usage();
         }
+        
         break;
+        
       case 'E':
       case 'e':
         parameters.energy_file = strdup(optarg);
         break;
+        
       case '?':
         switch (optopt) {
           case 'T':
@@ -92,16 +107,19 @@ FFTBOR2D_PARAMS parse_fftbor2d_args(int argc, char** argv) {
           case 'p':
           case 'E':
           case 'e':
-            fprintf (stderr, "Option -%c requires an argument.\n", optopt);
+            fprintf(stderr, "Option -%c requires an argument.\n", optopt);
             break;
+            
           default:
             if (isprint(optopt)) {
               fprintf(stderr, "Unknown option `-%c'.\n", optopt);
             } else {
               fprintf(stderr, "Unknown option character `\\x%x'.\n", optopt);
             }
-          }
-          fftbor2d_usage();
+        }
+        
+        fftbor2d_usage();
+        
       default:
         fftbor2d_usage();
     }
@@ -123,10 +141,6 @@ FFTBOR2D_PARAMS parse_fftbor2d_args(int argc, char** argv) {
   
   if (fftbor2d_error_handling(parameters)) {
     fftbor2d_usage();
-  }
-  
-  if (parameters.format == 'B') {
-    printf("%s\n%s\n%s\n", parameters.sequence, parameters.structure_1, parameters.structure_2);
   }
   
   return parameters;
@@ -275,14 +289,16 @@ int fftbor2d_error_handling(FFTBOR2D_PARAMS& parameters) {
 
 void debug_fftbor2d_parameters(FFTBOR2D_PARAMS& parameters) {
   printf("FFTBOR2D_PARAMS:\n");
-  printf("sequence\t%s\n",    parameters.sequence    == NULL ? "*missing*" : parameters.sequence);
-  printf("structure_1\t%s\n", parameters.structure_1 == NULL ? "*missing*" : parameters.structure_1);
-  printf("structure_2\t%s\n", parameters.structure_2 == NULL ? "*missing*" : parameters.structure_2);
-  printf("seq_length\t%d\n",  parameters.seq_length);
-  printf("precision\t%d\n",   parameters.precision);
-  printf("max_threads\t%d\n", parameters.max_threads);
-  printf("energy_file\t%s\n", parameters.energy_file);
-  printf("format\t\t%c\n",    parameters.format);
+  printf("    sequence\t%s\n",    parameters.sequence    == NULL ? "*missing*" : parameters.sequence);
+  printf("    structure_1\t%s\n", parameters.structure_1 == NULL ? "*missing*" : parameters.structure_1);
+  printf("    structure_2\t%s\n", parameters.structure_2 == NULL ? "*missing*" : parameters.structure_2);
+  printf("    seq_length\t%d\n",  parameters.seq_length);
+  printf("    max_threads\t%d\n", parameters.max_threads);
+  printf("    format\t%c\n",      parameters.format);
+  printf("(t) temperature\t%f\n", temperature);
+  printf("(p) precision\t%d\n",   parameters.precision);
+  printf("(b) benchmark\t%d\n",   parameters.benchmark);
+  printf("(e) energy_file\t%s\n", parameters.energy_file);
   printf("\n");
 }
 
@@ -295,6 +311,7 @@ void fftbor2d_usage() {
   fprintf(stderr, "\tsecondary structure (1)\n");
   fprintf(stderr, "\tsecondary structure (2)\n\n");
   fprintf(stderr, "Options include the following:\n");
+  fprintf(stderr, "-B/b\tbenchmark,     the default is off. If on, benchmarking data will print alongside the normal results.\n");
   fprintf(stderr, "-E/e\tenergyfile,    the default is rna_turner2004.par in this current directory. Must be the name of a file with all energy parameters (in the same format as used in Vienna RNA). Energy file lookup first checks the current directory, and then iterates through the PATH shell variable until a matching file is found. If no file is found, the default ViennaRNA parameters are used and a warning is presented to the user. If the -E switch is explicitly provided, that file is used in lieu of searching for the rna_turner2004.par file.\n");
   fprintf(stderr, "-T/t\ttemperature,   the default is 37 degrees Celsius (unless an energyfile with parameters for a different temperature is used.\n");
   fprintf(stderr, "-P/p\tprecision,     the default is %d, indicates the precision (base 2) of the probabilities Z_k / Z to be returned (0-%d, 0 disables precision handling).\n", (int)ceil(log(pow(10., 8)) / log(2.)), std::numeric_limits<double>::digits);
