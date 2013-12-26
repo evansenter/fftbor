@@ -64,11 +64,11 @@ void neighbors(FFTBOR2D_PARAMS& parameters) {
   // #pragma omp parallel for private(i, thread_id) shared(data, threaded_data) default(none) num_threads(parameters.max_threads)
   
   for (i = 0; i <= data.run_length / 2; ++i) {
-#ifdef _OPENMP
+    #ifdef _OPENMP
     thread_id = omp_get_thread_num();
-#else
+    #else
     thread_id = 0;
-#endif
+    #endif
     evaluate_recursions(i, data, threaded_data[thread_id]);
   }
   
@@ -99,9 +99,9 @@ void neighbors(FFTBOR2D_PARAMS& parameters) {
     print_fftbor2d_data(data);
   }
   
-#ifndef SILENCE_OUTPUT
+  #ifndef SILENCE_OUTPUT
   print_output(parameters, data);
-#endif
+  #endif
   
   if (parameters.benchmark) {
     gettimeofday(&stop, NULL);
@@ -126,9 +126,9 @@ void neighbors(FFTBOR2D_PARAMS& parameters) {
 
 void precalculate_energies(FFTBOR2D_DATA& data) {
   int i, j, k, l, d, position;
-#if MEASURE_TWIDDLE
+  #if MEASURE_TWIDDLE
   double max_twiddle = 0;
-#endif
+  #endif
   
   for (i = 1; i <= data.seq_length; ++i) {
     for (d = MIN_PAIR_DIST + 1; d <= data.seq_length - i; ++d) {
@@ -148,16 +148,16 @@ void precalculate_energies(FFTBOR2D_DATA& data) {
           for (l = MAX2(k + MIN_PAIR_DIST + 1, j - (MAX_INTERIOR_DIST - (k - i))); l < j; ++l) {
             // l needs to at least have room to pair with k, and there can be at most 30 unpaired bases between (i, k) + (l, j), with l < j
             if (data.can_base_pair[data.int_sequence[k]][data.int_sequence[l]]) {
-#ifdef TWIDDLE_DEBUG
+              #ifdef TWIDDLE_DEBUG
             
               if (position >= 6 * (data.seq_length + 1)) {
                 fprintf(stderr, "Trying to access non-existant memory in EIL at index %d (%f).\n", position, position / (data.seq_length + 1.));
               }
               
-#endif
-#ifdef MEASURE_TWIDDLE
+              #endif
+              #ifdef MEASURE_TWIDDLE
               max_twiddle = position / (data.seq_length + 1.) > max_twiddle ? position / (data.seq_length + 1.) : max_twiddle;
-#endif
+              #endif
               // In interior loop / bulge / stack with (i, j) and (k, l), (i + 1, k - 1) and (l + 1, j - 1) are all unpaired.
               data.EIL[i][j][position] = exp(-interior_loop_energy(data, i, j, k, l, data.can_base_pair[data.int_sequence[i]][data.int_sequence[j]], data.can_base_pair[data.int_sequence[l]][data.int_sequence[k]], data.int_sequence[i + 1], data.int_sequence[l + 1], data.int_sequence[j - 1], data.int_sequence[k - 1]) / data.RT);
               position++;
@@ -204,9 +204,9 @@ void precalculate_energies(FFTBOR2D_DATA& data) {
     }
   }
   
-#ifdef MEASURE_TWIDDLE
+  #ifdef MEASURE_TWIDDLE
   printf("Max twiddle distance seen: %f\n", max_twiddle);
-#endif
+  #endif
 }
 
 void evaluate_recursions(int root, FFTBOR2D_DATA& data, FFTBOR2D_THREADED_DATA& threaded_data) {
@@ -226,14 +226,14 @@ void evaluate_recursions(int root, FFTBOR2D_DATA& data, FFTBOR2D_THREADED_DATA& 
         // ****************************************************************************
         // Solve ZB
         // ****************************************************************************
-#ifdef DO_WORK
+        #ifdef DO_WORK
         // In a hairpin, [i + 1, j - 1] unpaired.
         delta  = data.delta_table[data.num_base_pairs[0][i][j] + data.j_paired_to_0[i][j]][data.num_base_pairs[1][i][j] + data.j_paired_to_1[i][j]];
         threaded_data.ZB[i][j] += threaded_data.root_to_power[delta] * data.EH[i][j];
-#ifdef STRUCTURE_COUNT
+        #ifdef STRUCTURE_COUNT
         threaded_data.ZB[j][i] += 1;
-#endif
-#endif
+        #endif
+        #endif
         position = 0;
         
         // Interior loop / bulge / stack / multiloop.
@@ -242,15 +242,15 @@ void evaluate_recursions(int root, FFTBOR2D_DATA& data, FFTBOR2D_THREADED_DATA& 
           for (l = MAX2(k + MIN_PAIR_DIST + 1, j - (MAX_INTERIOR_DIST - (k - i))); l < j; ++l) {
             // l needs to at least have room to pair with k, and there can be at most 30 unpaired bases between (i, k) + (l, j), with l < j
             if (data.can_base_pair[data.int_sequence[k]][data.int_sequence[l]]) {
-#ifdef DO_WORK
+              #ifdef DO_WORK
               // In interior loop / bulge / stack with (i, j) and (k, l), (i + 1, k - 1) and (l + 1, j - 1) are all unpaired.
               delta  = data.delta_table[data.num_base_pairs[0][i][j] - data.num_base_pairs[0][k][l] + data.j_paired_to_0[i][j]][data.num_base_pairs[1][i][j] - data.num_base_pairs[1][k][l] + data.j_paired_to_1[i][j]];
               threaded_data.ZB[i][j] += threaded_data.ZB[k][l] * threaded_data.root_to_power[delta] * data.EIL[i][j][position];
               position++;
-#ifdef STRUCTURE_COUNT
+              #ifdef STRUCTURE_COUNT
               threaded_data.ZB[j][i] += threaded_data.ZB[l][k];
-#endif
-#endif
+              #endif
+              #endif
             }
           }
         }
@@ -258,14 +258,14 @@ void evaluate_recursions(int root, FFTBOR2D_DATA& data, FFTBOR2D_THREADED_DATA& 
         energy = data.EHM[i][j];
         
         for (k = i + MIN_PAIR_DIST + 3; k < j - MIN_PAIR_DIST - 1; ++k) {
-#ifdef DO_WORK
+          #ifdef DO_WORK
           // If (i, j) is the closing b.p. of a multiloop, and (k, l) is the rightmost base pair, there is at least one hairpin between (i + 1, k - 1)
           delta  = data.delta_table[data.num_base_pairs[0][i][j] - data.num_base_pairs[0][i + 1][k - 1] - data.num_base_pairs[0][k][j - 1] + data.j_paired_to_0[i][j]][data.num_base_pairs[1][i][j] - data.num_base_pairs[1][i + 1][k - 1] - data.num_base_pairs[1][k][j - 1] + data.j_paired_to_1[i][j]];
           threaded_data.ZB[i][j] += threaded_data.ZM[i + 1][k - 1] * threaded_data.ZM1[k][j - 1] * threaded_data.root_to_power[delta] * energy;
-#ifdef STRUCTURE_COUNT
+          #ifdef STRUCTURE_COUNT
           threaded_data.ZB[j][i] += threaded_data.ZM[k - 1][i + 1] * threaded_data.ZM1[j - 1][k];
-#endif
-#endif
+          #endif
+          #endif
         }
       }
       
@@ -275,13 +275,13 @@ void evaluate_recursions(int root, FFTBOR2D_DATA& data, FFTBOR2D_THREADED_DATA& 
       for (k = i + MIN_PAIR_DIST + 1; k <= j; ++k) {
         // k is the closing base pairing with i of a single component within the range [i, j]
         if (data.can_base_pair[data.int_sequence[i]][data.int_sequence[k]]) {
-#ifdef DO_WORK
+          #ifdef DO_WORK
           delta  = data.delta_table[data.num_base_pairs[0][i][j] - data.num_base_pairs[0][i][k]][data.num_base_pairs[1][i][j] - data.num_base_pairs[1][i][k]];
           threaded_data.ZM1[i][j] += threaded_data.ZB[i][k] * data.EM1[i][j][k];
-#ifdef STRUCTURE_COUNT
+          #ifdef STRUCTURE_COUNT
           threaded_data.ZM1[j][i] += threaded_data.ZB[k][i];
-#endif
-#endif
+          #endif
+          #endif
         }
       }
       
@@ -289,61 +289,61 @@ void evaluate_recursions(int root, FFTBOR2D_DATA& data, FFTBOR2D_THREADED_DATA& 
       // Solve ZM
       // ****************************************************************************
       for (k = i; k < j - MIN_PAIR_DIST; ++k) {
-#ifdef DO_WORK
+        #ifdef DO_WORK
         // Only one stem.
         delta  = data.delta_table[data.num_base_pairs[0][i][j] - data.num_base_pairs[0][k][j]][data.num_base_pairs[1][i][j] - data.num_base_pairs[1][k][j]];
         threaded_data.ZM[i][j] += threaded_data.ZM1[k][j] * threaded_data.root_to_power[delta] * data.EMA[i][k];
-#ifdef STRUCTURE_COUNT
+        #ifdef STRUCTURE_COUNT
         threaded_data.ZM[j][i] += threaded_data.ZM1[j][k];
-#endif
-#endif
+        #endif
+        #endif
         
         // More than one stem.
         if (k > i + MIN_PAIR_DIST + 1) { // (k > i + MIN_PAIR_DIST + 1) because i can pair with k - 1
-#ifdef DO_WORK
+          #ifdef DO_WORK
           delta  = data.delta_table[data.num_base_pairs[0][i][j] - data.num_base_pairs[0][i][k - 1] - data.num_base_pairs[0][k][j]][data.num_base_pairs[1][i][j] - data.num_base_pairs[1][i][k - 1] - data.num_base_pairs[1][k][j]];
           threaded_data.ZM[i][j] += threaded_data.ZM[i][k - 1] * threaded_data.ZM1[k][j] * threaded_data.root_to_power[delta] * data.EMB[j][k];
-#ifdef STRUCTURE_COUNT
+          #ifdef STRUCTURE_COUNT
           threaded_data.ZM[j][i] += threaded_data.ZM[k - 1][i] * threaded_data.ZM1[j][k];
-#endif
-#endif
+          #endif
+          #endif
         }
       }
       
       // **************************************************************************
       // Solve Z
       // **************************************************************************
-#ifdef DO_WORK
+      #ifdef DO_WORK
       delta = data.delta_table[j_paired_in(i, j, data.int_bp[0])][j_paired_in(i, j, data.int_bp[1])];
       threaded_data.Z[i][j] += threaded_data.Z[i][j - 1] * threaded_data.root_to_power[delta];
-#ifdef STRUCTURE_COUNT
+      #ifdef STRUCTURE_COUNT
       threaded_data.Z[j][i] += threaded_data.Z[j - 1][i];
-#endif
-#endif
+      #endif
+      #endif
       
       for (k = i; k < j - MIN_PAIR_DIST; ++k) {
         // (k, j) is the rightmost base pair in (i, j)
         if (data.can_base_pair[data.int_sequence[k]][data.int_sequence[j]]) {
-#ifdef DO_WORK
+          #ifdef DO_WORK
           energy = data.EZ[j][k];
-#endif
+          #endif
           
           if (k == i) {
-#ifdef DO_WORK
+            #ifdef DO_WORK
             delta = data.delta_table[data.num_base_pairs[0][i][j] - data.num_base_pairs[0][k][j]][data.num_base_pairs[1][i][j] - data.num_base_pairs[1][k][j]];
             threaded_data.Z[i][j] += threaded_data.ZB[k][j] * threaded_data.root_to_power[delta] * energy;
-#ifdef STRUCTURE_COUNT
+            #ifdef STRUCTURE_COUNT
             threaded_data.Z[j][i] += threaded_data.ZB[j][k];
-#endif
-#endif
+            #endif
+            #endif
           } else {
-#ifdef DO_WORK
+            #ifdef DO_WORK
             delta = data.delta_table[data.num_base_pairs[0][i][j] - data.num_base_pairs[0][i][k - 1] - data.num_base_pairs[0][k][j]][data.num_base_pairs[1][i][j] - data.num_base_pairs[1][i][k - 1] - data.num_base_pairs[1][k][j]];
             threaded_data.Z[i][j] += threaded_data.Z[i][k - 1] * threaded_data.ZB[k][j] * threaded_data.root_to_power[delta] * energy;
-#ifdef STRUCTURE_COUNT
+            #ifdef STRUCTURE_COUNT
             threaded_data.Z[j][i] += threaded_data.Z[k - 1][i] * threaded_data.ZB[j][k];
-#endif
-#endif
+            #endif
+            #endif
           }
         }
       }
@@ -351,38 +351,38 @@ void evaluate_recursions(int root, FFTBOR2D_DATA& data, FFTBOR2D_THREADED_DATA& 
   }
   
   data.solutions[root] = threaded_data.Z[1][data.seq_length];
-#ifdef FFTBOR_DEBUG
+  #ifdef FFTBOR_DEBUG
   printf(".");
-#endif
+  #endif
 }
 
 void populate_remaining_roots(FFTBOR2D_DATA& data) {
   // Optimization leveraging complex conjugate of data.solutions to the polynomial.
   int i;
-#ifdef FFTBOR_DEBUG
+  #ifdef FFTBOR_DEBUG
   printf("Solutions (before populating remaining roots):\n");
   
   for (i = 0; i < data.run_length; ++i) {
     PRINT_COMPLEX(i, data.solutions);
   }
   
-#endif
+  #endif
   
   for (i = data.run_length / 2 + 1; i < data.run_length; ++i) {
-#ifdef FFTBOR_DEBUG
+    #ifdef FFTBOR_DEBUG
     printf("l: %d, r %d\n", i, data.run_length - i);
-#endif
+    #endif
     data.solutions[i] = COMPLEX_CONJ(data.solutions[data.run_length - i]);
   }
   
-#ifdef FFTBOR_DEBUG
+  #ifdef FFTBOR_DEBUG
   printf("Solutions (after populating remaining roots):\n");
   
   for (i = 0; i < data.run_length; ++i) {
     PRINT_COMPLEX(i, data.solutions);
   }
   
-#endif
+  #endif
   
   if (data.input_str_dist % 2) {
     for (i = 0; i < data.run_length; ++i) {
@@ -393,14 +393,14 @@ void populate_remaining_roots(FFTBOR2D_DATA& data) {
       data.solutions[i] = dcomplex(-1, 0) * data.solutions[i];
     }
     
-#ifdef FFTBOR_DEBUG
+    #ifdef FFTBOR_DEBUG
     printf("Solutions (after multiplying data.solutions by nu^{-k} (and the scalar -1 for data.solutions y_{k: k > M_{0} / 2})):\n");
     
     for (i = 0; i < data.run_length; ++i) {
       PRINT_COMPLEX(i, data.solutions);
     }
     
-#endif
+    #endif
   }
 }
 
@@ -421,7 +421,7 @@ void solve_system(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {
     signal[i][FFTW_IMAG] = pow(2., (double)parameters.precision) * (data.solutions[i].imag() / data.partition_function);
   }
   
-#ifdef FFTBOR_DEBUG
+  #ifdef FFTBOR_DEBUG
   printf("Scaling factor: %f:\n", data.solutions[0].real());
   printf("Scaled data.solutions vector for the inverse DFT:\n");
   
@@ -429,7 +429,7 @@ void solve_system(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {
     printf("%d: %+f %+fi\n", i, signal[i][FFTW_REAL], signal[i][FFTW_IMAG]);
   }
   
-#endif
+  #endif
   // Calculate transform, coefficients are in fftw_complex result array.
   fftw_execute(plan);
   
@@ -464,7 +464,7 @@ void solve_system(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {
   }
   
   fftw_destroy_plan(plan);
-#ifdef FFTBOR_DEBUG
+  #ifdef FFTBOR_DEBUG
   printf("\nPartition function: ");
   printf(data.precision_format, data.partition_function);
   printf("\nSum of eligible data.probabilities > 0: ");
@@ -472,7 +472,7 @@ void solve_system(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {
   printf("\nSum of normalized data.probabilities: ");
   printf(data.precision_format, normal_sum);
   printf("\n");
-#endif
+  #endif
 }
 
 void print_output(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {

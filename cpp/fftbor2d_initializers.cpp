@@ -218,17 +218,17 @@ void print_fftbor2d_data(FFTBOR2D_DATA& data) {
 FFTBOR2D_THREADED_DATA* init_fftbor2d_threaded_data(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {
   int i, j;
   FFTBOR2D_THREADED_DATA* threaded_data;
-#if defined(_OPENMP) && defined(OPENMP_DEBUG)
+  #if defined(_OPENMP) && defined(OPENMP_DEBUG)
   printf("Max threads possible: %d\n", omp_get_max_threads());
-#ifdef SINGLE_THREAD
+  #ifdef SINGLE_THREAD
   parameters.max_threads = 1;
-#endif
+  #endif
   printf("Setting number of threads: %d\n", parameters.max_threads);
-#endif
-#ifdef _OPENMP
+  #endif
+  #ifdef _OPENMP
   // Set number of threads for OpenMP
   omp_set_num_threads(parameters.max_threads);
-#endif
+  #endif
   threaded_data = (FFTBOR2D_THREADED_DATA*)calloc(parameters.max_threads, sizeof(FFTBOR2D_THREADED_DATA));
   
   for (i = 0; i < parameters.max_threads; ++i) {

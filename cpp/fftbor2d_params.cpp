@@ -29,9 +29,9 @@ FFTBOR2D_PARAMS init_fftbor2d_params() {
     0,                                     // benchmark
     0                                      // verbose
   };
-#ifdef _OPENMP
+  #ifdef _OPENMP
   parameters.max_threads = omp_get_max_threads();
-#endif
+  #endif
   return parameters;
 }
 
