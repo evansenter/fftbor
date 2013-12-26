@@ -113,7 +113,6 @@ FFTBOR2D_DATA init_fftbor2d_data(FFTBOR2D_PARAMS& parameters) {
   max_bp_2 = maximumMatchingConstraint(data.sequence, vienna_bp[1]);
   // Minimize the row size to the max BP distance.
   minimal_row_length = MAX2(data.int_bp[0][0] + max_bp_1[index[1] - data.seq_length], data.int_bp[1][0] + max_bp_2[index[1] - data.seq_length]);
-  
   // Note: row_length = (least even number >= minimal_row_length) + 1 (for a seq. with minimal_row_length = 9, row_length = (0..10).length = 11)
   data.row_length = (minimal_row_length % 2 ? minimal_row_length + 1 : minimal_row_length) + 1;
   // Note: run_length = (least number div. 4 >= row_length ^ 2) / 2 (for a seq. with row_length = 11, run_length = (11 ^ 2 + 3) / 2 = 62)
@@ -267,7 +266,7 @@ FFTBOR2D_THREADED_DATA* init_fftbor2d_threaded_data(FFTBOR2D_PARAMS& parameters,
 
 void free_fftbor2d_threaded_data(FFTBOR2D_THREADED_DATA* threaded_data, int max_threads) {
   int i;
-  
+
   for (i = 0; i < max_threads; ++i) {
     free(threaded_data[i].Z);
     free(threaded_data[i].ZB);
@@ -275,7 +274,7 @@ void free_fftbor2d_threaded_data(FFTBOR2D_THREADED_DATA* threaded_data, int max_
     free(threaded_data[i].ZM1);
     free(threaded_data[i].root_to_power);
   }
-  
+
   free(threaded_data);
 }
 

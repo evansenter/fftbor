@@ -54,11 +54,11 @@ void neighbors(FFTBOR2D_PARAMS& parameters) {
   TIMING(start, stop, "pre-calculate energies")
   gettimeofday(&start, NULL);
   #endif
-  
+
   if (parameters.verbose) {
     print_fftbor2d_data(data);
   }
-  
+
   // Start main recursions (i <= data.run_length / 2 is an optimization leveraging complex conjugates).
   // #pragma omp parallel for private(i, thread_id) shared(data, threaded_data) default(none) num_threads(parameters.max_threads)
 

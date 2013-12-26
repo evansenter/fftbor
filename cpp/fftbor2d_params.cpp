@@ -144,13 +144,14 @@ void parse_fftbor2d_sequence_data(int argc, char** argv, int& argp, FFTBOR2D_PAR
     if (line == NULL) {
       fftbor2d_usage();
     }
-    
+
     // This was a tricky bug to catch, fgets (perhaps obviously) reads a line in, including the \n character,
     // which is different from the terminating character \0, making the data.seq_length off by one.
     while (line[char_index] != '\0' && char_index < MAX_LENGTH) {
       if (line[char_index] == '\n') {
         line[char_index] = '\0';
       }
+
       char_index++;
     }
 

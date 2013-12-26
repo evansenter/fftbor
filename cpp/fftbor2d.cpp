@@ -12,6 +12,5 @@ int main(int argc, char** argv) {
 
   parameters = parse_fftbor2d_args(argc, argv);
   neighbors(parameters);
-  
   return 0;
 }
