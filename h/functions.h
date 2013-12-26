@@ -4,12 +4,12 @@
 #include "data_structures.h"
 #include "mfpt/data_structures.h"
 
-void   neighbors(FFTBOR2D_PARAMS);
-void   precalculate_energies(FFTBOR2D_DATA);
-void   evaluate_recursions(int, FFTBOR2D_DATA, FFTBOR2D_THREADED_DATA);
-void   populate_remaining_roots(FFTBOR2D_DATA);
-void   solve_system(FFTBOR2D_PARAMS, FFTBOR2D_DATA&);
-void   print_output(FFTBOR2D_PARAMS, FFTBOR2D_DATA);
+void   neighbors(FFTBOR2D_PARAMS&);
+void   precalculate_energies(FFTBOR2D_DATA&);
+void   evaluate_recursions(int, FFTBOR2D_DATA&, FFTBOR2D_THREADED_DATA&);
+void   populate_remaining_roots(FFTBOR2D_DATA&);
+void   solve_system(FFTBOR2D_PARAMS&, FFTBOR2D_DATA&);
+void   print_output(FFTBOR2D_PARAMS&, FFTBOR2D_DATA&);
 // void   calculateKinetics(int*, int, double*, int, char*);
 // void   convert_fftbor2d_energy_grid_to_klp_matrix(int*, double*, int, KLP_MATRIX);
 // void   populationProportion(int*, int, double*, int, char*);
@@ -24,8 +24,8 @@ short  rna_int_code(char);
 void   initialize_can_base_pair_matrix(int**);
 void   translate_to_int_sequence(char*, short*);
 void   initialize_base_pair_count_matrix(int**, int*, int);
-double hairpin_loop_energy(FFTBOR2D_DATA, int, int, int, short, short, char*);
-double interior_loop_energy(FFTBOR2D_DATA, int, int, int, int, int, int, short, short, short, short);
+double hairpin_loop_energy(FFTBOR2D_DATA&, int, int, int, short, short, char*);
+double interior_loop_energy(FFTBOR2D_DATA&, int, int, int, int, int, int, short, short, short, short);
 
 extern "C" {
   int* get_iindx(unsigned int sequence_length);

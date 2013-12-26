@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <fftw3.h>
+#include <sys/time.h>
 #include "functions.h"
 #include "initializers.h"
 #include "params.h"
@@ -28,12 +29,10 @@
 // #define FFTBOR_DEBUG    1
 // #define TWIDDLE_DEBUG   1
 // #define MEASURE_TWIDDLE 1
-// #define OPENMP_DEBUG    1
-// #define SINGLE_THREAD   1
 // #define STRUCTURE_COUNT 1
 #define DO_WORK
 
-void neighbors(FFTBOR2D_PARAMS parameters) {
+void neighbors(FFTBOR2D_PARAMS& parameters) {
   #ifdef TIMING_DEBUG
   struct timeval full_start, full_stop, start, stop;
   gettimeofday(&full_start, NULL);
@@ -55,21 +54,13 @@ void neighbors(FFTBOR2D_PARAMS parameters) {
   TIMING(start, stop, "pre-calculate energies")
   gettimeofday(&start, NULL);
   #endif
-  #ifdef FFTBOR_DEBUG
-  printf("sequenceLength:     %d\n", data.seq_length);
-  printf("rowLength:          %d\n", data.row_length);
-  printf("runLength:          %d\n", data.run_length);
-  printf("numRoots:           %d\n", data.num_roots);
-  printf("inputStructureDist: %d\n", data.input_str_dist);
-  printf("Roots of unity:\n");
-
-  for (root = 0; root < data.num_roots; ++root) {
-    PRINT_COMPLEX(root, data.roots_of_unity);
+  
+  if (parameters.verbose) {
+    print_fftbor2d_data(data);
   }
-
-  #endif
+  
   // Start main recursions (i <= data.run_length / 2 is an optimization leveraging complex conjugates).
-  #pragma omp parallel for private(i, thread_id) shared(data, threaded_data) default(none) num_threads(parameters.max_threads)
+  // #pragma omp parallel for private(i, thread_id) shared(data, threaded_data) default(none) num_threads(parameters.max_threads)
 
   for (i = 0; i <= data.run_length / 2; ++i) {
     #ifdef _OPENMP
@@ -119,7 +110,7 @@ void neighbors(FFTBOR2D_PARAMS parameters) {
   #endif
 }
 
-void precalculate_energies(FFTBOR2D_DATA data) {
+void precalculate_energies(FFTBOR2D_DATA& data) {
   int i, j, k, l, d, position;
   #if MEASURE_TWIDDLE
   double max_twiddle = 0;
@@ -204,12 +195,12 @@ void precalculate_energies(FFTBOR2D_DATA data) {
   #endif
 }
 
-void evaluate_recursions(int root, FFTBOR2D_DATA data, FFTBOR2D_THREADED_DATA threaded_data) {
+void evaluate_recursions(int root, FFTBOR2D_DATA& data, FFTBOR2D_THREADED_DATA& threaded_data) {
   int i, j, k, l, d, delta, position;
   double energy;
   flush_matrices(threaded_data.Z, threaded_data.ZB, threaded_data.ZM, threaded_data.ZM1, data.seq_length);
 
-  for (i = 0; i < (data.row_length + 1) * data.seq_length + 1; ++i) {
+  for (i = 0; i < data.num_roots; ++i) {
     threaded_data.root_to_power[i] = ROOT_POW(root, i, data.num_roots);
   }
 
@@ -351,7 +342,7 @@ void evaluate_recursions(int root, FFTBOR2D_DATA data, FFTBOR2D_THREADED_DATA th
   #endif
 }
 
-void populate_remaining_roots(FFTBOR2D_DATA data) {
+void populate_remaining_roots(FFTBOR2D_DATA& data) {
   // Optimization leveraging complex conjugate of data.solutions to the polynomial.
   int i;
   #ifdef FFTBOR_DEBUG
@@ -399,7 +390,7 @@ void populate_remaining_roots(FFTBOR2D_DATA data) {
   }
 }
 
-void solve_system(FFTBOR2D_PARAMS parameters, FFTBOR2D_DATA& data) {
+void solve_system(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {
   int i, x, y;
   int offset              = data.input_str_dist % 2 ? 1 : 0;
   double sum              = 0;
@@ -470,7 +461,7 @@ void solve_system(FFTBOR2D_PARAMS parameters, FFTBOR2D_DATA& data) {
   #endif
 }
 
-void print_output(FFTBOR2D_PARAMS parameters, FFTBOR2D_DATA data) {
+void print_output(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {
   int i;
   int matrix_size = (int)pow((double)data.row_length, 2);
 
@@ -763,7 +754,7 @@ void initialize_base_pair_count_matrix(int** num_base_pairs, int* bp_list, int n
 }
 
 // INLINE  PRIVATE int E_Hairpin(int size, int type, int si1, int sj1, const char *string, paramT *P){
-inline double hairpin_loop_energy(FFTBOR2D_DATA data, int i, int j, int type, short si1, short sj1, char* string) {
+inline double hairpin_loop_energy(FFTBOR2D_DATA& data, int i, int j, int type, short si1, short sj1, char* string) {
   double energy;
   int size = j - i - 1;
   energy = (size <= 30) ? data.vienna_params->hairpin[size] : data.vienna_params->hairpin[30] + (int)(data.vienna_params->lxc * log((size) / 30.));
@@ -800,7 +791,7 @@ inline double hairpin_loop_energy(FFTBOR2D_DATA data, int i, int j, int type, sh
 }
 
 // INLINE  PRIVATE int E_IntLoop(int n1, int n2, int type, int type_2, int si1, int sj1, int sp1, int sq1, paramT *P){
-inline double interior_loop_energy(FFTBOR2D_DATA data, int i, int j, int k, int l, int type, int type_2, short si1, short sq1, short sj1, short sp1) {
+inline double interior_loop_energy(FFTBOR2D_DATA& data, int i, int j, int k, int l, int type, int type_2, short si1, short sq1, short sj1, short sp1) {
   /* compute energy of degree 2 loop (stack bulge or interior) */
   int nl, ns;
   double energy;

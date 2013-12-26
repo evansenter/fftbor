@@ -12,6 +12,7 @@
 #include <omp.h>
 #endif
 
+#define MAX_LENGTH 1024
 #define TRIEQUALS(x, y, z) ((x == y) && (y == z)) /* Transitivity (BOOM) */
 
 extern double temperature;
@@ -35,9 +36,6 @@ FFTBOR2D_PARAMS init_fftbor2d_params() {
 }
 
 void free_fftbor2d_params(FFTBOR2D_PARAMS parameters) {
-  free(parameters.sequence);
-  free(parameters.structure_1);
-  free(parameters.structure_2);
   free(parameters.energy_file);
 }
 
@@ -110,26 +108,26 @@ FFTBOR2D_PARAMS parse_fftbor2d_args(int argc, char** argv) {
   return parameters;
 }
 
-void parse_fftbor2d_sequence_data(int argc, char** argv, int& i, FFTBOR2D_PARAMS& parameters) {
-  int j;
+void parse_fftbor2d_sequence_data(int argc, char** argv, int& argp, FFTBOR2D_PARAMS& parameters) {
+  int i, char_index = 0;
   FILE* file;
-  char line[1024];
-  file = fopen(argv[i], "r");
+  char line[MAX_LENGTH];
+  file = fopen(argv[argp], "r");
 
   if (file == NULL) {
     /* Input is not a file */
-    /* argv[i] should be the sequence and argv[i + 1], argv[i + 2] should be the structures */
-    if (argc <= i + 2) {
+    /* argv[argp] should be the sequence and argv[argp + 1], argv[argp + 2] should be the structures */
+    if (argc <= argp + 2) {
       fftbor2d_usage();
     }
 
-    parameters.seq_length  = strlen(argv[i]);
+    parameters.seq_length  = strlen(argv[argp]);
     parameters.sequence    = (char*)calloc(parameters.seq_length + 1, sizeof(char));
     parameters.structure_1 = (char*)calloc(parameters.seq_length + 1, sizeof(char));
     parameters.structure_2 = (char*)calloc(parameters.seq_length + 1, sizeof(char));
-    sscanf(argv[i++], "%s", parameters.sequence);
-    sscanf(argv[i++], "%s", parameters.structure_1);
-    sscanf(argv[i],   "%s", parameters.structure_2);
+    sscanf(argv[argp++], "%s", parameters.sequence);
+    sscanf(argv[argp++], "%s", parameters.structure_1);
+    sscanf(argv[argp],   "%s", parameters.structure_2);
   } else {
     /* Input is a file */
     if (fgets(line, sizeof(line), file) == NULL) {
@@ -143,8 +141,17 @@ void parse_fftbor2d_sequence_data(int argc, char** argv, int& i, FFTBOR2D_PARAMS
       }
     }
 
-    if ((line == NULL)) {
+    if (line == NULL) {
       fftbor2d_usage();
+    }
+    
+    // This was a tricky bug to catch, fgets (perhaps obviously) reads a line in, including the \n character,
+    // which is different from the terminating character \0, making the data.seq_length off by one.
+    while (line[char_index] != '\0' && char_index < MAX_LENGTH) {
+      if (line[char_index] == '\n') {
+        line[char_index] = '\0';
+      }
+      char_index++;
     }
 
     parameters.seq_length  = strlen(line);
@@ -174,11 +181,11 @@ void parse_fftbor2d_sequence_data(int argc, char** argv, int& i, FFTBOR2D_PARAMS
   parameters.structure_2[parameters.seq_length] = '\0';
 
   /* Convert RNA sequence to uppercase and make sure there are no Ts in the sequence (replace by U). */
-  for (j = 0; j < parameters.seq_length; ++j) {
-    parameters.sequence[j] = toupper(parameters.sequence[j]);
+  for (i = 0; i < parameters.seq_length; ++i) {
+    parameters.sequence[i] = toupper(parameters.sequence[i]);
 
-    if (parameters.sequence[j] == 'T') {
-      parameters.sequence[j] = 'U';
+    if (parameters.sequence[i] == 'T') {
+      parameters.sequence[i] = 'U';
     }
   }
 }
@@ -216,7 +223,7 @@ char* find_energy_file(char* energy_file_name) {
   return energy_location;
 }
 
-int fftbor2d_error_handling(FFTBOR2D_PARAMS parameters) {
+int fftbor2d_error_handling(FFTBOR2D_PARAMS& parameters) {
   int error = 0;
 
   if (!TRIEQUALS(strlen(parameters.sequence), strlen(parameters.structure_1), strlen(parameters.structure_2))) {
@@ -241,15 +248,16 @@ int fftbor2d_error_handling(FFTBOR2D_PARAMS parameters) {
   return error;
 }
 
-void debug_fftbor2d_parameters(FFTBOR2D_PARAMS parameters) {
-  printf("sequence\t\t%s\n",           parameters.sequence    == NULL ? "*missing*" : parameters.sequence);
-  printf("structure_1\t\t%s\n",        parameters.structure_1 == NULL ? "*missing*" : parameters.structure_1);
-  printf("structure_2\t\t%s\n",        parameters.structure_2 == NULL ? "*missing*" : parameters.structure_2);
-  printf("seq_length\t\t%d\n",         parameters.seq_length);
-  printf("precision\t\t%d\n",          parameters.precision);
-  printf("max_threads\t\t%d\n",        parameters.max_threads);
-  printf("energy_file\t\t%s\n",        parameters.energy_file);
-  printf("format\t\t%c\n",             parameters.format);
+void debug_fftbor2d_parameters(FFTBOR2D_PARAMS& parameters) {
+  printf("FFTBOR2D_PARAMS:\n");
+  printf("sequence\t%s\n",    parameters.sequence    == NULL ? "*missing*" : parameters.sequence);
+  printf("structure_1\t%s\n", parameters.structure_1 == NULL ? "*missing*" : parameters.structure_1);
+  printf("structure_2\t%s\n", parameters.structure_2 == NULL ? "*missing*" : parameters.structure_2);
+  printf("seq_length\t%d\n",  parameters.seq_length);
+  printf("precision\t%d\n",   parameters.precision);
+  printf("max_threads\t%d\n", parameters.max_threads);
+  printf("energy_file\t%s\n", parameters.energy_file);
+  printf("format\t\t%c\n",    parameters.format);
   printf("\n");
 }
 
@@ -258,7 +266,7 @@ void fftbor2d_usage() {
   fprintf(stderr, "FFTbor2D [options] filename\n");
   fprintf(stderr, "where filename is a file of the format:\n");
   fprintf(stderr, "\t>comment (optional line)\n");
-  fprintf(stderr, "\tsequence (max length: 1024)\n");
+  fprintf(stderr, "\tsequence (max length: MAX_LENGTH)\n");
   fprintf(stderr, "\tsecondary structure (1)\n");
   fprintf(stderr, "\tsecondary structure (2)\n\n");
   fprintf(stderr, "Options include the following:\n");

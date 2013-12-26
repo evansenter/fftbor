@@ -10,10 +10,12 @@
 #endif
 
 #define DELTA_2D(expression1, expression2, n) ((expression1) * (n) + (expression2))
+// #define OPENMP_DEBUG  1
+// #define SINGLE_THREAD 1
 
 extern double temperature;
 
-FFTBOR2D_DATA init_fftbor2d_data(FFTBOR2D_PARAMS parameters) {
+FFTBOR2D_DATA init_fftbor2d_data(FFTBOR2D_PARAMS& parameters) {
   int i, j;
   short** vienna_bp;
   int* index;
@@ -111,6 +113,7 @@ FFTBOR2D_DATA init_fftbor2d_data(FFTBOR2D_PARAMS parameters) {
   max_bp_2 = maximumMatchingConstraint(data.sequence, vienna_bp[1]);
   // Minimize the row size to the max BP distance.
   minimal_row_length = MAX2(data.int_bp[0][0] + max_bp_1[index[1] - data.seq_length], data.int_bp[1][0] + max_bp_2[index[1] - data.seq_length]);
+  
   // Note: row_length = (least even number >= minimal_row_length) + 1 (for a seq. with minimal_row_length = 9, row_length = (0..10).length = 11)
   data.row_length = (minimal_row_length % 2 ? minimal_row_length + 1 : minimal_row_length) + 1;
   // Note: run_length = (least number div. 4 >= row_length ^ 2) / 2 (for a seq. with row_length = 11, run_length = (11 ^ 2 + 3) / 2 = 62)
@@ -124,10 +127,10 @@ FFTBOR2D_DATA init_fftbor2d_data(FFTBOR2D_PARAMS parameters) {
   // Populate convenience tables.
   populate_matrices(data.roots_of_unity, data.num_roots);
   // Create convenience table for looking up 1D indexing of (k, l) coordinates.
-  data.delta_table = (int**)calloc(data.seq_length + 1, sizeof(int**));
+  data.delta_table = (int**)calloc(data.seq_length + 1, sizeof(int*));
 
   for (i = 0; i <= data.seq_length; ++i) {
-    data.delta_table[i] = (int*)calloc(data.seq_length + 1, sizeof(int*));
+    data.delta_table[i] = (int*)calloc(data.seq_length + 1, sizeof(int));
 
     for (j = 0; j <= data.seq_length; ++j) {
       data.delta_table[i][j] = DELTA_2D(i, j, data.row_length);
@@ -135,12 +138,12 @@ FFTBOR2D_DATA init_fftbor2d_data(FFTBOR2D_PARAMS parameters) {
   }
 
   // Create convenience table for boolean (i, j paired?) values.
-  data.j_paired_to_0 = (int**)calloc(data.seq_length + 1, sizeof(int**));
-  data.j_paired_to_1 = (int**)calloc(data.seq_length + 1, sizeof(int**));
+  data.j_paired_to_0 = (int**)calloc(data.seq_length + 1, sizeof(int*));
+  data.j_paired_to_1 = (int**)calloc(data.seq_length + 1, sizeof(int*));
 
   for (i = 0; i <= data.seq_length; ++i) {
-    data.j_paired_to_0[i] = (int*)calloc(data.seq_length + 1, sizeof(int*));
-    data.j_paired_to_1[i] = (int*)calloc(data.seq_length + 1, sizeof(int*));
+    data.j_paired_to_0[i] = (int*)calloc(data.seq_length + 1, sizeof(int));
+    data.j_paired_to_1[i] = (int*)calloc(data.seq_length + 1, sizeof(int));
 
     for (j = 0; j <= data.seq_length; ++j) {
       data.j_paired_to_0[i][j] = j_paired_to(i, j, data.int_bp[0]);
@@ -149,34 +152,34 @@ FFTBOR2D_DATA init_fftbor2d_data(FFTBOR2D_PARAMS parameters) {
   }
 
   // Initialize tables for precalculating energies.
-  data.EZ  = (double**)calloc(data.seq_length + 1, sizeof(double**));
-  data.EH  = (double**)calloc(data.seq_length + 1, sizeof(double**));
-  data.EHM = (double**)calloc(data.seq_length + 1, sizeof(double**));
-  data.EMA = (double**)calloc(data.seq_length + 1, sizeof(double**));
-  data.EMB = (double**)calloc(data.seq_length + 1, sizeof(double**));
-  data.EIL = (double***)calloc(data.seq_length + 1, sizeof(double***));;
-  data.EM1 = (double***)calloc(data.seq_length + 1, sizeof(double***));;
+  data.EZ  = (double**)calloc(data.seq_length + 1, sizeof(double*));
+  data.EH  = (double**)calloc(data.seq_length + 1, sizeof(double*));
+  data.EHM = (double**)calloc(data.seq_length + 1, sizeof(double*));
+  data.EMA = (double**)calloc(data.seq_length + 1, sizeof(double*));
+  data.EMB = (double**)calloc(data.seq_length + 1, sizeof(double*));
+  data.EIL = (double***)calloc(data.seq_length + 1, sizeof(double**));;
+  data.EM1 = (double***)calloc(data.seq_length + 1, sizeof(double**));;
 
   for (i = 0; i <= data.seq_length; ++i) {
-    data.EZ[i]  = (double*)calloc(data.seq_length + 1, sizeof(double*));
-    data.EH[i]  = (double*)calloc(data.seq_length + 1, sizeof(double*));
-    data.EHM[i] = (double*)calloc(data.seq_length + 1, sizeof(double*));
-    data.EMA[i] = (double*)calloc(data.seq_length + 1, sizeof(double*));
-    data.EMB[i] = (double*)calloc(data.seq_length + 1, sizeof(double*));
-    data.EIL[i] = (double**)calloc(data.seq_length + 1, sizeof(double**));
-    data.EM1[i] = (double**)calloc(data.seq_length + 1, sizeof(double**));
+    data.EZ[i]  = (double*)calloc(data.seq_length + 1, sizeof(double));
+    data.EH[i]  = (double*)calloc(data.seq_length + 1, sizeof(double));
+    data.EHM[i] = (double*)calloc(data.seq_length + 1, sizeof(double));
+    data.EMA[i] = (double*)calloc(data.seq_length + 1, sizeof(double));
+    data.EMB[i] = (double*)calloc(data.seq_length + 1, sizeof(double));
+    data.EIL[i] = (double**)calloc(data.seq_length + 1, sizeof(double*));
+    data.EM1[i] = (double**)calloc(data.seq_length + 1, sizeof(double*));
 
     for (j = 0; j <= data.seq_length; ++j) {
-      data.EM1[i][j] = (double*)calloc(data.seq_length + 1, sizeof(double*));
+      data.EM1[i][j] = (double*)calloc(data.seq_length + 1, sizeof(double));
       // Multiplied by a "twiddle" factor.
-      data.EIL[i][j] = (double*)calloc(6 * (data.seq_length + 1), sizeof(double*));
+      data.EIL[i][j] = (double*)calloc(6 * (data.seq_length + 1), sizeof(double));
     }
   }
 
   return data;
 }
 
-void free_fftbor2d_data(FFTBOR2D_DATA data) {
+void free_fftbor2d_data(FFTBOR2D_DATA& data) {
   free(data.sequence);
   free(data.structure_1);
   free(data.structure_2);
@@ -202,7 +205,24 @@ void free_fftbor2d_data(FFTBOR2D_DATA data) {
   free(data.EM1);
 }
 
-FFTBOR2D_THREADED_DATA* init_fftbor2d_threaded_data(FFTBOR2D_PARAMS parameters, FFTBOR2D_DATA data) {
+void print_fftbor2d_data(FFTBOR2D_DATA& data) {
+  printf("FFTBOR2D_DATA:\n");
+  printf("sequence\t\t%s\n",         data.sequence    == NULL ? "*missing*" : data.sequence);
+  printf("structure_1\t\t%s\n",      data.structure_1 == NULL ? "*missing*" : data.structure_1);
+  printf("structure_2\t\t%s\n",      data.structure_2 == NULL ? "*missing*" : data.structure_2);
+  printf("seq_length\t\t%d\n",       data.seq_length);
+  printf("RT\t\t\t%f\n",             data.RT);
+  printf("precision_format\t%s\n",   data.precision_format == NULL ? "*missing*" : data.precision_format);
+  printf("input_str_dist\t\t%d\n",   data.input_str_dist);
+  printf("row_length\t\t%d\n",       data.row_length);
+  printf("run_length\t\t%d\n",       data.run_length);
+  printf("num_roots\t\t%d\n",        data.num_roots);
+  printf("partition_function\t%f\n", data.partition_function);
+  printf("non_zero_count\t\t%d\n",   data.non_zero_count);
+  printf("\n");
+}
+
+FFTBOR2D_THREADED_DATA* init_fftbor2d_threaded_data(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {
   int i, j;
   FFTBOR2D_THREADED_DATA* threaded_data;
   #if defined(_OPENMP) && defined(OPENMP_DEBUG)
@@ -216,7 +236,7 @@ FFTBOR2D_THREADED_DATA* init_fftbor2d_threaded_data(FFTBOR2D_PARAMS parameters, 
   // Set number of threads for OpenMP
   omp_set_num_threads(parameters.max_threads);
   #endif
-  threaded_data = (FFTBOR2D_THREADED_DATA*)calloc(parameters.max_threads, sizeof(FFTBOR2D_THREADED_DATA*));
+  threaded_data = (FFTBOR2D_THREADED_DATA*)calloc(parameters.max_threads, sizeof(FFTBOR2D_THREADED_DATA));
 
   for (i = 0; i < parameters.max_threads; ++i) {
     threaded_data[i] = {
@@ -227,19 +247,19 @@ FFTBOR2D_THREADED_DATA* init_fftbor2d_threaded_data(FFTBOR2D_PARAMS parameters, 
       NULL  // root_to_power
     };
     // Initialize matricies for dynamic programming.
-    threaded_data[i].Z   = (dcomplex**)calloc(data.seq_length + 1, sizeof(dcomplex**));
-    threaded_data[i].ZB  = (dcomplex**)calloc(data.seq_length + 1, sizeof(dcomplex**));
-    threaded_data[i].ZM  = (dcomplex**)calloc(data.seq_length + 1, sizeof(dcomplex**));
-    threaded_data[i].ZM1 = (dcomplex**)calloc(data.seq_length + 1, sizeof(dcomplex**));
+    threaded_data[i].Z   = (dcomplex**)calloc(data.seq_length + 1, sizeof(dcomplex*));
+    threaded_data[i].ZB  = (dcomplex**)calloc(data.seq_length + 1, sizeof(dcomplex*));
+    threaded_data[i].ZM  = (dcomplex**)calloc(data.seq_length + 1, sizeof(dcomplex*));
+    threaded_data[i].ZM1 = (dcomplex**)calloc(data.seq_length + 1, sizeof(dcomplex*));
 
     for (j = 0; j <= data.seq_length; ++j) {
-      threaded_data[i].Z[j]   = (dcomplex*)calloc(data.seq_length + 1, sizeof(dcomplex*));
-      threaded_data[i].ZB[j]  = (dcomplex*)calloc(data.seq_length + 1, sizeof(dcomplex*));
-      threaded_data[i].ZM[j]  = (dcomplex*)calloc(data.seq_length + 1, sizeof(dcomplex*));
-      threaded_data[i].ZM1[j] = (dcomplex*)calloc(data.seq_length + 1, sizeof(dcomplex*));
+      threaded_data[i].Z[j]   = (dcomplex*)calloc(data.seq_length + 1, sizeof(dcomplex));
+      threaded_data[i].ZB[j]  = (dcomplex*)calloc(data.seq_length + 1, sizeof(dcomplex));
+      threaded_data[i].ZM[j]  = (dcomplex*)calloc(data.seq_length + 1, sizeof(dcomplex));
+      threaded_data[i].ZM1[j] = (dcomplex*)calloc(data.seq_length + 1, sizeof(dcomplex));
     }
 
-    threaded_data[i].root_to_power = (dcomplex*)calloc((data.row_length + 1) * data.seq_length + 1, sizeof(dcomplex*));
+    threaded_data[i].root_to_power = (dcomplex*)calloc(data.num_roots, sizeof(dcomplex));
   }
 
   return threaded_data;
