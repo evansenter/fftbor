@@ -38,28 +38,22 @@ void neighbors(FFTBOR2D_PARAMS parameters) {
   gettimeofday(&full_start, NULL);
   gettimeofday(&start, NULL);
   #endif
-  
   int i, thread_id;
   FFTBOR2D_DATA data;
   FFTBOR2D_THREADED_DATA* threaded_data;
-  
   data          = init_fftbor2d_data(parameters);
   threaded_data = init_fftbor2d_threaded_data(parameters, data);
-
   #ifdef TIMING_DEBUG
   gettimeofday(&stop, NULL);
   TIMING(start, stop, "initialization")
   gettimeofday(&start, NULL);
   #endif
-  
   precalculate_energies(data);
-    
   #ifdef TIMING_DEBUG
   gettimeofday(&stop, NULL);
   TIMING(start, stop, "pre-calculate energies")
   gettimeofday(&start, NULL);
   #endif
-  
   #ifdef FFTBOR_DEBUG
   printf("sequenceLength:     %d\n", data.seq_length);
   printf("rowLength:          %d\n", data.row_length);
@@ -67,11 +61,12 @@ void neighbors(FFTBOR2D_PARAMS parameters) {
   printf("numRoots:           %d\n", data.num_roots);
   printf("inputStructureDist: %d\n", data.input_str_dist);
   printf("Roots of unity:\n");
+
   for (root = 0; root < data.num_roots; ++root) {
     PRINT_COMPLEX(root, data.roots_of_unity);
   }
+
   #endif
-  
   // Start main recursions (i <= data.run_length / 2 is an optimization leveraging complex conjugates).
   #pragma omp parallel for private(i, thread_id) shared(data, threaded_data) default(none) num_threads(parameters.max_threads)
 
@@ -81,7 +76,6 @@ void neighbors(FFTBOR2D_PARAMS parameters) {
     #else
     thread_id = 0;
     #endif
-    
     evaluate_recursions(i, data, threaded_data[thread_id]);
   }
 
@@ -90,42 +84,33 @@ void neighbors(FFTBOR2D_PARAMS parameters) {
   TIMING(start, stop, "explicit evaluation of Z")
   gettimeofday(&start, NULL);
   #endif
-  
   // Convert point-value solutions to coefficient form w/ inverse DFT.
   populate_remaining_roots(data);
-  
   #ifdef TIMING_DEBUG
   gettimeofday(&stop, NULL);
   TIMING(start, stop, "inferred evaluation of Z")
   gettimeofday(&start, NULL);
   #endif
-  
   solve_system(parameters, data);
-  
   #ifdef TIMING_DEBUG
   gettimeofday(&stop, NULL);
   TIMING(start, stop, "FFT")
   gettimeofday(&start, NULL);
   #endif
-  
   #ifndef SILENCE_OUTPUT
   print_output(parameters, data);
   #endif
-  
   #ifdef TIMING_DEBUG
   gettimeofday(&stop, NULL);
   TIMING(start, stop, "Print output / matrix inversion (if -X was provided)")
   gettimeofday(&start, NULL);
   #endif
-
   free_fftbor2d_data(data);
   free_fftbor2d_threaded_data(threaded_data);
- 
   #ifdef TIMING_DEBUG
   gettimeofday(&stop, NULL);
   TIMING(start, stop, "free memory")
   #endif
-    
   #ifdef TIMING_DEBUG
   gettimeofday(&full_stop, NULL);
   TIMING(full_start, full_stop, "total")
@@ -461,7 +446,6 @@ void solve_system(FFTBOR2D_PARAMS parameters, FFTBOR2D_DATA& data) {
     ) {
       data.non_zero_indices[data.non_zero_count++] = 2 * i + offset;
       data.probabilities[2 * i + offset]           = data.solutions[i].real();
-      
       sum += data.solutions[i].real();
     }
   }
@@ -503,10 +487,10 @@ void print_output(FFTBOR2D_PARAMS parameters, FFTBOR2D_DATA data) {
     }
 
     printf("\n");
-  // } else if (parameters.format == 'X') {
-  //   calculateKinetics(data);
-  // } else if (parameters.format == 'Y') {
-  //   populationProportion(data);
+    // } else if (parameters.format == 'X') {
+    //   calculateKinetics(data);
+    // } else if (parameters.format == 'Y') {
+    //   populationProportion(data);
   } else {
     for (i = 0; i < matrix_size; ++i) {
       if (data.probabilities[i] > 0) {
@@ -534,12 +518,12 @@ void print_output(FFTBOR2D_PARAMS parameters, FFTBOR2D_DATA data) {
 //   parameters.hastings             = 1;
 //   error                           = mfpt_error_handling(parameters);
 //   klpMatrix                       = init_klp_matrix(nonZeroCount);
-// 
+//
 //   if (error) {
 //     fprintf(stderr, "Errors occured when calling the libmfpt files, terminating:\n");
 //     exit(0);
 //   }
-// 
+//
 //   convert_fftbor2d_energy_grid_to_klp_matrix(nonZeroIndices, probabilities, rowLength, klpMatrix);
 //   transitionMatrix = convert_energy_grid_to_transition_matrix(&klpMatrix, parameters);
 //   mfpt             = compute_mfpt(klpMatrix, parameters, transitionMatrix);
@@ -548,17 +532,17 @@ void print_output(FFTBOR2D_PARAMS parameters, FFTBOR2D_DATA data) {
 //   free_transition_matrix(transitionMatrix, nonZeroCount);
 //   free_klp_matrix(klpMatrix);
 // }
-// 
+//
 // void convert_fftbor2d_energy_grid_to_klp_matrix(int* nonZeroIndices, double* probabilities, int rowLength, KLP_MATRIX klpMatrix) {
 //   int i;
-// 
+//
 //   for (i = 0; i < klpMatrix.length; ++i) {
 //     klpMatrix.k[i] = nonZeroIndices[i] / rowLength;
 //     klpMatrix.l[i] = nonZeroIndices[i] % rowLength;
 //     klpMatrix.p[i] = probabilities[nonZeroIndices[i]];
 //   }
 // }
-// 
+//
 // void populationProportion(int* nonZeroIndices, int nonZeroCount, double* probabilities, int rowLength, char* precisionFormat) {
 //   int i, startIndex = -1, endIndex = -1, error = 0;
 //   double step_counter;
@@ -567,22 +551,22 @@ void print_output(FFTBOR2D_PARAMS parameters, FFTBOR2D_DATA data) {
 //   SPECTRAL_PARAMS parameters;
 //   parameters = init_spectral_params();
 //   error      = spectral_error_handling(parameters);
-// 
+//
 //   if (error) {
 //     fprintf(stderr, "Errors occured when calling the libspectral files, terminating:\n");
 //     exit(0);
 //   }
-// 
+//
 //   for (i = 0; i < nonZeroCount; ++i) {
 //     if (nonZeroIndices[i] / rowLength == 0 && nonZeroIndices[i] % rowLength == GLOBAL_BP_DIST) {
 //       startIndex = i;
 //     }
-// 
+//
 //     if (nonZeroIndices[i] / rowLength == GLOBAL_BP_DIST && nonZeroIndices[i] % rowLength == 0) {
 //       endIndex = i;
 //     }
 //   }
-// 
+//
 //   if (startIndex < 0 || endIndex < 0) {
 //     printf("The start index (%d) or the end index (%d) in the nonZeroIndices array doesn't exist, committing digital hari-kiri.\n", startIndex, endIndex);
 //     printf("\n");
@@ -591,11 +575,11 @@ void print_output(FFTBOR2D_PARAMS parameters, FFTBOR2D_DATA data) {
 //     printf("        \\                   \n");
 //     exit(0);
 //   }
-// 
+//
 //   transitionMatrix = convert_fftbor2d_energy_grid_to_transition_rate_matrix(nonZeroIndices, nonZeroCount, probabilities);
 //   eigensystem      = convert_transition_matrix_to_eigenvectors(transitionMatrix, nonZeroCount);
 //   invert_matrix(eigensystem);
-// 
+//
 //   for (step_counter = parameters.start_time; step_counter <= parameters.end_time; step_counter += parameters.step_size) {
 //     printf(precisionFormat, step_counter);
 //     printf("\t");
@@ -604,29 +588,29 @@ void print_output(FFTBOR2D_PARAMS parameters, FFTBOR2D_DATA data) {
 //     printf(precisionFormat, probability_at_time(eigensystem, pow(10, step_counter), startIndex, startIndex));
 //     printf("\n");
 //   }
-// 
+//
 //   free_eigensystem(eigensystem);
 // }
-// 
+//
 // double* convert_fftbor2d_energy_grid_to_transition_rate_matrix(int* nonZeroIndices, int nonZeroCount, double* probabilities) {
 //   int i, j;
 //   double colSum;
 //   double* transitionMatrix;
 //   transitionMatrix = (double*)calloc(nonZeroCount * nonZeroCount, sizeof(double));
-// 
+//
 //   for (i = 0; i < nonZeroCount; ++i) {
 //     colSum = 0;
-// 
+//
 //     for (j = 0; j < nonZeroCount; ++j) {
 //       if (i != j) {
 //         transitionMatrix[i + nonZeroCount * j] = MIN2(1., probabilities[nonZeroIndices[j]] / probabilities[nonZeroIndices[i]]);
 //         colSum                                += transitionMatrix[i + nonZeroCount * j];
 //       }
-// 
+//
 //       transitionMatrix[i + nonZeroCount * i] = -colSum;
 //     }
 //   }
-// 
+//
 //   return transitionMatrix;
 // }
 

@@ -4,7 +4,7 @@
 
 int main(int argc, char** argv) {
   FFTBOR2D_PARAMS parameters;
-  
+
   if (argc == 1) {
     fftbor2d_usage();
     exit(0);
@@ -13,6 +13,5 @@ int main(int argc, char** argv) {
   parameters = parse_fftbor2d_args(argc, argv);
   neighbors(parameters);
   free_fftbor2d_params(parameters);
-  
   return 0;
 }

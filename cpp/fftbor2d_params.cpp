@@ -28,11 +28,9 @@ FFTBOR2D_PARAMS init_fftbor2d_params() {
     'B',                                   // format
     0                                      // verbose
   };
-  
   #ifdef _OPENMP
-    parameters.max_threads = omp_get_max_threads();
+  parameters.max_threads = omp_get_max_threads();
   #endif
-  
   return parameters;
 }
 
@@ -52,7 +50,7 @@ FFTBOR2D_PARAMS parse_fftbor2d_args(int argc, char** argv) {
   }
 
   parameters = init_fftbor2d_params();
-  
+
   for (i = 1; i < argc; ++i) {
     if (argv[i][0] == '-') {
       if (!strcmp(argv[i], "-T")) {
@@ -92,7 +90,7 @@ FFTBOR2D_PARAMS parse_fftbor2d_args(int argc, char** argv) {
       parse_fftbor2d_sequence_data(argc, argv, i, parameters);
     }
   }
-  
+
   if (parameters.energy_file == NULL) {
     parameters.energy_file = find_energy_file((char*)"rna_turner2004.par");
   }
@@ -104,7 +102,7 @@ FFTBOR2D_PARAMS parse_fftbor2d_args(int argc, char** argv) {
   if (fftbor2d_error_handling(parameters)) {
     fftbor2d_usage();
   }
-  
+
   if (parameters.format == 'B') {
     printf("%s\n%s\n%s\n", parameters.sequence, parameters.structure_1, parameters.structure_2);
   }
@@ -116,7 +114,6 @@ void parse_fftbor2d_sequence_data(int argc, char** argv, int& i, FFTBOR2D_PARAMS
   int j;
   FILE* file;
   char line[1024];
-  
   file = fopen(argv[i], "r");
 
   if (file == NULL) {
@@ -130,7 +127,6 @@ void parse_fftbor2d_sequence_data(int argc, char** argv, int& i, FFTBOR2D_PARAMS
     parameters.sequence    = (char*)calloc(parameters.seq_length + 1, sizeof(char));
     parameters.structure_1 = (char*)calloc(parameters.seq_length + 1, sizeof(char));
     parameters.structure_2 = (char*)calloc(parameters.seq_length + 1, sizeof(char));
-    
     sscanf(argv[i++], "%s", parameters.sequence);
     sscanf(argv[i++], "%s", parameters.structure_1);
     sscanf(argv[i],   "%s", parameters.structure_2);
@@ -155,14 +151,13 @@ void parse_fftbor2d_sequence_data(int argc, char** argv, int& i, FFTBOR2D_PARAMS
     parameters.sequence    = (char*)calloc(parameters.seq_length + 1, sizeof(char));
     parameters.structure_1 = (char*)calloc(parameters.seq_length + 1, sizeof(char));
     parameters.structure_2 = (char*)calloc(parameters.seq_length + 1, sizeof(char));
-
     sscanf(line, "%s", parameters.sequence);
 
     if (fgets(line, sizeof(line), file) == NULL) {
       fprintf(stderr, "There was an error reading the file\n");
       exit(0);
     }
-    
+
     sscanf(line, "%s", parameters.structure_1);
 
     if (fgets(line, sizeof(line), file) == NULL) {
@@ -171,14 +166,13 @@ void parse_fftbor2d_sequence_data(int argc, char** argv, int& i, FFTBOR2D_PARAMS
     }
 
     sscanf(line, "%s", parameters.structure_2);
-
     fclose(file);
   }
-  
+
   parameters.sequence[parameters.seq_length]    = '\0';
   parameters.structure_1[parameters.seq_length] = '\0';
   parameters.structure_2[parameters.seq_length] = '\0';
-  
+
   /* Convert RNA sequence to uppercase and make sure there are no Ts in the sequence (replace by U). */
   for (j = 0; j < parameters.seq_length; ++j) {
     parameters.sequence[j] = toupper(parameters.sequence[j]);
@@ -224,15 +218,15 @@ char* find_energy_file(char* energy_file_name) {
 
 int fftbor2d_error_handling(FFTBOR2D_PARAMS parameters) {
   int error = 0;
-  
+
   if (!TRIEQUALS(strlen(parameters.sequence), strlen(parameters.structure_1), strlen(parameters.structure_2))) {
     fprintf(
-      stderr, 
-      "(%d) %s\n(%d) %s\n(%d) %s\n", 
+      stderr,
+      "(%d) %s\n(%d) %s\n(%d) %s\n",
       (int)strlen(parameters.sequence),
-      parameters.sequence, 
+      parameters.sequence,
       (int)strlen(parameters.structure_1),
-      parameters.structure_1, 
+      parameters.structure_1,
       (int)strlen(parameters.structure_2),
       parameters.structure_2
     );
@@ -267,7 +261,6 @@ void fftbor2d_usage() {
   fprintf(stderr, "\tsequence (max length: 1024)\n");
   fprintf(stderr, "\tsecondary structure (1)\n");
   fprintf(stderr, "\tsecondary structure (2)\n\n");
-  
   fprintf(stderr, "Options include the following:\n");
   fprintf(stderr, "-E\tenergyfile,    the default is rna_turner2004.par in this current directory. Must be the name of a file with all energy parameters (in the same format as used in Vienna RNA). Energy file lookup first checks the current directory, and then iterates through the PATH shell variable until a matching file is found. If no file is found, the default ViennaRNA parameters are used and a warning is presented to the user. If the -E switch is explicitly provided, that file is used in lieu of searching for the rna_turner2004.par file.\n");
   fprintf(stderr, "-T\ttemperature,   the default is 37 degrees Celsius (unless an energyfile with parameters for a different temperature is used.\n");
@@ -277,7 +270,6 @@ void fftbor2d_usage() {
   fprintf(stderr, "-V\tverbose, the default is disabled, presents some debug information at runtime.\n");
   fprintf(stderr, "-X\tMFPT, the default is disabled, estimates the mean-first passage time of the input RNA from structure 1 to structure 2.\n");
   fprintf(stderr, "-Y\tspectral decomposition, the default is disabled, estimates the population proportion of the input structures over time.\n\n");
-  
   fprintf(stderr, "Note: the output formatting flags (M, S, X, Y) are mutually exclusive. If more than one is provided, *only* the last flag will be honored.\n");
   exit(0);
 }
