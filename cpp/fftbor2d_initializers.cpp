@@ -205,11 +205,6 @@ void free_fftbor2d_data(FFTBOR2D_DATA& data) {
 }
 
 void print_fftbor2d_data(FFTBOR2D_DATA& data) {
-  printf("FFTBOR2D_DATA:\n");
-  printf("    sequence\t\t%s\n",         data.sequence    == NULL ? "*missing*" : data.sequence);
-  printf("    structure_1\t\t%s\n",      data.structure_1 == NULL ? "*missing*" : data.structure_1);
-  printf("    structure_2\t\t%s\n",      data.structure_2 == NULL ? "*missing*" : data.structure_2);
-  printf("    seq_length\t\t%d\n",       data.seq_length);
   printf("    RT\t\t\t%f\n",             data.RT);
   printf("    precision_format\t%s\n",   data.precision_format == NULL ? "*missing*" : data.precision_format);
   printf("    input_str_dist\t%d\n",     data.input_str_dist);
@@ -218,7 +213,6 @@ void print_fftbor2d_data(FFTBOR2D_DATA& data) {
   printf("    num_roots\t\t%d\n",        data.num_roots);
   printf("    partition_function\t%f\n", data.partition_function);
   printf("    non_zero_count\t%d\n",     data.non_zero_count);
-  printf("\n");
 }
 
 FFTBOR2D_THREADED_DATA* init_fftbor2d_threaded_data(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {
