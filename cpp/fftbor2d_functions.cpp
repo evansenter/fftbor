@@ -1,5 +1,7 @@
-#include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <math.h>
 #include <fftw3.h>
 #include <sys/time.h>
 #include "functions.h"
@@ -7,7 +9,6 @@
 #include "params.h"
 #include "shared/libmfpt_header.h"
 #include "shared/libspectral_header.h"
-#include "vienna/functions.h"
 
 #ifdef _OPENMP
 #include <omp.h>

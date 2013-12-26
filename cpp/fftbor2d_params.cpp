@@ -3,10 +3,9 @@
 #include <stdlib.h>
 #include <math.h>
 #include <unistd.h>
-#include <cctype>
+#include <ctype.h>
 #include <limits>
 #include "params.h"
-#include "vienna/data_structures.h"
 
 #ifdef _OPENMP
 #include <omp.h>
