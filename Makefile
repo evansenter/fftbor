@@ -39,7 +39,7 @@ $(CODE)/fftbor2d_params.o: $(CODE)/fftbor2d_params.cpp $(HEADER)/params.h
 $(CODE)/fftbor2d_initializers.o: $(CODE)/fftbor2d_initializers.cpp $(HEADER)/initializers.h $(HEADER)/functions.h
 	$(CC) $(CCFLAGS) $(CODE)/fftbor2d_initializers.cpp -o $(CODE)/fftbor2d_initializers.o
 
-$(CODE)/fftbor2d_functions.o: $(CODE)/fftbor2d_functions.cpp $(HEADER)/functions.h $(SHARED_HEADER)/shared/libmfpt_header.h $(LIB)/libmfpt.a $(SHARED_HEADER)/shared/libspectral_header.h $(LIB)/libspectral.a
+$(CODE)/fftbor2d_functions.o: $(CODE)/fftbor2d_functions.cpp $(HEADER)/functions.h $(HEADER)/initializers.h $(HEADER)/params.h $(SHARED_HEADER)/shared/libmfpt_header.h $(LIB)/libmfpt.a $(SHARED_HEADER)/shared/libspectral_header.h $(LIB)/libspectral.a
 	$(CC) $(CCFLAGS) $(CODE)/fftbor2d_functions.cpp -o $(CODE)/fftbor2d_functions.o
   
 $(LIB)/libmfpt.a:

@@ -3,6 +3,7 @@
 #include <fftw3.h>
 #include "functions.h"
 #include "initializers.h"
+#include "params.h"
 #include "shared/libmfpt_header.h"
 #include "shared/libspectral_header.h"
 #include "vienna/functions.h"
@@ -105,8 +106,9 @@ void neighbors(FFTBOR2D_PARAMS parameters) {
   TIMING(start, stop, "Print output / matrix inversion (if -X was provided)")
   gettimeofday(&start, NULL);
   #endif
+  free_fftbor2d_threaded_data(threaded_data, parameters.max_threads);
   free_fftbor2d_data(data);
-  free_fftbor2d_threaded_data(threaded_data);
+  free_fftbor2d_params(parameters);
   #ifdef TIMING_DEBUG
   gettimeofday(&stop, NULL);
   TIMING(start, stop, "free memory")
@@ -614,24 +616,24 @@ void print_output(FFTBOR2D_PARAMS parameters, FFTBOR2D_DATA data) {
 //   return transitionMatrix;
 // }
 
-inline int j_paired_in(int i, int j, int* basePairs) {
-  return basePairs[j] >= i && basePairs[j] < j ? 1 : 0;
+inline int j_paired_in(int i, int j, int* base_pairs) {
+  return base_pairs[j] >= i && base_pairs[j] < j ? 1 : 0;
 }
 
-void populate_matrices(dcomplex* rootsOfUnity, int numRoots) {
+void populate_matrices(dcomplex* roots_of_unity, int num_roots) {
   int i;
   #pragma omp parallel for default(shared)
 
-  for (i = 0; i < numRoots; ++i) {
-    rootsOfUnity[i] = dcomplex(cos(-2 * M_PI * i / numRoots), sin(-2 * M_PI * i / numRoots));
+  for (i = 0; i < num_roots; ++i) {
+    roots_of_unity[i] = dcomplex(cos(-2 * M_PI * i / num_roots), sin(-2 * M_PI * i / num_roots));
   }
 }
 
-inline void flush_matrices(dcomplex** Z, dcomplex** ZB, dcomplex** ZM, dcomplex** ZM1, int sequenceLength) {
+inline void flush_matrices(dcomplex** Z, dcomplex** ZB, dcomplex** ZM, dcomplex** ZM1, int sequence_length) {
   int i, j;
 
-  for (i = 0; i <= sequenceLength; ++i) {
-    for (j = 0; j <= sequenceLength; ++j) {
+  for (i = 0; i <= sequence_length; ++i) {
+    for (j = 0; j <= sequence_length; ++j) {
       if (i > 0 && j > 0 && abs(j - i) <= MIN_PAIR_DIST) {
         Z[i][j] = ONE_C;
       } else {
@@ -645,7 +647,7 @@ inline void flush_matrices(dcomplex** Z, dcomplex** ZB, dcomplex** ZM, dcomplex*
   }
 }
 
-int* get_bp_list(char* secStr) {
+int* get_bp_list(char* sec_str) {
   /* Returns list L of ordered pairs (i,j) where i<j and
    * positions i,j occupied by balancing parentheses
    * For linear time efficiency, use stack
@@ -654,108 +656,108 @@ int* get_bp_list(char* secStr) {
    * -2 means too many ( with respect to )
    * -1 means too many ) with respect to (
    * If 1,-1 not returned, then return (possibly empty) list */
-  int len = strlen(secStr);
-  int* S = (int*) calloc(len / 2, sizeof(int)); //empty stack
-  int* L = (int*) calloc(2 * len * (len - 1) / 2 + 1, sizeof(int)); /* initially empty
+  int len = strlen(sec_str);
+  int* s = (int*) calloc(len / 2, sizeof(int)); //empty stack
+  int* l = (int*) calloc(2 * len * (len - 1) / 2 + 1, sizeof(int)); /* initially empty
                    * list of base
                    * pairs */
   int j, k = 0;
   char ch;
   /* First position holds the number of base pairs */
-  L[0] = 0;
+  l[0] = 0;
 
   for (j = 1; j <= len; j++) {
-    L[j] = -1;
+    l[j] = -1;
   }
 
   for (j = 1; j <= len; j++) {
-    ch = secStr[j - 1];
+    ch = sec_str[j - 1];
 
     if (ch == '(') {
-      S[k++] = j;
+      s[k++] = j;
     } else if (ch == ')') {
       if (k == 0) {
         /* There is something wrong with the structure. */
-        L[0] = -1;
-        return L;
+        l[0] = -1;
+        return l;
       } else {
-        L[S[--k]] = j;
-        L[j] = S[k];
-        L[0]++;
+        l[s[--k]] = j;
+        l[j] = s[k];
+        l[0]++;
       }
     }
   }
 
   if (k != 0) {
     /* There is something wrong with the structure. */
-    L[0] = -2;
+    l[0] = -2;
   }
 
-  free(S);
-  return L;
+  free(s);
+  return l;
 }
 
 /* Number of base pairs in the region i to j in bpList */
-int num_bp(int i, int j, int* bpList) {
+int num_bp(int i, int j, int* bp_list) {
   int n = 0;
   int k;
 
   for (k = i; k <= j; k++)
-    if (k < bpList[k] && bpList[k] <= j) {
+    if (k < bp_list[k] && bp_list[k] <= j) {
       n++;
     }
 
   return n;
 }
 
-short rna_int_code(char A) {
+short rna_int_code(char a) {
   /* Return the integer corresponding to the given base
      @ = 0  A = 1  C = 2  G = 3  U = 4 */
-  if (A == 'A') {
+  if (a == 'A') {
     return 1;
-  } else if (A == 'C') {
+  } else if (a == 'C') {
     return 2;
-  } else if (A == 'G') {
+  } else if (a == 'G') {
     return 3;
-  } else if (A == 'U') {
+  } else if (a == 'U') {
     return 4;
   } else {
     return 0;
   }
 }
 
-void initialize_can_base_pair_matrix(int** canBasePair) {
+void initialize_can_base_pair_matrix(int** can_base_pair) {
   // A = 1, C = 2, G = 3, U = 4
-  canBasePair[1][4] = 5;
-  canBasePair[4][1] = 6;
-  canBasePair[2][3] = 1;
-  canBasePair[3][2] = 2;
-  canBasePair[3][4] = 3;
-  canBasePair[4][3] = 4;
+  can_base_pair[1][4] = 5;
+  can_base_pair[4][1] = 6;
+  can_base_pair[2][3] = 1;
+  can_base_pair[3][2] = 2;
+  can_base_pair[3][4] = 3;
+  can_base_pair[4][3] = 4;
 }
 
-void translate_to_int_sequence(char* a, short* intSequence) {
+void translate_to_int_sequence(char* a, short* int_sequence) {
   int i;
-  intSequence[0] = strlen(a);
+  int_sequence[0] = strlen(a);
 
-  for (i = 0; i < intSequence[0]; ++i) {
-    intSequence[i + 1] = rna_int_code(a[i]);
+  for (i = 0; i < int_sequence[0]; ++i) {
+    int_sequence[i + 1] = rna_int_code(a[i]);
   }
 }
 
-void initialize_base_pair_count_matrix(int** numBasePairs, int* bpList, int n) {
+void initialize_base_pair_count_matrix(int** num_base_pairs, int* bp_list, int n) {
   int d, i, j;
 
   for (i = 1; i <= n; ++i) {
     for (j = 1; j <= n; ++j) {
-      numBasePairs[i][j] = 0;
+      num_base_pairs[i][j] = 0;
     }
   }
 
   for (d = MIN_PAIR_DIST + 1; d < n; d++) {
     for (i = 1; i <= n - d; ++i) {
       j = i + d;
-      numBasePairs[i][j] = num_bp(i, j, bpList);
+      num_base_pairs[i][j] = num_bp(i, j, bp_list);
     }
   }
 }

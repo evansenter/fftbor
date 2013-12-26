@@ -28,8 +28,8 @@ double hairpin_loop_energy(FFTBOR2D_DATA, int, int, int, short, short, char*);
 double interior_loop_energy(FFTBOR2D_DATA, int, int, int, int, int, int, short, short, short, short);
 
 extern "C" {
-  int* get_iindx(unsigned int sequenceLength);
-  unsigned int* maximumMatchingConstraint(const char* sequence, short* viennaBP);
+  int* get_iindx(unsigned int sequence_length);
+  unsigned int* maximumMatchingConstraint(const char* sequence, short* vienna_bp);
 }
 
 #endif

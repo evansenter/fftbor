@@ -177,6 +177,29 @@ FFTBOR2D_DATA init_fftbor2d_data(FFTBOR2D_PARAMS parameters) {
 }
 
 void free_fftbor2d_data(FFTBOR2D_DATA data) {
+  free(data.sequence);
+  free(data.structure_1);
+  free(data.structure_2);
+  free(data.vienna_params);
+  free(data.int_bp);
+  free(data.precision_format);
+  free(data.int_sequence);
+  free(data.can_base_pair);
+  free(data.num_base_pairs);
+  free(data.solutions);
+  free(data.roots_of_unity);
+  free(data.probabilities);
+  free(data.non_zero_indices);
+  free(data.delta_table);
+  free(data.j_paired_to_0);
+  free(data.j_paired_to_1);
+  free(data.EZ);
+  free(data.EH);
+  free(data.EHM);
+  free(data.EMA);
+  free(data.EMB);
+  free(data.EIL);
+  free(data.EM1);
 }
 
 FFTBOR2D_THREADED_DATA* init_fftbor2d_threaded_data(FFTBOR2D_PARAMS parameters, FFTBOR2D_DATA data) {
@@ -222,9 +245,20 @@ FFTBOR2D_THREADED_DATA* init_fftbor2d_threaded_data(FFTBOR2D_PARAMS parameters, 
   return threaded_data;
 }
 
-void free_fftbor2d_threaded_data(FFTBOR2D_THREADED_DATA* threaded_data) {
+void free_fftbor2d_threaded_data(FFTBOR2D_THREADED_DATA* threaded_data, int max_threads) {
+  int i;
+  
+  for (i = 0; i < max_threads; ++i) {
+    free(threaded_data[i].Z);
+    free(threaded_data[i].ZB);
+    free(threaded_data[i].ZM);
+    free(threaded_data[i].ZM1);
+    free(threaded_data[i].root_to_power);
+  }
+  
+  free(threaded_data);
 }
 
-inline int j_paired_to(int i, int j, int* basePairs) {
-  return basePairs[i] == j ? -1 : 1;
+inline int j_paired_to(int i, int j, int* base_pairs) {
+  return base_pairs[i] == j ? -1 : 1;
 }

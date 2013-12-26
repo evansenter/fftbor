@@ -184,36 +184,36 @@ void parse_fftbor2d_sequence_data(int argc, char** argv, int& i, FFTBOR2D_PARAMS
 }
 
 char* find_energy_file(char* energy_file_name) {
-  char* envPath, *tempPath, *splitPath, *energyLocation, *possiblePath;
-  tempPath       = getenv("PATH");
-  envPath        = (char*)calloc((strlen(tempPath) + 2), sizeof(char));
-  energyLocation = (char*)calloc(1, sizeof(char));
-  strcpy(envPath, ".:");
-  strcat(envPath, tempPath);
+  char* env_path, *temp_path, *split_path, *energy_location, *possible_path;
+  temp_path       = getenv("PATH");
+  env_path        = (char*)calloc((strlen(temp_path) + 2), sizeof(char));
+  energy_location = (char*)calloc(1, sizeof(char));
+  strcpy(env_path, ".:");
+  strcat(env_path, temp_path);
 
-  if (envPath != NULL) {
-    splitPath = strtok(envPath, ":");
+  if (env_path != NULL) {
+    split_path = strtok(env_path, ":");
 
-    while (splitPath != NULL) {
-      possiblePath = (char*)calloc((strlen(splitPath) + 1 + strlen(energy_file_name)), sizeof(char));
-      strcpy(possiblePath, splitPath);
-      strcat(possiblePath, "/");
-      strcat(possiblePath, energy_file_name);
+    while (split_path != NULL) {
+      possible_path = (char*)calloc((strlen(split_path) + 1 + strlen(energy_file_name)), sizeof(char));
+      strcpy(possible_path, split_path);
+      strcat(possible_path, "/");
+      strcat(possible_path, energy_file_name);
 
-      if (access(possiblePath, R_OK) != -1) {
-        energyLocation = (char*)calloc(strlen(possiblePath), sizeof(char));
-        strcpy(energyLocation, possiblePath);
-        splitPath = NULL;
+      if (access(possible_path, R_OK) != -1) {
+        energy_location = (char*)calloc(strlen(possible_path), sizeof(char));
+        strcpy(energy_location, possible_path);
+        split_path = NULL;
       } else {
-        splitPath = strtok(NULL, ":");
+        split_path = strtok(NULL, ":");
       }
 
-      free(possiblePath);
+      free(possible_path);
     }
   }
 
-  free(envPath);
-  return energyLocation;
+  free(env_path);
+  return energy_location;
 }
 
 int fftbor2d_error_handling(FFTBOR2D_PARAMS parameters) {
