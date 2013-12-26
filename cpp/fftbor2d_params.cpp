@@ -39,53 +39,78 @@ void free_fftbor2d_params(FFTBOR2D_PARAMS parameters) {
 }
 
 FFTBOR2D_PARAMS parse_fftbor2d_args(int argc, char** argv) {
-  int i;
+  int c;
   FFTBOR2D_PARAMS parameters;
-  
-  if (argc < 1) {
-    fftbor2d_usage();
-  }
   
   parameters = init_fftbor2d_params();
   
-  for (i = 1; i < argc; ++i) {
-    if (argv[i][0] == '-') {
-      if (!strcmp(argv[i], "-T")) {
-        if (i == argc - 1) {
-          fftbor2d_usage();
-        } else if (!sscanf(argv[++i], "%lf", &temperature)) {
+  while ((c = getopt(argc, argv, "VvMmSsXxYyT:t:E:e:P:p:")) != -1) {
+    switch (c) {
+      case 'V':
+      case 'v':
+        parameters.verbose = 1;
+        break;
+      case 'M':
+      case 'm':
+        parameters.format = 'M';
+        break;
+      case 'S':
+      case 's':
+        parameters.format = 'S';
+        break;
+      case 'X':
+      case 'x':
+        parameters.format = 'X';
+        break;
+      case 'Y':
+      case 'y':
+        parameters.format = 'Y';
+        break;
+      case 'T':
+      case 't':
+        if (!sscanf(optarg, "%lf", &temperature)) {
           fftbor2d_usage();
         }
-      } else if (!strcmp(argv[i], "-E")) {
-        if (i == argc - 1) {
-          fftbor2d_usage();
-        }
-        
-        parameters.energy_file = argv[++i];
-      } else if (!strcmp(argv[i], "-P")) {
-        if (i == argc - 1) {
-          fftbor2d_usage();
-        } else if (!sscanf(argv[++i], "%d", &parameters.precision)) {
+        break;
+      case 'P':
+      case 'p':
+        if (!sscanf(optarg, "%d", &parameters.precision)) {
           fftbor2d_usage();
         } else if (parameters.precision < 0 || parameters.precision > std::numeric_limits<double>::digits) {
           fftbor2d_usage();
         }
-      } else if (!strcmp(argv[i], "-M")) {
-        parameters.format = 'M';
-      } else if (!strcmp(argv[i], "-S")) {
-        parameters.format = 'S';
-      } else if (!strcmp(argv[i], "-X")) {
-        parameters.format = 'X';
-      } else if (!strcmp(argv[i], "-Y")) {
-        parameters.format = 'Y';
-      } else if (!strcmp(argv[i], "-V")) {
-        parameters.verbose = 1;
-      } else {
+        break;
+      case 'E':
+      case 'e':
+        parameters.energy_file = strdup(optarg);
+        break;
+      case '?':
+        switch (optopt) {
+          case 'T':
+          case 't':
+          case 'P':
+          case 'p':
+          case 'E':
+          case 'e':
+            fprintf (stderr, "Option -%c requires an argument.\n", optopt);
+            break;
+          default:
+            if (isprint(optopt)) {
+              fprintf(stderr, "Unknown option `-%c'.\n", optopt);
+            } else {
+              fprintf(stderr, "Unknown option character `\\x%x'.\n", optopt);
+            }
+          }
+          fftbor2d_usage();
+      default:
         fftbor2d_usage();
-      }
-    } else {
-      parse_fftbor2d_sequence_data(argc, argv, i, parameters);
     }
+  }
+  
+  if (optind == argc) {
+    fftbor2d_usage();
+  } else {
+    parse_fftbor2d_sequence_data(argc, argv, optind, parameters);
   }
   
   if (parameters.energy_file == NULL) {
@@ -266,18 +291,18 @@ void fftbor2d_usage() {
   fprintf(stderr, "FFTbor2D [options] filename\n");
   fprintf(stderr, "where filename is a file of the format:\n");
   fprintf(stderr, "\t>comment (optional line)\n");
-  fprintf(stderr, "\tsequence (max length: MAX_LENGTH)\n");
+  fprintf(stderr, "\tsequence (max length: %d)\n", MAX_LENGTH);
   fprintf(stderr, "\tsecondary structure (1)\n");
   fprintf(stderr, "\tsecondary structure (2)\n\n");
   fprintf(stderr, "Options include the following:\n");
-  fprintf(stderr, "-E\tenergyfile,    the default is rna_turner2004.par in this current directory. Must be the name of a file with all energy parameters (in the same format as used in Vienna RNA). Energy file lookup first checks the current directory, and then iterates through the PATH shell variable until a matching file is found. If no file is found, the default ViennaRNA parameters are used and a warning is presented to the user. If the -E switch is explicitly provided, that file is used in lieu of searching for the rna_turner2004.par file.\n");
-  fprintf(stderr, "-T\ttemperature,   the default is 37 degrees Celsius (unless an energyfile with parameters for a different temperature is used.\n");
-  fprintf(stderr, "-P\tprecision,     the default is %d, indicates the precision (base 2) of the probabilities Z_k / Z to be returned (0-%d, 0 disables precision handling).\n", (int)ceil(log(pow(10., 8)) / log(2.)), std::numeric_limits<double>::digits);
-  fprintf(stderr, "-M\tmatrix format, the default is disabled, presents output in a matrix format instead of a column format.\n");
-  fprintf(stderr, "-S\tsimple output, the default is disabled, presents output in column format, for non-zero entries only with no header output (columns are: k, l, p(Z_{k,l}/Z), -RTln(Z_{k,l})).\n");
-  fprintf(stderr, "-V\tverbose, the default is disabled, presents some debug information at runtime.\n");
-  fprintf(stderr, "-X\tMFPT, the default is disabled, estimates the mean-first passage time of the input RNA from structure 1 to structure 2.\n");
-  fprintf(stderr, "-Y\tspectral decomposition, the default is disabled, estimates the population proportion of the input structures over time.\n\n");
-  fprintf(stderr, "Note: the output formatting flags (M, S, X, Y) are mutually exclusive. If more than one is provided, *only* the last flag will be honored.\n");
-  exit(0);
+  fprintf(stderr, "-E/e\tenergyfile,    the default is rna_turner2004.par in this current directory. Must be the name of a file with all energy parameters (in the same format as used in Vienna RNA). Energy file lookup first checks the current directory, and then iterates through the PATH shell variable until a matching file is found. If no file is found, the default ViennaRNA parameters are used and a warning is presented to the user. If the -E switch is explicitly provided, that file is used in lieu of searching for the rna_turner2004.par file.\n");
+  fprintf(stderr, "-T/t\ttemperature,   the default is 37 degrees Celsius (unless an energyfile with parameters for a different temperature is used.\n");
+  fprintf(stderr, "-P/p\tprecision,     the default is %d, indicates the precision (base 2) of the probabilities Z_k / Z to be returned (0-%d, 0 disables precision handling).\n", (int)ceil(log(pow(10., 8)) / log(2.)), std::numeric_limits<double>::digits);
+  fprintf(stderr, "-M/m\tmatrix format, the default is disabled, presents output in a matrix format instead of a column format.\n");
+  fprintf(stderr, "-S/s\tsimple output, the default is disabled, presents output in column format, for non-zero entries only with no header output (columns are: k, l, p(Z_{k,l}/Z), -RTln(Z_{k,l})).\n");
+  fprintf(stderr, "-V/v\tverbose, the default is disabled, presents some debug information at runtime.\n");
+  fprintf(stderr, "-X/x\tMFPT, the default is disabled, estimates the mean-first passage time of the input RNA from structure 1 to structure 2.\n");
+  fprintf(stderr, "-Y/y\tspectral decomposition, the default is disabled, estimates the population proportion of the input structures over time.\n\n");
+  fprintf(stderr, "Note: the output formatting flags (M/m, S/s, X/x, Y/y) are mutually exclusive. If more than one is provided, *only* the last flag will be honored.\n");
+  abort();
 }
