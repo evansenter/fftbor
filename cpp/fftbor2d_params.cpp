@@ -41,13 +41,13 @@ void free_fftbor2d_params(FFTBOR2D_PARAMS parameters) {
 FFTBOR2D_PARAMS parse_fftbor2d_args(int argc, char** argv) {
   int i;
   FFTBOR2D_PARAMS parameters;
-
+  
   if (argc < 1) {
     fftbor2d_usage();
   }
-
+  
   parameters = init_fftbor2d_params();
-
+  
   for (i = 1; i < argc; ++i) {
     if (argv[i][0] == '-') {
       if (!strcmp(argv[i], "-T")) {
@@ -60,7 +60,7 @@ FFTBOR2D_PARAMS parse_fftbor2d_args(int argc, char** argv) {
         if (i == argc - 1) {
           fftbor2d_usage();
         }
-
+        
         parameters.energy_file = argv[++i];
       } else if (!strcmp(argv[i], "-P")) {
         if (i == argc - 1) {
@@ -87,23 +87,23 @@ FFTBOR2D_PARAMS parse_fftbor2d_args(int argc, char** argv) {
       parse_fftbor2d_sequence_data(argc, argv, i, parameters);
     }
   }
-
+  
   if (parameters.energy_file == NULL) {
     parameters.energy_file = find_energy_file((char*)"rna_turner2004.par");
   }
-
+  
   if (parameters.verbose) {
     debug_fftbor2d_parameters(parameters);
   }
-
+  
   if (fftbor2d_error_handling(parameters)) {
     fftbor2d_usage();
   }
-
+  
   if (parameters.format == 'B') {
     printf("%s\n%s\n%s\n", parameters.sequence, parameters.structure_1, parameters.structure_2);
   }
-
+  
   return parameters;
 }
 
@@ -112,14 +112,14 @@ void parse_fftbor2d_sequence_data(int argc, char** argv, int& argp, FFTBOR2D_PAR
   FILE* file;
   char line[MAX_LENGTH];
   file = fopen(argv[argp], "r");
-
+  
   if (file == NULL) {
     /* Input is not a file */
     /* argv[argp] should be the sequence and argv[argp + 1], argv[argp + 2] should be the structures */
     if (argc <= argp + 2) {
       fftbor2d_usage();
     }
-
+    
     parameters.seq_length  = strlen(argv[argp]);
     parameters.sequence    = (char*)calloc(parameters.seq_length + 1, sizeof(char));
     parameters.structure_1 = (char*)calloc(parameters.seq_length + 1, sizeof(char));
@@ -133,57 +133,57 @@ void parse_fftbor2d_sequence_data(int argc, char** argv, int& argp, FFTBOR2D_PAR
       fprintf(stderr, "There was an error reading the file\n");
       exit(0);
     }
-
+    
     while (*line == '*' || *line == '\0' || *line == '>') {
       if (fgets(line, sizeof(line), file) == NULL) {
         break;
       }
     }
-
+    
     if (line == NULL) {
       fftbor2d_usage();
     }
-
+    
     // This was a tricky bug to catch, fgets (perhaps obviously) reads a line in, including the \n character,
     // which is different from the terminating character \0, making the data.seq_length off by one.
     while (line[char_index] != '\0' && char_index < MAX_LENGTH) {
       if (line[char_index] == '\n') {
         line[char_index] = '\0';
       }
-
+      
       char_index++;
     }
-
+    
     parameters.seq_length  = strlen(line);
     parameters.sequence    = (char*)calloc(parameters.seq_length + 1, sizeof(char));
     parameters.structure_1 = (char*)calloc(parameters.seq_length + 1, sizeof(char));
     parameters.structure_2 = (char*)calloc(parameters.seq_length + 1, sizeof(char));
     sscanf(line, "%s", parameters.sequence);
-
+    
     if (fgets(line, sizeof(line), file) == NULL) {
       fprintf(stderr, "There was an error reading the file\n");
       exit(0);
     }
-
+    
     sscanf(line, "%s", parameters.structure_1);
-
+    
     if (fgets(line, sizeof(line), file) == NULL) {
       fprintf(stderr, "There was an error reading the file\n");
       exit(0);
     }
-
+    
     sscanf(line, "%s", parameters.structure_2);
     fclose(file);
   }
-
+  
   parameters.sequence[parameters.seq_length]    = '\0';
   parameters.structure_1[parameters.seq_length] = '\0';
   parameters.structure_2[parameters.seq_length] = '\0';
-
+  
   /* Convert RNA sequence to uppercase and make sure there are no Ts in the sequence (replace by U). */
   for (i = 0; i < parameters.seq_length; ++i) {
     parameters.sequence[i] = toupper(parameters.sequence[i]);
-
+    
     if (parameters.sequence[i] == 'T') {
       parameters.sequence[i] = 'U';
     }
@@ -197,16 +197,16 @@ char* find_energy_file(char* energy_file_name) {
   energy_location = (char*)calloc(1, sizeof(char));
   strcpy(env_path, ".:");
   strcat(env_path, temp_path);
-
+  
   if (env_path != NULL) {
     split_path = strtok(env_path, ":");
-
+    
     while (split_path != NULL) {
       possible_path = (char*)calloc((strlen(split_path) + 1 + strlen(energy_file_name)), sizeof(char));
       strcpy(possible_path, split_path);
       strcat(possible_path, "/");
       strcat(possible_path, energy_file_name);
-
+      
       if (access(possible_path, R_OK) != -1) {
         energy_location = (char*)calloc(strlen(possible_path), sizeof(char));
         strcpy(energy_location, possible_path);
@@ -214,18 +214,18 @@ char* find_energy_file(char* energy_file_name) {
       } else {
         split_path = strtok(NULL, ":");
       }
-
+      
       free(possible_path);
     }
   }
-
+  
   free(env_path);
   return energy_location;
 }
 
 int fftbor2d_error_handling(FFTBOR2D_PARAMS& parameters) {
   int error = 0;
-
+  
   if (!TRIEQUALS(strlen(parameters.sequence), strlen(parameters.structure_1), strlen(parameters.structure_2))) {
     fprintf(
       stderr,
@@ -240,11 +240,11 @@ int fftbor2d_error_handling(FFTBOR2D_PARAMS& parameters) {
     fprintf(stderr, "Length of RNA sequence and structures must be equal.\n");
     error++;
   }
-
+  
   if (error) {
     fprintf(stderr, "\n");
   }
-
+  
   return error;
 }
 

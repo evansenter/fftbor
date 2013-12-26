@@ -55,14 +55,14 @@ void neighbors(FFTBOR2D_PARAMS& parameters) {
   TIMING(start, stop, "pre-calculate energies")
   gettimeofday(&start, NULL);
   #endif
-
+  
   if (parameters.verbose) {
     print_fftbor2d_data(data);
   }
-
+  
   // Start main recursions (i <= data.run_length / 2 is an optimization leveraging complex conjugates).
   // #pragma omp parallel for private(i, thread_id) shared(data, threaded_data) default(none) num_threads(parameters.max_threads)
-
+  
   for (i = 0; i <= data.run_length / 2; ++i) {
     #ifdef _OPENMP
     thread_id = omp_get_thread_num();
@@ -71,7 +71,7 @@ void neighbors(FFTBOR2D_PARAMS& parameters) {
     #endif
     evaluate_recursions(i, data, threaded_data[thread_id]);
   }
-
+  
   #ifdef TIMING_DEBUG
   gettimeofday(&stop, NULL);
   TIMING(start, stop, "explicit evaluation of Z")
@@ -116,11 +116,11 @@ void precalculate_energies(FFTBOR2D_DATA& data) {
   #if MEASURE_TWIDDLE
   double max_twiddle = 0;
   #endif
-
+  
   for (i = 1; i <= data.seq_length; ++i) {
     for (d = MIN_PAIR_DIST + 1; d <= data.seq_length - i; ++d) {
       j = i + d;
-
+      
       if (data.can_base_pair[data.int_sequence[i]][data.int_sequence[j]]) {
         // ****************************************************************************
         // Solve ZB
@@ -128,7 +128,7 @@ void precalculate_energies(FFTBOR2D_DATA& data) {
         // In a hairpin, [i + 1, j - 1] unpaired.
         data.EH[i][j] = exp(-hairpin_loop_energy(data, i, j, data.can_base_pair[data.int_sequence[i]][data.int_sequence[j]], data.int_sequence[i + 1], data.int_sequence[j - 1], data.sequence) / data.RT);
         position = 0;
-
+        
         // Interior loop / bulge / stack / multiloop.
         for (k = i + 1; k < MIN2(i + 30, j - MIN_PAIR_DIST - 2) + 1; ++k) {
           // There can't be more than 30 unpaired bases between i and k, and there must be room between k and j for l
@@ -136,11 +136,11 @@ void precalculate_energies(FFTBOR2D_DATA& data) {
             // l needs to at least have room to pair with k, and there can be at most 30 unpaired bases between (i, k) + (l, j), with l < j
             if (data.can_base_pair[data.int_sequence[k]][data.int_sequence[l]]) {
               #ifdef TWIDDLE_DEBUG
-
+            
               if (position >= 6 * (data.seq_length + 1)) {
                 fprintf(stderr, "Trying to access non-existant memory in EIL at index %d (%f).\n", position, position / (data.seq_length + 1.));
               }
-
+              
               #endif
               #ifdef MEASURE_TWIDDLE
               max_twiddle = position / (data.seq_length + 1.) > max_twiddle ? position / (data.seq_length + 1.) : max_twiddle;
@@ -151,11 +151,11 @@ void precalculate_energies(FFTBOR2D_DATA& data) {
             }
           }
         }
-
+        
         // If (i, j) is the closing b.p. of a multiloop, and (k, l) is the rightmost base pair, there is at least one hairpin between (i + 1, k - 1)
         data.EHM[i][j] = exp(-(data.vienna_params->MLclosing + data.vienna_params->MLintern[data.can_base_pair[data.int_sequence[i]][data.int_sequence[j]]]) / data.RT);
       }
-
+      
       // ****************************************************************************
       // Solve ZM1
       // ****************************************************************************
@@ -165,20 +165,20 @@ void precalculate_energies(FFTBOR2D_DATA& data) {
           data.EM1[i][j][k] = exp(-(data.vienna_params->MLbase * (j - k) + data.vienna_params->MLintern[data.can_base_pair[data.int_sequence[i]][data.int_sequence[k]]]) / data.RT);
         }
       }
-
+      
       // ****************************************************************************
       // Solve ZM
       // ****************************************************************************
       for (k = i; k < j - MIN_PAIR_DIST; ++k) {
         // Only one stem.
         data.EMA[i][k] = exp(-(data.vienna_params->MLbase * (k - i)) / data.RT);
-
+        
         // More than one stem.
         if (k > i + MIN_PAIR_DIST + 1) { // (k > i + MIN_PAIR_DIST + 1) because i can pair with k - 1
           data.EMB[j][k] = exp(-(data.vienna_params->MLintern[data.can_base_pair[data.int_sequence[k]][data.int_sequence[j]]]) / data.RT);
         }
       }
-
+      
       // **************************************************************************
       // Solve Z
       // **************************************************************************
@@ -190,7 +190,7 @@ void precalculate_energies(FFTBOR2D_DATA& data) {
       }
     }
   }
-
+  
   #ifdef MEASURE_TWIDDLE
   printf("Max twiddle distance seen: %f\n", max_twiddle);
   #endif
@@ -200,15 +200,15 @@ void evaluate_recursions(int root, FFTBOR2D_DATA& data, FFTBOR2D_THREADED_DATA& 
   int i, j, k, l, d, delta, position;
   double energy;
   flush_matrices(threaded_data.Z, threaded_data.ZB, threaded_data.ZM, threaded_data.ZM1, data.seq_length);
-
+  
   for (i = 0; i < data.num_roots; ++i) {
     threaded_data.root_to_power[i] = ROOT_POW(root, i, data.num_roots);
   }
-
+  
   for (d = MIN_PAIR_DIST + 1; d < data.seq_length; ++d) {
     for (i = 1; i <= data.seq_length - d; ++i) {
       j = i + d;
-
+      
       if (data.can_base_pair[data.int_sequence[i]][data.int_sequence[j]]) {
         // ****************************************************************************
         // Solve ZB
@@ -222,7 +222,7 @@ void evaluate_recursions(int root, FFTBOR2D_DATA& data, FFTBOR2D_THREADED_DATA& 
         #endif
         #endif
         position = 0;
-
+        
         // Interior loop / bulge / stack / multiloop.
         for (k = i + 1; k < MIN2(i + 30, j - MIN_PAIR_DIST - 2) + 1; ++k) {
           // There can't be more than 30 unpaired bases between i and k, and there must be room between k and j for l
@@ -241,9 +241,9 @@ void evaluate_recursions(int root, FFTBOR2D_DATA& data, FFTBOR2D_THREADED_DATA& 
             }
           }
         }
-
+        
         energy = data.EHM[i][j];
-
+        
         for (k = i + MIN_PAIR_DIST + 3; k < j - MIN_PAIR_DIST - 1; ++k) {
           #ifdef DO_WORK
           // If (i, j) is the closing b.p. of a multiloop, and (k, l) is the rightmost base pair, there is at least one hairpin between (i + 1, k - 1)
@@ -255,7 +255,7 @@ void evaluate_recursions(int root, FFTBOR2D_DATA& data, FFTBOR2D_THREADED_DATA& 
           #endif
         }
       }
-
+      
       // ****************************************************************************
       // Solve ZM1
       // ****************************************************************************
@@ -271,7 +271,7 @@ void evaluate_recursions(int root, FFTBOR2D_DATA& data, FFTBOR2D_THREADED_DATA& 
           #endif
         }
       }
-
+      
       // ****************************************************************************
       // Solve ZM
       // ****************************************************************************
@@ -284,7 +284,7 @@ void evaluate_recursions(int root, FFTBOR2D_DATA& data, FFTBOR2D_THREADED_DATA& 
         threaded_data.ZM[j][i] += threaded_data.ZM1[j][k];
         #endif
         #endif
-
+        
         // More than one stem.
         if (k > i + MIN_PAIR_DIST + 1) { // (k > i + MIN_PAIR_DIST + 1) because i can pair with k - 1
           #ifdef DO_WORK
@@ -296,7 +296,7 @@ void evaluate_recursions(int root, FFTBOR2D_DATA& data, FFTBOR2D_THREADED_DATA& 
           #endif
         }
       }
-
+      
       // **************************************************************************
       // Solve Z
       // **************************************************************************
@@ -307,14 +307,14 @@ void evaluate_recursions(int root, FFTBOR2D_DATA& data, FFTBOR2D_THREADED_DATA& 
       threaded_data.Z[j][i] += threaded_data.Z[j - 1][i];
       #endif
       #endif
-
+      
       for (k = i; k < j - MIN_PAIR_DIST; ++k) {
         // (k, j) is the rightmost base pair in (i, j)
         if (data.can_base_pair[data.int_sequence[k]][data.int_sequence[j]]) {
           #ifdef DO_WORK
           energy = data.EZ[j][k];
           #endif
-
+          
           if (k == i) {
             #ifdef DO_WORK
             delta = data.delta_table[data.num_base_pairs[0][i][j] - data.num_base_pairs[0][k][j]][data.num_base_pairs[1][i][j] - data.num_base_pairs[1][k][j]];
@@ -336,7 +336,7 @@ void evaluate_recursions(int root, FFTBOR2D_DATA& data, FFTBOR2D_THREADED_DATA& 
       }
     }
   }
-
+  
   data.solutions[root] = threaded_data.Z[1][data.seq_length];
   #ifdef FFTBOR_DEBUG
   printf(".");
@@ -348,45 +348,45 @@ void populate_remaining_roots(FFTBOR2D_DATA& data) {
   int i;
   #ifdef FFTBOR_DEBUG
   printf("Solutions (before populating remaining roots):\n");
-
+  
   for (i = 0; i < data.run_length; ++i) {
     PRINT_COMPLEX(i, data.solutions);
   }
-
+  
   #endif
-
+  
   for (i = data.run_length / 2 + 1; i < data.run_length; ++i) {
     #ifdef FFTBOR_DEBUG
     printf("l: %d, r %d\n", i, data.run_length - i);
     #endif
     data.solutions[i] = COMPLEX_CONJ(data.solutions[data.run_length - i]);
   }
-
+  
   #ifdef FFTBOR_DEBUG
   printf("Solutions (after populating remaining roots):\n");
-
+  
   for (i = 0; i < data.run_length; ++i) {
     PRINT_COMPLEX(i, data.solutions);
   }
-
+  
   #endif
-
+  
   if (data.input_str_dist % 2) {
     for (i = 0; i < data.run_length; ++i) {
       data.solutions[i] = COMPLEX_CONJ(data.roots_of_unity[i]) * data.solutions[i];
     }
-
+    
     for (i = data.run_length / 2 + 1; i <= data.run_length; ++i) {
       data.solutions[i] = dcomplex(-1, 0) * data.solutions[i];
     }
-
+    
     #ifdef FFTBOR_DEBUG
     printf("Solutions (after multiplying data.solutions by nu^{-k} (and the scalar -1 for data.solutions y_{k: k > M_{0} / 2})):\n");
-
+    
     for (i = 0; i < data.run_length; ++i) {
       PRINT_COMPLEX(i, data.solutions);
     }
-
+    
     #endif
   }
 }
@@ -400,26 +400,26 @@ void solve_system(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {
   fftw_complex* result    = (fftw_complex*)calloc(data.run_length, sizeof(fftw_complex));
   fftw_plan plan          = fftw_plan_dft_1d(data.run_length, signal, result, FFTW_BACKWARD, FFTW_ESTIMATE);
   data.partition_function = data.solutions[0].real();
-
+  
   // For some reason it's much more numerically stable to set the signal via real / imag components separately.
   for (i = 0; i < data.run_length; ++i) {
     // Convert point-value data.solutions of Z(root) to 10^parameters.precision * Z(root) / Z
     signal[i][FFTW_REAL] = pow(2., (double)parameters.precision) * (data.solutions[i].real() / data.partition_function);
     signal[i][FFTW_IMAG] = pow(2., (double)parameters.precision) * (data.solutions[i].imag() / data.partition_function);
   }
-
+  
   #ifdef FFTBOR_DEBUG
   printf("Scaling factor: %f:\n", data.solutions[0].real());
   printf("Scaled data.solutions vector for the inverse DFT:\n");
-
+  
   for (i = 0; i < data.run_length; ++i) {
     printf("%d: %+f %+fi\n", i, signal[i][FFTW_REAL], signal[i][FFTW_IMAG]);
   }
-
+  
   #endif
   // Calculate transform, coefficients are in fftw_complex result array.
   fftw_execute(plan);
-
+  
   for (i = 0; i < data.run_length; ++i) {
     // Truncate to user-specified precision; if set to 0, no truncation occurs (dangerous).
     if (!parameters.precision) {
@@ -427,10 +427,10 @@ void solve_system(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {
     } else {
       data.solutions[i] = dcomplex(pow(2., -parameters.precision) * static_cast<int>(result[i][FFTW_REAL] / data.run_length), 0);
     }
-
+    
     x = (2 * i + offset) / data.row_length;
     y = (2 * i + offset) % data.row_length;
-
+    
     // Probabilities must be > 0 and satisfy the triangle inequality.
     if (
       data.solutions[i].real() > 0 &&
@@ -443,13 +443,13 @@ void solve_system(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {
       sum += data.solutions[i].real();
     }
   }
-
+  
   // Normalizing pass.
   for (i = 0; i < (int)pow((double)data.row_length, 2); ++i) {
     data.probabilities[i] /= sum;
     normal_sum            += data.probabilities[i];
   }
-
+  
   fftw_destroy_plan(plan);
   #ifdef FFTBOR_DEBUG
   printf("\nPartition function: ");
@@ -465,21 +465,21 @@ void solve_system(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {
 void print_output(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {
   int i;
   int matrix_size = (int)pow((double)data.row_length, 2);
-
+  
   if (parameters.format == 'B') {
     printf("%d,%d\nk\tl\tp(Z_{k,l}/Z)\t-RTln(Z_{k,l})\n", data.input_str_dist, data.row_length);
   }
-
+  
   if (parameters.format == 'M') {
     for (i = 0; i < matrix_size; ++i) {
       if (i && !(i % data.row_length)) {
         printf("\n");
       }
-
+      
       printf(data.precision_format, data.probabilities[i]);
       printf("\t");
     }
-
+    
     printf("\n");
     // } else if (parameters.format == 'X') {
     //   calculateKinetics(data);
@@ -615,7 +615,7 @@ inline int j_paired_in(int i, int j, int* base_pairs) {
 void populate_matrices(dcomplex* roots_of_unity, int num_roots) {
   int i;
   #pragma omp parallel for default(shared)
-
+  
   for (i = 0; i < num_roots; ++i) {
     roots_of_unity[i] = dcomplex(cos(-2 * M_PI * i / num_roots), sin(-2 * M_PI * i / num_roots));
   }
@@ -623,7 +623,7 @@ void populate_matrices(dcomplex* roots_of_unity, int num_roots) {
 
 inline void flush_matrices(dcomplex** Z, dcomplex** ZB, dcomplex** ZM, dcomplex** ZM1, int sequence_length) {
   int i, j;
-
+  
   for (i = 0; i <= sequence_length; ++i) {
     for (j = 0; j <= sequence_length; ++j) {
       if (i > 0 && j > 0 && abs(j - i) <= MIN_PAIR_DIST) {
@@ -631,7 +631,7 @@ inline void flush_matrices(dcomplex** Z, dcomplex** ZB, dcomplex** ZM, dcomplex*
       } else {
         Z[i][j] = ZERO_C;
       }
-
+      
       ZB[i][j]  = ZERO_C;
       ZM[i][j]  = ZERO_C;
       ZM1[i][j] = ZERO_C;
@@ -657,14 +657,14 @@ int* get_bp_list(char* sec_str) {
   char ch;
   /* First position holds the number of base pairs */
   l[0] = 0;
-
+  
   for (j = 1; j <= len; j++) {
     l[j] = -1;
   }
-
+  
   for (j = 1; j <= len; j++) {
     ch = sec_str[j - 1];
-
+    
     if (ch == '(') {
       s[k++] = j;
     } else if (ch == ')') {
@@ -679,12 +679,12 @@ int* get_bp_list(char* sec_str) {
       }
     }
   }
-
+  
   if (k != 0) {
     /* There is something wrong with the structure. */
     l[0] = -2;
   }
-
+  
   free(s);
   return l;
 }
@@ -693,12 +693,12 @@ int* get_bp_list(char* sec_str) {
 int num_bp(int i, int j, int* bp_list) {
   int n = 0;
   int k;
-
+  
   for (k = i; k <= j; k++)
     if (k < bp_list[k] && bp_list[k] <= j) {
       n++;
     }
-
+    
   return n;
 }
 
@@ -731,7 +731,7 @@ void initialize_can_base_pair_matrix(int** can_base_pair) {
 void translate_to_int_sequence(char* a, short* int_sequence) {
   int i;
   int_sequence[0] = strlen(a);
-
+  
   for (i = 0; i < int_sequence[0]; ++i) {
     int_sequence[i + 1] = rna_int_code(a[i]);
   }
@@ -739,13 +739,13 @@ void translate_to_int_sequence(char* a, short* int_sequence) {
 
 void initialize_base_pair_count_matrix(int** num_base_pairs, int* bp_list, int n) {
   int d, i, j;
-
+  
   for (i = 1; i <= n; ++i) {
     for (j = 1; j <= n; ++j) {
       num_base_pairs[i][j] = 0;
     }
   }
-
+  
   for (d = MIN_PAIR_DIST + 1; d < n; d++) {
     for (i = 1; i <= n - d; ++i) {
       j = i + d;
@@ -759,34 +759,34 @@ inline double hairpin_loop_energy(FFTBOR2D_DATA& data, int i, int j, int type, s
   double energy;
   int size = j - i - 1;
   energy = (size <= 30) ? data.vienna_params->hairpin[size] : data.vienna_params->hairpin[30] + (int)(data.vienna_params->lxc * log((size) / 30.));
-
+  
   if (data.vienna_params->model_details.special_hp) {
     if (size == 4) { /* check for tetraloop bonus */
       char tl[7] = {0}, *ts;
       strncpy(tl, string, 6);
-
+      
       if ((ts = strstr(data.vienna_params->Tetraloops, tl))) {
         return (data.vienna_params->Tetraloop_E[(ts - data.vienna_params->Tetraloops) / 7]);
       }
     } else if (size == 6) {
       char tl[9] = {0}, *ts;
       strncpy(tl, string, 8);
-
+      
       if ((ts = strstr(data.vienna_params->Hexaloops, tl))) {
         return (energy = data.vienna_params->Hexaloop_E[(ts - data.vienna_params->Hexaloops) / 9]);
       }
     } else if (size == 3) {
       char tl[6] = {0, 0, 0, 0, 0, 0}, *ts;
       strncpy(tl, string, 5);
-
+      
       if ((ts = strstr(data.vienna_params->Triloops, tl))) {
         return (data.vienna_params->Triloop_E[(ts - data.vienna_params->Triloops) / 6]);
       }
-
+      
       return (energy + (type > 2 ? data.vienna_params->TerminalAU : 0));
     }
   }
-
+  
   energy += data.vienna_params->mismatchH[type][si1][sj1];
   return energy;
 }
@@ -799,7 +799,7 @@ inline double interior_loop_energy(FFTBOR2D_DATA& data, int i, int j, int k, int
   int n1 = k - i - 1;
   int n2 = j - l - 1;
   energy = INF;
-
+  
   if (n1 > n2) {
     nl = n1;
     ns = n2;
@@ -807,41 +807,41 @@ inline double interior_loop_energy(FFTBOR2D_DATA& data, int i, int j, int k, int
     nl = n2;
     ns = n1;
   }
-
+  
   if (nl == 0) {
     return data.vienna_params->stack[type][type_2];  /* stack */
   }
-
+  
   if (ns == 0) {                    /* bulge */
     energy = (nl <= MAXLOOP) ? data.vienna_params->bulge[nl] :
              (data.vienna_params->bulge[30] + (int)(data.vienna_params->lxc * log(nl / 30.)));
-
+             
     if (nl == 1) {
       energy += data.vienna_params->stack[type][type_2];
     } else {
       if (type > 2) {
         energy += data.vienna_params->TerminalAU;
       }
-
+      
       if (type_2 > 2) {
         energy += data.vienna_params->TerminalAU;
       }
     }
-
+    
     return energy;
   } else {                          /* interior loop */
     if (ns == 1) {
       if (nl == 1) {                /* 1x1 loop */
         return data.vienna_params->int11[type][type_2][si1][sj1];
       }
-
+      
       if (nl == 2) {                /* 2x1 loop */
         if (n1 == 1) {
           energy = data.vienna_params->int21[type][type_2][si1][sq1][sj1];
         } else {
           energy = data.vienna_params->int21[type_2][type][sq1][si1][sp1];
         }
-
+        
         return energy;
       } else { /* 1xn loop */
         energy = (nl + 1 <= MAXLOOP) ? (data.vienna_params->internal_loop[nl + 1]) : (data.vienna_params->internal_loop[30] + (int)(data.vienna_params->lxc * log((nl + 1) / 30.)));
@@ -858,7 +858,7 @@ inline double interior_loop_energy(FFTBOR2D_DATA& data, int i, int j, int k, int
         return energy;
       }
     }
-
+    
     {
       /* generic interior loop (no else here!)*/
       energy = (n1 + n2 <= MAXLOOP) ? (data.vienna_params->internal_loop[n1 + n2]) : (data.vienna_params->internal_loop[30] + (int)(data.vienna_params->lxc * log((n1 + n2) / 30.)));
@@ -866,6 +866,6 @@ inline double interior_loop_energy(FFTBOR2D_DATA& data, int i, int j, int k, int
       energy += data.vienna_params->mismatchI[type][si1][sj1] + data.vienna_params->mismatchI[type_2][sq1][sp1];
     }
   }
-
+  
   return energy;
 }
