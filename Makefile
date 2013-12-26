@@ -1,6 +1,6 @@
 # Makefile for FFTbor2D
 
-CCFLAGS           = -c -ansi -pedantic -fopenmp -funroll-loops -Wall -Wextra -Wa,-q -I $(HEADER) -I $(SHARED_HEADER)
+CCFLAGS           = -c -std=c++11 -pedantic -fopenmp -funroll-loops -Wall -Wextra -Wa,-q -I $(HEADER) -I $(SHARED_HEADER)
 LDFLAGS           = -L . -L $(LIB)/ -lfftw3 -lgomp -llapack -lgslcblas -lgsl -lRNA -lmfpt -lspectral -o
 BINDIR           = ~/bin
 LIBDIR           = ~/lib
@@ -27,19 +27,19 @@ ifeq "$(GCC_GTEQ_4.9.0)" "1"
 	CCFLAGS += -fdiagnostics-color=always
 endif
 
-FFTbor2D.out: $(CODE)/fftbor2d_functions.o $(CODE)/rna_misc_functions.o $(CODE)/fftbor2d_params.o $(CODE)/fftbor2d.o
-	$(CC) $(CODE)/fftbor2d_functions.o $(CODE)/rna_misc_functions.o $(CODE)/fftbor2d_params.o $(CODE)/fftbor2d.o $(LDFLAGS) FFTbor2D.out
+FFTbor2D.out: $(CODE)/fftbor2d_functions.o $(CODE)/fftbor2d_initializers.o $(CODE)/fftbor2d_params.o $(CODE)/fftbor2d.o
+	$(CC) $(CODE)/fftbor2d_functions.o $(CODE)/fftbor2d_initializers.o $(CODE)/fftbor2d_params.o $(CODE)/fftbor2d.o $(LDFLAGS) FFTbor2D.out
 	
 $(CODE)/fftbor2d.o: $(CODE)/fftbor2d.cpp $(HEADER)/functions.h $(HEADER)/params.h
 	$(CC) $(CCFLAGS) $(CODE)/fftbor2d.cpp -o $(CODE)/fftbor2d.o
 
-$(CODE)/fftbor2d_params.o: $(CODE)/fftbor2d_params.cpp $(HEADER)/params.h $(HEADER)/rna_misc_functions.h $(SHARED_HEADER)/vienna/data_structures.h
+$(CODE)/fftbor2d_params.o: $(CODE)/fftbor2d_params.cpp $(HEADER)/params.h
 	$(CC) $(CCFLAGS) $(CODE)/fftbor2d_params.cpp -o $(CODE)/fftbor2d_params.o
-  
-$(CODE)/rna_misc_functions.o: $(CODE)/rna_misc_functions.c $(HEADER)/rna_misc_functions.h
-	$(CC) $(CCFLAGS) $(CODE)/rna_misc_functions.c -o $(CODE)/rna_misc_functions.o
 
-$(CODE)/fftbor2d_functions.o: $(CODE)/fftbor2d_functions.cpp $(HEADER)/functions.h $(SHARED_HEADER)/shared/libmfpt_header.h $(LIB)/libmfpt.a $(SHARED_HEADER)/shared/libspectral_header.h $(LIB)/libspectral.a $(HEADER)/rna_misc_functions.h $(SHARED_HEADER)/vienna/energy_par.h $(SHARED_HEADER)/vienna/functions.h
+$(CODE)/fftbor2d_initializers.o: $(CODE)/fftbor2d_initializers.cpp $(HEADER)/initializers.h $(HEADER)/functions.h
+	$(CC) $(CCFLAGS) $(CODE)/fftbor2d_initializers.cpp -o $(CODE)/fftbor2d_initializers.o
+
+$(CODE)/fftbor2d_functions.o: $(CODE)/fftbor2d_functions.cpp $(HEADER)/functions.h $(SHARED_HEADER)/shared/libmfpt_header.h $(LIB)/libmfpt.a $(SHARED_HEADER)/shared/libspectral_header.h $(LIB)/libspectral.a
 	$(CC) $(CCFLAGS) $(CODE)/fftbor2d_functions.cpp -o $(CODE)/fftbor2d_functions.o
   
 $(LIB)/libmfpt.a:
