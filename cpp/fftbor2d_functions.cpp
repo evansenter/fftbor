@@ -2,13 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include <fftw3.h>
 #include <sys/time.h>
 #include "functions.h"
 #include "initializers.h"
 #include "params.h"
-#include "shared/libmfpt_header.h"
-#include "shared/libspectral_header.h"
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -496,10 +493,6 @@ void print_output(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {
     }
     
     printf("\n");
-    // } else if (parameters.format == 'X') {
-    //   calculateKinetics(data);
-    // } else if (parameters.format == 'Y') {
-    //   populationProportion(data);
   } else {
     for (i = 0; i < matrix_size; ++i) {
       if (data.probabilities[i] > 0) {
@@ -512,116 +505,6 @@ void print_output(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {
     }
   }
 }
-
-// void calculateKinetics(int* nonZeroIndices, int nonZeroCount, double* probabilities, int rowLength, char* precisionFormat) {
-//   int error = 0;
-//   double mfpt;
-//   double** transitionMatrix;
-//   MFPT_PARAMETERS parameters;
-//   KLP_MATRIX klpMatrix;
-//   parameters                      = init_mfpt_params();
-//   parameters.seq_length      = GLOBAL_SEQ_LENGTH;
-//   parameters.distributed_epsilon  = 1e-8;
-//   parameters.bp_dist              = GLOBAL_BP_DIST;
-//   parameters.single_bp_moves_only = 1;
-//   parameters.hastings             = 1;
-//   error                           = mfpt_error_handling(parameters);
-//   klpMatrix                       = init_klp_matrix(nonZeroCount);
-//
-//   if (error) {
-//     fprintf(stderr, "Errors occured when calling the libmfpt files, terminating:\n");
-//     exit(0);
-//   }
-//
-//   convert_fftbor2d_energy_grid_to_klp_matrix(nonZeroIndices, probabilities, rowLength, klpMatrix);
-//   transitionMatrix = convert_energy_grid_to_transition_matrix(&klpMatrix, parameters);
-//   mfpt             = compute_mfpt(klpMatrix, parameters, transitionMatrix);
-//   printf(precisionFormat, mfpt);
-//   printf("\n");
-//   free_transition_matrix(transitionMatrix, nonZeroCount);
-//   free_klp_matrix(klpMatrix);
-// }
-//
-// void convert_fftbor2d_energy_grid_to_klp_matrix(int* nonZeroIndices, double* probabilities, int rowLength, KLP_MATRIX klpMatrix) {
-//   int i;
-//
-//   for (i = 0; i < klpMatrix.length; ++i) {
-//     klpMatrix.k[i] = nonZeroIndices[i] / rowLength;
-//     klpMatrix.l[i] = nonZeroIndices[i] % rowLength;
-//     klpMatrix.p[i] = probabilities[nonZeroIndices[i]];
-//   }
-// }
-//
-// void populationProportion(int* nonZeroIndices, int nonZeroCount, double* probabilities, int rowLength, char* precisionFormat) {
-//   int i, startIndex = -1, endIndex = -1, error = 0;
-//   double step_counter;
-//   double* transitionMatrix;
-//   EIGENSYSTEM eigensystem;
-//   SPECTRAL_PARAMS parameters;
-//   parameters = init_spectral_params();
-//   error      = spectral_error_handling(parameters);
-//
-//   if (error) {
-//     fprintf(stderr, "Errors occured when calling the libspectral files, terminating:\n");
-//     exit(0);
-//   }
-//
-//   for (i = 0; i < nonZeroCount; ++i) {
-//     if (nonZeroIndices[i] / rowLength == 0 && nonZeroIndices[i] % rowLength == GLOBAL_BP_DIST) {
-//       startIndex = i;
-//     }
-//
-//     if (nonZeroIndices[i] / rowLength == GLOBAL_BP_DIST && nonZeroIndices[i] % rowLength == 0) {
-//       endIndex = i;
-//     }
-//   }
-//
-//   if (startIndex < 0 || endIndex < 0) {
-//     printf("The start index (%d) or the end index (%d) in the nonZeroIndices array doesn't exist, committing digital hari-kiri.\n", startIndex, endIndex);
-//     printf("\n");
-//     printf("        /                    \n");
-//     printf("*//////{<>==================-\n");
-//     printf("        \\                   \n");
-//     exit(0);
-//   }
-//
-//   transitionMatrix = convert_fftbor2d_energy_grid_to_transition_rate_matrix(nonZeroIndices, nonZeroCount, probabilities);
-//   eigensystem      = convert_transition_matrix_to_eigenvectors(transitionMatrix, nonZeroCount);
-//   invert_matrix(eigensystem);
-//
-//   for (step_counter = parameters.start_time; step_counter <= parameters.end_time; step_counter += parameters.step_size) {
-//     printf(precisionFormat, step_counter);
-//     printf("\t");
-//     printf(precisionFormat, probability_at_time(eigensystem, pow(10, step_counter), startIndex, endIndex));
-//     printf("\t");
-//     printf(precisionFormat, probability_at_time(eigensystem, pow(10, step_counter), startIndex, startIndex));
-//     printf("\n");
-//   }
-//
-//   free_eigensystem(eigensystem);
-// }
-//
-// double* convert_fftbor2d_energy_grid_to_transition_rate_matrix(int* nonZeroIndices, int nonZeroCount, double* probabilities) {
-//   int i, j;
-//   double colSum;
-//   double* transitionMatrix;
-//   transitionMatrix = (double*)calloc(nonZeroCount * nonZeroCount, sizeof(double));
-//
-//   for (i = 0; i < nonZeroCount; ++i) {
-//     colSum = 0;
-//
-//     for (j = 0; j < nonZeroCount; ++j) {
-//       if (i != j) {
-//         transitionMatrix[i + nonZeroCount * j] = MIN2(1., probabilities[nonZeroIndices[j]] / probabilities[nonZeroIndices[i]]);
-//         colSum                                += transitionMatrix[i + nonZeroCount * j];
-//       }
-//
-//       transitionMatrix[i + nonZeroCount * i] = -colSum;
-//     }
-//   }
-//
-//   return transitionMatrix;
-// }
 
 inline int j_paired_in(int i, int j, int* base_pairs) {
   return base_pairs[j] >= i && base_pairs[j] < j ? 1 : 0;

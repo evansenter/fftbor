@@ -44,7 +44,7 @@ FFTBOR2D_PARAMS parse_fftbor2d_args(int argc, char** argv) {
   FFTBOR2D_PARAMS parameters;
   parameters = init_fftbor2d_params();
   
-  while ((c = getopt(argc, argv, "VvBbMmSsXxYyT:t:E:e:P:p:")) != -1) {
+  while ((c = getopt(argc, argv, "VvBbMmSsT:t:E:e:P:p:")) != -1) {
     switch (c) {
       case 'V':
       case 'v':
@@ -65,17 +65,7 @@ FFTBOR2D_PARAMS parse_fftbor2d_args(int argc, char** argv) {
       case 's':
         parameters.format = 'S';
         break;
-        
-      case 'X':
-      case 'x':
-        parameters.format = 'X';
-        break;
-        
-      case 'Y':
-      case 'y':
-        parameters.format = 'Y';
-        break;
-        
+                
       case 'T':
       case 't':
         if (!sscanf(optarg, "%lf", &temperature)) {
@@ -316,8 +306,6 @@ void fftbor2d_usage() {
   fprintf(stderr, "-M/m\tmatrix format, the default is disabled, presents output in a matrix format instead of a column format.\n");
   fprintf(stderr, "-S/s\tsimple output, the default is disabled, presents output in column format, for non-zero entries only with no header output (columns are: k, l, p(Z_{k,l}/Z), -RTln(Z_{k,l})).\n");
   fprintf(stderr, "-V/v\tverbose, the default is disabled, presents some debug information at runtime.\n");
-  fprintf(stderr, "-X/x\tMFPT, the default is disabled, estimates the mean-first passage time of the input RNA from structure 1 to structure 2.\n");
-  fprintf(stderr, "-Y/y\tspectral decomposition, the default is disabled, estimates the population proportion of the input structures over time.\n\n");
-  fprintf(stderr, "Note: the output formatting flags (M/m, S/s, X/x, Y/y) are mutually exclusive. If more than one is provided, *only* the last flag will be honored.\n");
+  fprintf(stderr, "Note: the output formatting flags (M/m, S/s) are mutually exclusive. If more than one is provided, *only* the last flag will be honored.\n");
   abort();
 }
