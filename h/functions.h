@@ -4,17 +4,11 @@
 #include "data_structures.h"
 #include "mfpt/data_structures.h"
 
-void   neighbors(FFTBOR2D_PARAMS&);
 void   precalculate_energies(FFTBOR2D_DATA&);
 void   evaluate_recursions(int, FFTBOR2D_DATA&, FFTBOR2D_THREADED_DATA&);
 void   populate_remaining_roots(FFTBOR2D_DATA&);
 void   solve_system(FFTBOR2D_PARAMS&, FFTBOR2D_DATA&);
 void   print_output(FFTBOR2D_PARAMS&, FFTBOR2D_DATA&);
-// void   calculateKinetics(int*, int, double*, int, char*);
-// void   convert_fftbor2d_energy_grid_to_klp_matrix(int*, double*, int, KLP_MATRIX);
-// void   populationProportion(int*, int, double*, int, char*);
-// double* convert_fftbor2d_energy_grid_to_transition_rate_matrix(int*, int, double*);
-
 int    j_paired_in(int, int, int*);
 void   populate_matrices(dcomplex*, int);
 void   flush_matrices(dcomplex**, dcomplex**, dcomplex**, dcomplex**, int);

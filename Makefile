@@ -1,7 +1,7 @@
 # Makefile for FFTbor2D
 
 CCFLAGS           = -c -std=c++11 -pedantic -fopenmp -funroll-loops -Wall -Wextra -Wa,-q -I $(HEADER) -I $(SHARED_HEADER)
-LDFLAGS           = -L . -L $(LIB)/ -L /usr/local/include -lfftw3 -lgomp -llapack -lgslcblas -lgsl -lRNA -lmfpt -lspectral -o
+LDFLAGS           = -L . -L $(LIB)/ -L /usr/local/include -lfftw3 -lgomp -llapack -lgslcblas -lgsl -lRNA -o
 BINDIR           = ~/bin
 LIBDIR           = ~/lib
 CC               = g++
@@ -27,10 +27,11 @@ ifeq "$(GCC_GTEQ_4.9.0)" "1"
 	CCFLAGS += -fdiagnostics-color=always
 endif
 
-FFTbor2D.out: $(CODE)/fftbor2d_functions.o $(CODE)/fftbor2d_initializers.o $(CODE)/fftbor2d_params.o $(CODE)/fftbor2d.o $(LIB)/libmfpt.a $(LIB)/libspectral.a
+FFTbor2D.out: $(CODE)/fftbor2d_functions.o $(CODE)/fftbor2d_initializers.o $(CODE)/fftbor2d_params.o $(CODE)/fftbor2d.o
 	$(CC) $(CODE)/fftbor2d_functions.o $(CODE)/fftbor2d_initializers.o $(CODE)/fftbor2d_params.o $(CODE)/fftbor2d.o $(LDFLAGS) FFTbor2D.out
+	ar cr $(LIB)/libfftbor2d.a $(CODE)/fftbor2d_functions.o $(CODE)/fftbor2d_params.o $(CODE)/fftbor2d_initializers.o
 	
-$(CODE)/fftbor2d.o: $(CODE)/fftbor2d.cpp $(HEADER)/functions.h $(HEADER)/params.h
+$(CODE)/fftbor2d.o: $(CODE)/fftbor2d.cpp $(HEADER)/functions.h $(HEADER)/params.h $(HEADER)/initializers.h
 	$(CC) $(CCFLAGS) $(CODE)/fftbor2d.cpp -o $(CODE)/fftbor2d.o
 
 $(CODE)/fftbor2d_params.o: $(CODE)/fftbor2d_params.cpp $(HEADER)/params.h
@@ -39,19 +40,14 @@ $(CODE)/fftbor2d_params.o: $(CODE)/fftbor2d_params.cpp $(HEADER)/params.h
 $(CODE)/fftbor2d_initializers.o: $(CODE)/fftbor2d_initializers.cpp $(HEADER)/initializers.h $(HEADER)/functions.h
 	$(CC) $(CCFLAGS) $(CODE)/fftbor2d_initializers.cpp -o $(CODE)/fftbor2d_initializers.o
 
-$(CODE)/fftbor2d_functions.o: $(CODE)/fftbor2d_functions.cpp $(HEADER)/functions.h $(HEADER)/initializers.h $(HEADER)/params.h $(SHARED_HEADER)/shared/libmfpt_header.h $(SHARED_HEADER)/shared/libspectral_header.h
+$(CODE)/fftbor2d_functions.o: $(CODE)/fftbor2d_functions.cpp $(HEADER)/functions.h $(HEADER)/initializers.h $(HEADER)/params.h
 	$(CC) $(CCFLAGS) $(CODE)/fftbor2d_functions.cpp -o $(CODE)/fftbor2d_functions.o
-  
-$(LIB)/libmfpt.a:
-	cd ../mfpt; make
-	
-$(LIB)/libspectral.a:
-	cd ../spectral; make
 
 clean:
-	rm -f $(CODE)/*.o FFTbor2D.out
+	rm -f $(CODE)/*.o $(LIB)/libfftbor2d.a FFTbor2D.out
 
 install: FFTbor2D.out
 	cp FFTbor2D.out $(BINDIR)/FFTbor2D
+	cp $(LIB)/libfftbor2d.a $(LIBDIR)
 	cp ../../misc/rna_turner1999.par ../../misc/rna_turner2004.par $(BINDIR)
 	
