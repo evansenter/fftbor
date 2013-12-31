@@ -136,7 +136,7 @@ FFTBOR2D_PARAMS parse_fftbor2d_args(int argc, char** argv) {
   return parameters;
 }
 
-void parse_fftbor2d_sequence_data(int argc, char** argv, int& argp, FFTBOR2D_PARAMS& parameters) {
+void parse_fftbor2d_sequence_data(int argc, char** argv, int argp, FFTBOR2D_PARAMS& parameters) {
   int i, char_index = 0;
   FILE* file;
   char line[MAX_LENGTH];

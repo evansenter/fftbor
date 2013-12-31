@@ -20,7 +20,6 @@ int main(int argc, char** argv) {
     gettimeofday(&start, NULL);
   }
   
-  int i, thread_id;
   FFTBOR2D_DATA data;
   FFTBOR2D_THREADED_DATA* threaded_data;
   data          = init_fftbor2d_data(parameters);
@@ -40,17 +39,7 @@ int main(int argc, char** argv) {
     gettimeofday(&start, NULL);
   }
   
-  // Start main recursions (i <= data.run_length / 2 is an optimization leveraging complex conjugates).
-  #pragma omp parallel for private(i, thread_id) shared(data, threaded_data) default(none) num_threads(parameters.max_threads)
-  
-  for (i = 0; i <= data.run_length / 2; ++i) {
-    #ifdef _OPENMP
-    thread_id = omp_get_thread_num();
-    #else
-    thread_id = 0;
-    #endif
-    evaluate_recursions(i, data, threaded_data[thread_id]);
-  }
+  evaluate_recursions_in_parallel(parameters, data, threaded_data);
   
   if (parameters.benchmark) {
     gettimeofday(&stop, NULL);

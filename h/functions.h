@@ -5,6 +5,7 @@
 #include "mfpt/data_structures.h"
 
 void   precalculate_energies(FFTBOR2D_DATA&);
+void   evaluate_recursions_in_parallel(FFTBOR2D_PARAMS&, FFTBOR2D_DATA&, FFTBOR2D_THREADED_DATA*);
 void   evaluate_recursions(int, FFTBOR2D_DATA&, FFTBOR2D_THREADED_DATA&);
 void   populate_remaining_roots(FFTBOR2D_DATA&);
 void   solve_system(FFTBOR2D_PARAMS&, FFTBOR2D_DATA&);
