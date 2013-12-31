@@ -34,7 +34,7 @@ FFTBOR2D_DATA init_fftbor2d_data(FFTBOR2D_PARAMS& parameters) {
     NULL, // int_sequence
     NULL, // can_base_pair
     NULL, // num_base_pairs
-    0,    // input_str_dist
+    0,    // bp_dist
     0,    // row_length
     0,    // run_length
     0,    // num_roots
@@ -90,8 +90,8 @@ FFTBOR2D_DATA init_fftbor2d_data(FFTBOR2D_PARAMS& parameters) {
   initialize_base_pair_count_matrix(data.num_base_pairs[1], data.int_bp[1], data.seq_length);
   
   for (i = 1; i <= data.seq_length; ++i) {
-    data.input_str_dist += (data.int_bp[0][i] > i && data.int_bp[0][i] != data.int_bp[1][i] ? 1 : 0);
-    data.input_str_dist += (data.int_bp[1][i] > i && data.int_bp[1][i] != data.int_bp[0][i] ? 1 : 0);
+    data.bp_dist += (data.int_bp[0][i] > i && data.int_bp[0][i] != data.int_bp[1][i] ? 1 : 0);
+    data.bp_dist += (data.int_bp[1][i] > i && data.int_bp[1][i] != data.int_bp[0][i] ? 1 : 0);
   }
   
   // Secondary structure data structure in the slightly different format that Vienna uses (1-indexed short array with 0 as unpaired sentinel value).
@@ -207,7 +207,7 @@ void free_fftbor2d_data(FFTBOR2D_DATA& data) {
 void print_fftbor2d_data(FFTBOR2D_DATA& data) {
   printf("    RT\t\t\t%f\n",             data.RT);
   printf("    precision_format\t%s\n",   data.precision_format == NULL ? "*missing*" : data.precision_format);
-  printf("    input_str_dist\t%d\n",     data.input_str_dist);
+  printf("    bp_dist\t%d\n",     data.bp_dist);
   printf("    row_length\t\t%d\n",       data.row_length);
   printf("    run_length\t\t%d\n",       data.run_length);
   printf("    num_roots\t\t%d\n",        data.num_roots);

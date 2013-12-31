@@ -28,6 +28,24 @@
 // #define STRUCTURE_COUNT 1
 #define DO_WORK
 
+FFTBOR2D_DATA fftbor2d_from_params(FFTBOR2D_PARAMS parameters) {
+  FFTBOR2D_DATA data;
+  FFTBOR2D_THREADED_DATA* threaded_data;
+  
+  data          = init_fftbor2d_data(parameters);
+  threaded_data = init_fftbor2d_threaded_data(parameters, data);
+  
+  precalculate_energies(data);
+  evaluate_recursions_in_parallel(parameters, data, threaded_data);
+  populate_remaining_roots(data);
+  solve_system(parameters, data);
+  print_output(parameters, data);
+  
+  free_fftbor2d_threaded_data(threaded_data, parameters.max_threads);
+  
+  return data;
+}
+
 void precalculate_energies(FFTBOR2D_DATA& data) {
   int i, j, k, l, d, position;
   #if MEASURE_TWIDDLE
@@ -305,7 +323,7 @@ void populate_remaining_roots(FFTBOR2D_DATA& data) {
   
   #endif
   
-  if (data.input_str_dist % 2) {
+  if (data.bp_dist % 2) {
     for (i = 0; i < data.run_length; ++i) {
       data.solutions[i] = COMPLEX_CONJ(data.roots_of_unity[i]) * data.solutions[i];
     }
@@ -327,7 +345,7 @@ void populate_remaining_roots(FFTBOR2D_DATA& data) {
 
 void solve_system(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {
   int i, x, y;
-  int offset              = data.input_str_dist % 2 ? 1 : 0;
+  int offset              = data.bp_dist % 2 ? 1 : 0;
   double sum              = 0;
   double normal_sum       = 0;
   fftw_complex* signal    = (fftw_complex*)calloc(data.run_length, sizeof(fftw_complex));
@@ -368,9 +386,9 @@ void solve_system(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {
     // Probabilities must be > 0 and satisfy the triangle inequality.
     if (
       data.solutions[i].real() > 0 &&
-      x + y >= data.input_str_dist &&
-      x + data.input_str_dist >= y &&
-      y + data.input_str_dist >= x
+      x + y >= data.bp_dist &&
+      x + data.bp_dist >= y &&
+      y + data.bp_dist >= x
     ) {
       data.non_zero_indices[data.non_zero_count++] = 2 * i + offset;
       data.probabilities[2 * i + offset]           = data.solutions[i].real();
@@ -402,7 +420,7 @@ void print_output(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {
   
   if (parameters.format == 'B') {
     printf("%s\n%s\n%s\n", parameters.sequence, parameters.structure_1, parameters.structure_2);
-    printf("%d,%d\n", data.input_str_dist, data.row_length);
+    printf("%d,%d\n", data.bp_dist, data.row_length);
     printf("k\tl\tp(Z_{k,l}/Z)\t-RTln(Z_{k,l})\n");
   }
   
@@ -443,11 +461,11 @@ void populate_matrices(dcomplex* roots_of_unity, int num_roots) {
   }
 }
 
-inline void flush_matrices(dcomplex** Z, dcomplex** ZB, dcomplex** ZM, dcomplex** ZM1, int sequence_length) {
+inline void flush_matrices(dcomplex** Z, dcomplex** ZB, dcomplex** ZM, dcomplex** ZM1, int seq_length) {
   int i, j;
   
-  for (i = 0; i <= sequence_length; ++i) {
-    for (j = 0; j <= sequence_length; ++j) {
+  for (i = 0; i <= seq_length; ++i) {
+    for (j = 0; j <= seq_length; ++j) {
       if (i > 0 && j > 0 && abs(j - i) <= MIN_PAIR_DIST) {
         Z[i][j] = ONE_C;
       } else {

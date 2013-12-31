@@ -30,7 +30,7 @@ typedef struct { // Variables are sorted by the order they get instantiated.
   short*    int_sequence;
   int**     can_base_pair;
   int***    num_base_pairs;
-  int       input_str_dist;
+  int       bp_dist;
   int       row_length;
   int       run_length;
   int       num_roots;

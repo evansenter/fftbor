@@ -4,6 +4,7 @@
 #include "data_structures.h"
 #include "mfpt/data_structures.h"
 
+FFTBOR2D_DATA fftbor2d_from_params(FFTBOR2D_PARAMS);
 void   precalculate_energies(FFTBOR2D_DATA&);
 void   evaluate_recursions_in_parallel(FFTBOR2D_PARAMS&, FFTBOR2D_DATA&, FFTBOR2D_THREADED_DATA*);
 void   evaluate_recursions(int, FFTBOR2D_DATA&, FFTBOR2D_THREADED_DATA&);
@@ -23,7 +24,7 @@ double hairpin_loop_energy(FFTBOR2D_DATA&, int, int, int, short, short, char*);
 double interior_loop_energy(FFTBOR2D_DATA&, int, int, int, int, int, int, short, short, short, short);
 
 extern "C" {
-  int* get_iindx(unsigned int sequence_length);
+  int* get_iindx(unsigned int seq_length);
   unsigned int* maximumMatchingConstraint(const char* sequence, short* vienna_bp);
 }
 
