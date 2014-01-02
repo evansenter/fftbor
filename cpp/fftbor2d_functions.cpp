@@ -28,7 +28,7 @@
 // #define STRUCTURE_COUNT 1
 #define DO_WORK
 
-FFTBOR2D_DATA fftbor2d_from_params(FFTBOR2D_PARAMS parameters) {
+FFTBOR2D_DATA fftbor2d_from_params(FFTBOR2D_PARAMS& parameters) {
   FFTBOR2D_DATA data;
   FFTBOR2D_THREADED_DATA* threaded_data;
   
@@ -130,7 +130,7 @@ void precalculate_energies(FFTBOR2D_DATA& data) {
   #endif
 }
 
-void evaluate_recursions_in_parallel(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data, FFTBOR2D_THREADED_DATA* threaded_data) {
+void evaluate_recursions_in_parallel(const FFTBOR2D_PARAMS parameters, FFTBOR2D_DATA& data, FFTBOR2D_THREADED_DATA* threaded_data) {
   int i, thread_id;
   
   // Start main recursions (i <= data.run_length / 2 is an optimization leveraging complex conjugates).
@@ -342,7 +342,7 @@ void populate_remaining_roots(FFTBOR2D_DATA& data) {
   }
 }
 
-void solve_system(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {
+void solve_system(const FFTBOR2D_PARAMS parameters, FFTBOR2D_DATA& data) {
   int i, x, y;
   int offset              = data.bp_dist % 2 ? 1 : 0;
   double sum              = 0;
@@ -413,7 +413,7 @@ void solve_system(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {
   #endif
 }
 
-void print_output(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {
+void print_output(const FFTBOR2D_PARAMS parameters, const FFTBOR2D_DATA data) {
   int i;
   int matrix_size = (int)pow((double)data.row_length, 2);
   
@@ -447,7 +447,7 @@ void print_output(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {
   }
 }
 
-inline int j_paired_in(int i, int j, int* base_pairs) {
+inline int j_paired_in(int i, int j, const int* base_pairs) {
   return base_pairs[j] >= i && base_pairs[j] < j ? 1 : 0;
 }
 
@@ -478,58 +478,47 @@ inline void flush_matrices(dcomplex** Z, dcomplex** ZB, dcomplex** ZM, dcomplex*
   }
 }
 
-int* get_bp_list(char* sec_str) {
-  /* Returns list L of ordered pairs (i,j) where i<j and
-   * positions i,j occupied by balancing parentheses
-   * For linear time efficiency, use stack
-   * Assume that secStr is string consisting of '(',')' and '.'
-   * Values -2,-1 returned mean NOT well balanced
-   * -2 means too many ( with respect to )
-   * -1 means too many ) with respect to (
-   * If 1,-1 not returned, then return (possibly empty) list */
-  int len = strlen(sec_str);
-  int* s = (int*) calloc(len / 2, sizeof(int)); //empty stack
-  int* l = (int*) calloc(2 * len * (len - 1) / 2 + 1, sizeof(int)); /* initially empty
-                   * list of base
-                   * pairs */
-  int j, k = 0;
-  char ch;
-  /* First position holds the number of base pairs */
-  l[0] = 0;
+int* get_bp_list(char* structure) {
+  int i, stack_pointer = 0;
+  char c;
   
-  for (j = 1; j <= len; j++) {
-    l[j] = -1;
+  int length = strlen(structure);
+  int* stack = (int*)calloc(length / 2, sizeof(int));
+  int* list  = (int*)calloc(2 * length * (length - 1) / 2 + 1, sizeof(int));
+  
+  for (i = 1; i <= length; i++) {
+    list[i] = -1;
   }
   
-  for (j = 1; j <= len; j++) {
-    ch = sec_str[j - 1];
+  for (i = 1; i <= length; i++) {
+    c = structure[i - 1];
     
-    if (ch == '(') {
-      s[k++] = j;
-    } else if (ch == ')') {
-      if (k == 0) {
+    if (c == '(') {
+      stack[stack_pointer++] = i;
+    } else if (c == ')') {
+      if (stack_pointer == 0) {
         /* There is something wrong with the structure. */
-        l[0] = -1;
-        return l;
+        list[0] = -1;
+        return list;
       } else {
-        l[s[--k]] = j;
-        l[j] = s[k];
-        l[0]++;
+        list[stack[--stack_pointer]] = i;
+        list[i] = stack[stack_pointer];
+        list[0]++;
       }
     }
   }
   
-  if (k != 0) {
+  if (stack_pointer != 0) {
     /* There is something wrong with the structure. */
-    l[0] = -2;
+    list[0] = -2;
   }
   
-  free(s);
-  return l;
+  free(stack);
+  return list;
 }
 
 /* Number of base pairs in the region i to j in bpList */
-int num_bp(int i, int j, int* bp_list) {
+int num_bp(int i, int j, const int* bp_list) {
   int n = 0;
   int k;
   
@@ -576,7 +565,7 @@ void translate_to_int_sequence(char* a, short* int_sequence) {
   }
 }
 
-void initialize_base_pair_count_matrix(int** num_base_pairs, int* bp_list, int n) {
+void initialize_base_pair_count_matrix(int** num_base_pairs, const int* bp_list, int n) {
   int d, i, j;
   
   for (i = 1; i <= n; ++i) {

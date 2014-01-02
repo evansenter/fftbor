@@ -252,7 +252,7 @@ char* find_energy_file(char* energy_file_name) {
   return energy_location;
 }
 
-int fftbor2d_error_handling(FFTBOR2D_PARAMS& parameters) {
+int fftbor2d_error_handling(const FFTBOR2D_PARAMS parameters) {
   int error = 0;
   
   if (!TRIEQUALS(strlen(parameters.sequence), strlen(parameters.structure_1), strlen(parameters.structure_2))) {
@@ -277,7 +277,7 @@ int fftbor2d_error_handling(FFTBOR2D_PARAMS& parameters) {
   return error;
 }
 
-void debug_fftbor2d_parameters(FFTBOR2D_PARAMS& parameters) {
+void debug_fftbor2d_parameters(const FFTBOR2D_PARAMS parameters) {
   printf("    sequence\t\t\t%s\n",      parameters.sequence    == NULL ? "*missing*" : parameters.sequence);
   printf("    structure_1\t\t\t%s\n",   parameters.structure_1 == NULL ? "*missing*" : parameters.structure_1);
   printf("    structure_2\t\t\t%s\n",   parameters.structure_2 == NULL ? "*missing*" : parameters.structure_2);

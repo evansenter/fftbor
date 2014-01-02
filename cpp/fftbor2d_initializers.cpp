@@ -9,13 +9,13 @@
 #include <omp.h>
 #endif
 
-#define DELTA_2D(expression1, expression2, n) ((expression1) * (n) + (expression2))
+#define ROW_ORDER(expression_1, expression_2, n) ((expression_1) * (n) + (expression_2))
 // #define OPENMP_DEBUG  1
 // #define SINGLE_THREAD 1
 
 extern double temperature;
 
-FFTBOR2D_DATA init_fftbor2d_data(FFTBOR2D_PARAMS& parameters) {
+FFTBOR2D_DATA init_fftbor2d_data(const FFTBOR2D_PARAMS parameters) {
   int i, j;
   
   FFTBOR2D_DATA data = {
@@ -108,7 +108,7 @@ FFTBOR2D_DATA init_fftbor2d_data(FFTBOR2D_PARAMS& parameters) {
     data.delta_table[i] = (int*)calloc(data.seq_length + 1, sizeof(int));
     
     for (j = 0; j <= data.seq_length; ++j) {
-      data.delta_table[i][j] = DELTA_2D(i, j, data.row_length);
+      data.delta_table[i][j] = ROW_ORDER(i, j, data.row_length);
     }
   }
   
@@ -220,18 +220,18 @@ int minimum_row_length(const FFTBOR2D_DATA data) {
   return minimal_row_length;
 }
 
-void print_fftbor2d_data(FFTBOR2D_DATA& data) {
-  printf("    RT\t\t\t%f\n",             data.RT);
-  printf("    precision_format\t%s\n",   data.precision_format == NULL ? "*missing*" : data.precision_format);
-  printf("    bp_dist\t%d\n",     data.bp_dist);
-  printf("    row_length\t\t%d\n",       data.row_length);
-  printf("    run_length\t\t%d\n",       data.run_length);
-  printf("    num_roots\t\t%d\n",        data.num_roots);
-  printf("    partition_function\t%f\n", data.partition_function);
-  printf("    non_zero_count\t%d\n",     data.non_zero_count);
+void print_fftbor2d_data(const FFTBOR2D_DATA data) {
+  printf("    RT\t\t\t\t%f\n",             data.RT);
+  printf("    precision_format\t\t%s\n",   data.precision_format == NULL ? "*missing*" : data.precision_format);
+  printf("    bp_dist\t\t\t%d\n",          data.bp_dist);
+  printf("    row_length\t\t\t%d\n",       data.row_length);
+  printf("    run_length\t\t\t%d\n",       data.run_length);
+  printf("    num_roots\t\t\t%d\n",        data.num_roots);
+  printf("    partition_function\t\t%f\n", data.partition_function);
+  printf("    non_zero_count\t\t%d\n",     data.non_zero_count);
 }
 
-FFTBOR2D_THREADED_DATA* init_fftbor2d_threaded_data(FFTBOR2D_PARAMS& parameters, FFTBOR2D_DATA& data) {
+FFTBOR2D_THREADED_DATA* init_fftbor2d_threaded_data(FFTBOR2D_PARAMS& parameters, const FFTBOR2D_DATA data) {
   int i, j;
   FFTBOR2D_THREADED_DATA* threaded_data;
   #if defined(_OPENMP) && defined(OPENMP_DEBUG)
