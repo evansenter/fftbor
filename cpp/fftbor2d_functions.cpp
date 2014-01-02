@@ -39,7 +39,6 @@ FFTBOR2D_DATA fftbor2d_from_params(FFTBOR2D_PARAMS parameters) {
   evaluate_recursions_in_parallel(parameters, data, threaded_data);
   populate_remaining_roots(data);
   solve_system(parameters, data);
-  print_output(parameters, data);
   
   free_fftbor2d_threaded_data(threaded_data, parameters.max_threads);
   

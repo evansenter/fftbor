@@ -278,16 +278,16 @@ int fftbor2d_error_handling(FFTBOR2D_PARAMS& parameters) {
 }
 
 void debug_fftbor2d_parameters(FFTBOR2D_PARAMS& parameters) {
-  printf("    sequence\t\t%s\n",    parameters.sequence    == NULL ? "*missing*" : parameters.sequence);
-  printf("    structure_1\t\t%s\n", parameters.structure_1 == NULL ? "*missing*" : parameters.structure_1);
-  printf("    structure_2\t\t%s\n", parameters.structure_2 == NULL ? "*missing*" : parameters.structure_2);
-  printf("    seq_length\t\t%d\n",  parameters.seq_length);
-  printf("    max_threads\t\t%d\n", parameters.max_threads);
-  printf("    format\t\t%c\n",      parameters.format);
-  printf("(t) temperature\t\t%f\n", temperature);
-  printf("(p) precision\t\t%d\n",   parameters.precision);
-  printf("(b) benchmark\t\t%s\n",   parameters.benchmark ? "Yes" : "No");
-  printf("(e) energy_file\t\t%s\n", parameters.energy_file);
+  printf("    sequence\t\t\t%s\n",      parameters.sequence    == NULL ? "*missing*" : parameters.sequence);
+  printf("    structure_1\t\t\t%s\n",   parameters.structure_1 == NULL ? "*missing*" : parameters.structure_1);
+  printf("    structure_2\t\t\t%s\n",   parameters.structure_2 == NULL ? "*missing*" : parameters.structure_2);
+  printf("    seq_length\t\t\t%d\n",    parameters.seq_length);
+  printf("    max_threads\t\t\t%d\n",   parameters.max_threads);
+  printf("    format\t\t\t%c\n",        parameters.format);
+  printf("(t) temperature\t\t\t%.1f\n", temperature);
+  printf("(p) precision\t\t\t%d\n",     parameters.precision);
+  printf("(b) benchmark\t\t\t%s\n",     parameters.benchmark ? "Yes" : "No");
+  printf("(e) energy_file\t\t\t%s\n",   parameters.energy_file);
 }
 
 void fftbor2d_usage() {

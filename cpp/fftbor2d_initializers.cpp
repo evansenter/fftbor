@@ -17,11 +17,7 @@ extern double temperature;
 
 FFTBOR2D_DATA init_fftbor2d_data(FFTBOR2D_PARAMS& parameters) {
   int i, j;
-  short** vienna_bp;
-  int* index;
-  unsigned int* max_bp_1;
-  unsigned int* max_bp_2;
-  int minimal_row_length;
+  
   FFTBOR2D_DATA data = {
     NULL, // sequence
     NULL, // structure_1
@@ -94,27 +90,7 @@ FFTBOR2D_DATA init_fftbor2d_data(FFTBOR2D_PARAMS& parameters) {
     data.bp_dist += (data.int_bp[1][i] > i && data.int_bp[1][i] != data.int_bp[0][i] ? 1 : 0);
   }
   
-  // Secondary structure data structure in the slightly different format that Vienna uses (1-indexed short array with 0 as unpaired sentinel value).
-  vienna_bp = (short**)calloc(2, sizeof(short*));
-  
-  for (i = 0; i < 2; ++i) {
-    vienna_bp[i]    = (short*)calloc(data.seq_length + 1, sizeof(short));;
-    vienna_bp[i][0] = data.seq_length;
-    
-    for (j = 1; j <= data.seq_length; ++j) {
-      vienna_bp[i][j] = data.int_bp[i][j] > 0 ? data.int_bp[i][j] : 0;
-    }
-  }
-  
-  // Index for moving in quadratic distancy dimensions (from Vienna 2.1.2)
-  index = get_iindx((unsigned)data.seq_length);
-  // Maximally saturated structure constrained with the input structures.
-  max_bp_1 = maximumMatchingConstraint(data.sequence, vienna_bp[0]);
-  max_bp_2 = maximumMatchingConstraint(data.sequence, vienna_bp[1]);
-  // Minimize the row size to the max BP distance.
-  minimal_row_length = MAX2(data.int_bp[0][0] + max_bp_1[index[1] - data.seq_length], data.int_bp[1][0] + max_bp_2[index[1] - data.seq_length]);
-  // Note: row_length = (least even number >= minimal_row_length) + 1 (for a seq. with minimal_row_length = 9, row_length = (0..10).length = 11)
-  data.row_length = (minimal_row_length % 2 ? minimal_row_length + 1 : minimal_row_length) + 1;
+  data.row_length = minimum_row_length(data);
   // Note: run_length = (least number div. 4 >= row_length ^ 2) / 2 (for a seq. with row_length = 11, run_length = (11 ^ 2 + 3) / 2 = 62)
   data.run_length = ((int)pow((double)data.row_length, 2) + ((int)pow((double)data.row_length, 2) % 4)) / 2;
   data.num_roots  = data.run_length * 2;
@@ -202,6 +178,46 @@ void free_fftbor2d_data(FFTBOR2D_DATA& data) {
   free(data.EMB);
   free(data.EIL);
   free(data.EM1);
+}
+
+int minimum_row_length(const FFTBOR2D_DATA data) {
+  int i, j;
+  int* index;
+  unsigned int* max_bp_1;
+  unsigned int* max_bp_2;
+  short** vienna_bp;
+  int minimal_row_length;
+  
+  // Secondary structure data structure in the slightly different format that Vienna uses (1-indexed short array with 0 as unpaired sentinel value).
+  vienna_bp = (short**)calloc(2, sizeof(short*));
+  
+  for (i = 0; i < 2; ++i) {
+    vienna_bp[i]    = (short*)calloc(data.seq_length + 1, sizeof(short));;
+    vienna_bp[i][0] = data.seq_length;
+    
+    for (j = 1; j <= data.seq_length; ++j) {
+      vienna_bp[i][j] = data.int_bp[i][j] > 0 ? data.int_bp[i][j] : 0;
+    }
+  }
+  
+  // Index for moving in quadratic distancy dimensions (from Vienna 2.1.2)
+  index = get_iindx((unsigned)data.seq_length);
+  // Maximally saturated structure constrained with the input structures.
+  max_bp_1 = maximumMatchingConstraint(data.sequence, vienna_bp[0]);
+  max_bp_2 = maximumMatchingConstraint(data.sequence, vienna_bp[1]);
+  // Minimize the row size to the max BP distance.
+  minimal_row_length  = MAX2(data.int_bp[0][0] + max_bp_1[index[1] - data.seq_length], data.int_bp[1][0] + max_bp_2[index[1] - data.seq_length]);
+  // Note: row_length = (least even number >= minimal_row_length) + 1 (for a seq. with minimal_row_length = 9, row_length = (0..10).length = 11)
+  minimal_row_length += minimal_row_length % 2 ? 2 : 1;
+  
+  free(index);
+  free(max_bp_1);
+  free(max_bp_2);
+  free(vienna_bp[0]);
+  free(vienna_bp[1]);
+  free(vienna_bp);
+  
+  return minimal_row_length;
 }
 
 void print_fftbor2d_data(FFTBOR2D_DATA& data) {
