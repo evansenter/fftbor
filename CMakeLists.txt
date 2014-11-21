@@ -32,6 +32,8 @@ cxx_compiler_flag_test(CXX_STD_CXX98 "-std=c++98" "" 1)
 cxx_compiler_flag_test(CXX_PEDANTIC "-pedantic" "" 0)
 cxx_compiler_flag_test(CXX_WALL "-Wall" "" 0)
 cxx_compiler_flag_test(CXX_WEXTRA "-Wextra" "" 0)
+cxx_compiler_flag_test(CXX_WNO_WRITE_STR "-Wno-write-strings" "" 0)
+cxx_compiler_flag_test(CXX_WVLA "-Wno-vla" "" 0)
 cxx_compiler_flag_test(CXX_MARCH "-march=native" "" 0)
 cxx_compiler_flag_test(CXX_CLANG_ASSEMBLER "-Wa,-q" "" 0)
 
@@ -53,7 +55,7 @@ find_library(RNA libRNA.a PATHS)
 
 include_directories(${FFTW_INCLUDES})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -Wno-write-strings -Wno-vla")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
 add_executable(FFTbor main.cpp delta.cpp misc.cpp)
 
