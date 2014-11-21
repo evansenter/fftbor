@@ -29,13 +29,16 @@ macro(cxx_compiler_flag_test flag_name flag fallback_flag required)
 endmacro(cxx_compiler_flag_test)
 
 cxx_compiler_flag_test(CXX_STD_CXX98 "-std=c++98" "" 1)
-cxx_compiler_flag_test(CXX_PEDANTIC "-pedantic" "" 0)
 cxx_compiler_flag_test(CXX_WALL "-Wall" "" 0)
 cxx_compiler_flag_test(CXX_WEXTRA "-Wextra" "" 0)
 cxx_compiler_flag_test(CXX_WNO_WRITE_STR "-Wno-write-strings" "" 0)
 cxx_compiler_flag_test(CXX_WVLA "-Wno-vla" "" 0)
 cxx_compiler_flag_test(CXX_MARCH "-march=native" "" 0)
 cxx_compiler_flag_test(CXX_CLANG_ASSEMBLER "-Wa,-q" "" 0)
+
+if (CXX_WVLA)
+  cxx_compiler_flag_test(CXX_PEDANTIC "-pedantic" "" 0)
+endif()
 
 if (CMAKE_BUILD_TYPE_UPPER STREQUAL "DEBUG")
   cxx_compiler_flag_test(CXX_DEBUG "-g" "" 1)
