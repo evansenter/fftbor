@@ -21,7 +21,7 @@
 #define WINDOW_SIZE(i) (MIN_WINDOW_SIZE + i)
 #define NUM_WINDOWS (WINDOW_SIZE - MIN_WINDOW_SIZE + 1)
 #define ROOT_POW(i, pow, n) (rootsOfUnity[(i * pow) % (n + 1)])
-#define FFTBOR_DEBUG 0
+#define FFTBOR_DEBUG 1
 #define ENERGY_DEBUG (0 && !root)
 #define MIN2(A, B) ((A) < (B) ? (A) : (B))
 
@@ -41,7 +41,7 @@ void neighbours(char *inputSequence, int *bpList) {
   int  *intSequence = (int *)xcalloc(sequenceLength + 1, sizeof(int));
   int **canBasePair;
   int **numBasePairs;
-  
+
   // Load energy parameters.
   read_parameter_file(energyfile);
   P = scale_parameters();
@@ -51,41 +51,41 @@ void neighbours(char *inputSequence, int *bpList) {
 	sequence[0] = '@';
   strncpy(sequence + 1, inputSequence, sequenceLength);
   translateToIntSequence(inputSequence, intSequence);
-  
+
   // Initialize canBasePair lookup for all 4x4 nt. combinations.
   canBasePair = (int **)xcalloc(5, sizeof(int *));
   for (i = 0; i < 5; ++i) {
     canBasePair[i] = (int *)xcalloc(5, sizeof(int));
   }
   initializeCanBasePair(canBasePair);
-  
+
   // Initialize numBasePairs lookup for all (i, j) combinations.
   numBasePairs = (int **)xcalloc(sequenceLength + 1, sizeof(int *));
   for (i = 1; i <= sequenceLength; i++) {
     numBasePairs[i] = (int *)xcalloc(sequenceLength + 1, sizeof(int));
   }
   initializeBasePairCounts(numBasePairs, bpList, sequenceLength);
-  
+
   // Determine max bp. distance to determine how many roots of unity to generate.
   for (i = 1; i <= sequenceLength; ++i) {
     runLength += (bpList[i] > i ? 1 : 0);
   }
   runLength += floor((sequenceLength - MIN_PAIR_DIST) / 2);
-  
+
   dcomplex **Z            = new dcomplex*[sequenceLength + 1];
   dcomplex **ZB           = new dcomplex*[sequenceLength + 1];
   dcomplex **ZM           = new dcomplex*[sequenceLength + 1];
   dcomplex **ZM1          = new dcomplex*[sequenceLength + 1];
   dcomplex ***solutions   = new dcomplex**[NUM_WINDOWS];
   dcomplex *rootsOfUnity  = new dcomplex[runLength + 1];
-  
+
   populateMatrices(Z, ZB, ZM, ZM1, solutions, rootsOfUnity, sequenceLength, runLength);
-  
+
   // Start main recursions (root <= ceil(runLength / 2.0) is an optimization for roots of unity).
   for (root = 0; root <= ceil(runLength / 2.0); ++root) {
     evaluateZ(root, Z, ZB, ZM, ZM1, solutions, rootsOfUnity, inputSequence, sequence, intSequence, bpList, canBasePair, numBasePairs, sequenceLength, runLength, RT);
   }
-  
+
 	if (FFTBOR_DEBUG) {
 		std::cout << std::endl;
     printf("Number of structures: %.0f\n", Z[sequenceLength][1].real());
@@ -94,27 +94,27 @@ void neighbours(char *inputSequence, int *bpList) {
   // Convert point-value solutions to coefficient form w/ inverse DFT.
   populateRemainingRoots(solutions, sequenceLength, runLength, root);
   solveSystem(solutions, sequence, bpList, sequenceLength, runLength);
-  
+
   free(intSequence);
 }
 
 void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex ***solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, int *intSequence, int *bpList, int *canBasePair[5], int **numBasePairs, int sequenceLength, int runLength, double RT) {
   int i, j, k, l, d, delta;
   double energy;
-  
+
   flushMatrices(Z, ZB, ZM, ZM1, sequenceLength);
-    
+
   if (ENERGY_DEBUG) {
     printf("RT: %f\n", RT / 100);
   }
-  
+
   for (d = MIN_PAIR_DIST + 1; d < sequenceLength; ++d) {
     for (i = 1; i <= sequenceLength - d; ++i) {
       j = i + d;
-      
+
       if (canBasePair[intSequence[i]][intSequence[j]]) {
         // ****************************************************************************
-        // Solve ZB 
+        // Solve ZB
         // ****************************************************************************
         // In a hairpin, [i + 1, j - 1] unpaired.
         energy    = hairpinloop(i, j, canBasePair[intSequence[i]][intSequence[j]], intSequence[i + 1], intSequence[j - 1], inputSequence);
@@ -126,47 +126,50 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
         }
 
         if (STRUCTURE_COUNT) {
+          printf("zb_1\t%.0f\t%.0f\t%d\t%d\n", ZB[j][i].real(), (ZB[j][i] + 1.).real(), i, j);
           ZB[j][i] += 1;
         }
 
         // Interior loop / bulge / stack / multiloop.
         for (k = i + 1; k < min2(i + 30, j - MIN_PAIR_DIST - 2) + 1; ++k) {
           // There can't be more than 30 unpaired bases between i and k, and there must be room between k and j for l
-          for (l = max2(k + MIN_PAIR_DIST + 1, j - (MAX_INTERIOR_DIST - (k - i))); l < j; ++l) { 
+          for (l = max2(k + MIN_PAIR_DIST + 1, j - (MAX_INTERIOR_DIST - (k - i))); l < j; ++l) {
             // l needs to at least have room to pair with k, and there can be at most 30 unpaired bases between (i, k) + (l, j), with l < j
             if (canBasePair[intSequence[k]][intSequence[l]]) {
               // In interior loop / bulge / stack with (i, j) and (k, l), (i + 1, k - 1) and (l + 1, j - 1) are all unpaired.
               energy    = interiorloop(i, j, k, l, canBasePair[intSequence[i]][intSequence[j]], canBasePair[intSequence[l]][intSequence[k]], intSequence[i + 1], intSequence[l + 1], intSequence[j - 1], intSequence[k - 1]);
               delta     = numBasePairs[i][j] - numBasePairs[k][l] + jPairedTo(i, j, bpList);
               ZB[i][j] += ZB[k][l] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
-                
+
               if (ENERGY_DEBUG) {
                 printf("%+f: GetInteriorStackingAndBulgeEnergy(%c (%d), %c (%d), %c (%d), %c (%d));\n", energy / 100, sequence[i], i, sequence[j], j, sequence[k], k, sequence[l], l);
               }
 
               if (STRUCTURE_COUNT) {
+                printf("zb_2\t%.0f\t%.0f\t%d\t%d\t%d\t%d\n", ZB[j][i].real(), (ZB[j][i] + ZB[l][k]).real(), i, j, k, l);
                 ZB[j][i] += ZB[l][k];
               }
             }
           }
         }
-        
+
         for (k = i + MIN_PAIR_DIST + 3; k < j - MIN_PAIR_DIST - 1; ++k) {
           // If (i, j) is the closing b.p. of a multiloop, and (k, l) is the rightmost base pair, there is at least one hairpin between (i + 1, k - 1)
           energy    = P->MLclosing + P->MLintern[canBasePair[intSequence[i]][intSequence[j]]];
           delta     = numBasePairs[i][j] - numBasePairs[i + 1][k - 1] - numBasePairs[k][j - 1] + jPairedTo(i, j, bpList);
           ZB[i][j] += ZM[i + 1][k - 1] * ZM1[k][j - 1] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
-                 
+
           if (ENERGY_DEBUG) {
             printf("%+f: MultiloopA + MultiloopB;\n", energy / 100);
           }
 
           if (STRUCTURE_COUNT) {
+            printf("zb_3\t%.0f\t%.0f\t%d\t%d\t%d\n", ZB[j][i].real(), (ZB[j][i] + ZM[k - 1][i + 1] * ZM1[j - 1][k]).real(), i, j, k);
             ZB[j][i] += ZM[k - 1][i + 1] * ZM1[j - 1][k];
-          }  
+          }
         }
       }
-      
+
       // ****************************************************************************
       // Solve ZM1
       // ****************************************************************************
@@ -176,17 +179,18 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
           energy     = P->MLbase * (j - k) + P->MLintern[canBasePair[intSequence[i]][intSequence[k]]];
           delta      = numBasePairs[i][j] - numBasePairs[i][k];
           ZM1[i][j] += ZB[i][k] * exp(-energy / RT);
-          
+
           if (ENERGY_DEBUG) {
             printf("%+f: MultiloopB + MultiloopC * (%d - %d);\n", energy / 100, j, k);
           }
-          
+
           if (STRUCTURE_COUNT) {
+            printf("zm1_1\t%.0f\t%.0f\t%d\t%d\t%d\n", ZM1[j][i].real(), (ZM1[j][i] + ZB[k][i]).real(), i, j, k);
             ZM1[j][i] += ZB[k][i];
           }
         }
       }
-        
+
       // ****************************************************************************
       // Solve ZM
       // ****************************************************************************
@@ -201,6 +205,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
         }
 
         if (STRUCTURE_COUNT) {
+          printf("zm_1\t%.0f\t%.0f\t%d\t%d\t%d\n", ZM[j][i].real(), (ZM[j][i] + ZM1[j][k]).real(), i, j, k);
           ZM[j][i] += ZM1[j][k];
         }
 
@@ -215,11 +220,12 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
           }
 
           if (STRUCTURE_COUNT) {
+            printf("zm_2\t%.0f\t%.0f\t%d\t%d\t%d\n", ZM[j][i].real(), (ZM[j][i] + ZM[k - 1][i] * ZM1[j][k]).real(), i, j, k);
             ZM[j][i] += ZM[k - 1][i] * ZM1[j][k];
           }
         }
       }
-        
+
       // **************************************************************************
       // Solve Z
       // **************************************************************************
@@ -227,10 +233,11 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
       Z[i][j] += Z[i][j - 1] * ROOT_POW(root, delta, runLength);
 
       if (STRUCTURE_COUNT) {
+        printf("z_1\t%.0f\t%.0f\t%d\t%d\n", Z[j][i].real(), (Z[j][i] + Z[j - 1][i]).real(), i, j);
         Z[j][i] += Z[j - 1][i];
       }
 
-      for (k = i; k < j - MIN_PAIR_DIST; ++k) { 
+      for (k = i; k < j - MIN_PAIR_DIST; ++k) {
         // (k, j) is the rightmost base pair in (i, j)
         if (canBasePair[intSequence[k]][intSequence[j]]) {
           energy = canBasePair[intSequence[k]][intSequence[j]] > 2 ? P->TerminalAU : 0;
@@ -238,12 +245,13 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
           if (ENERGY_DEBUG) {
             printf("%+f: %c-%c == (2 || 3) ? 0 : GUAU_penalty;\n", energy / 100, sequence[k], sequence[j]);
           }
-            
+
           if (k == i) {
             delta    = numBasePairs[i][j] - numBasePairs[k][j];
             Z[i][j] += ZB[k][j] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
 
             if (STRUCTURE_COUNT) {
+              printf("z_2\t%.0f\t%.0f\t%d\t%d\t%d\n", Z[j][i].real(), (Z[j][i] + ZB[j][k]).real(), i, j, k);
               Z[j][i] += ZB[j][k];
             }
           } else {
@@ -251,6 +259,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
             Z[i][j] += Z[i][k - 1] * ZB[k][j] * ROOT_POW(root, delta, runLength) * exp(-energy / RT);
 
             if (STRUCTURE_COUNT) {
+              printf("z_3\t%.0f\t%.0f\t%d\t%d\t%d\n", Z[j][i].real(), (Z[j][i] + Z[k - 1][i] * ZB[j][k]).real(), i, j, k);
               Z[j][i] += Z[k - 1][i] * ZB[j][k];
             }
           }
@@ -258,7 +267,7 @@ void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **
       }
     }
   }
-  
+
   for (i = 0; i < NUM_WINDOWS; ++i) {
     for (j = 1; j <= sequenceLength - WINDOW_SIZE(i) + 1; ++j) {
       solutions[i][j][root] = Z[j][j + WINDOW_SIZE(i) - 1];
@@ -274,48 +283,48 @@ void solveSystem(dcomplex ***solutions, char *sequence, int *structure, int sequ
   char precisionFormat[20];
   int i, j, k;
   double scalingFactor, sum;
-  
+
   sprintf(precisionFormat, "%%d\t%%.0%df\n", PRECISION ? PRECISION : std::numeric_limits<double>::digits10);
-  
+
   fftw_complex signal[runLength + 1];
   fftw_complex result[runLength + 1];
-  
+
   fftw_plan plan = fftw_plan_dft_1d(runLength + 1, signal, result, FFTW_FORWARD, FFTW_ESTIMATE);
-  
+
   for (i = 0; i < NUM_WINDOWS; ++i) {
     for (j = 1; j <= sequenceLength - WINDOW_SIZE(i) + 1; ++j) {
       sum           = 0;
       scalingFactor = solutions[i][j][0].real();
-      
+
       if (!(MIN_WINDOW_SIZE == WINDOW_SIZE && WINDOW_SIZE == N)) {
         printf("Window size:           %d\n", WINDOW_SIZE(i));
         printf("Window starting index: %d\n", j);
-      
+
         printf("Sequence  (%d, %d): ", j, j + WINDOW_SIZE(i) - 1);
         for (k = j; k <= j + WINDOW_SIZE(i) - 1; k++) {
           printf("%c", sequence[k]);
         }
         printf("\n");
-      
+
         printf("Structure (%d, %d): ", j, j + WINDOW_SIZE(i) - 1);
         for (k = j; k <= j + WINDOW_SIZE(i) - 1; k++) {
           printf("%c", structure[k] < 0 ? '.' : (structure[k] > k ? '(' : ')'));
         }
         printf("\n");
       }
-  
+
       // For some reason it's much more numerically stable to set the signal via real / imag components separately.
       for (k = 0; k <= runLength; k++) {
         // Convert point-value solutions of Z(root) to 10^PRECISION * Z(root) / Z
         signal[k][FFTW_REAL] = (pow(10, PRECISION) * solutions[i][j][k].real()) / scalingFactor;
         signal[k][FFTW_IMAG] = (pow(10, PRECISION) * solutions[i][j][k].imag()) / scalingFactor;
       }
-  
+
       // Calculate transform, coefficients are in fftw_complex result array.
       fftw_execute(plan);
-  
+
       printf("k\tp(k)\n");
-  
+
       for (k = 0; k <= runLength; k++) {
         // Truncate to user-specified precision, default is 4 and if set to 0, no truncation occurs (dangerous).
         if (PRECISION == 0) {
@@ -323,19 +332,19 @@ void solveSystem(dcomplex ***solutions, char *sequence, int *structure, int sequ
         } else {
           solutions[i][j][k] = dcomplex(pow(10.0, -PRECISION) * static_cast<int>(result[k][FFTW_REAL] / (runLength + 1)), 0);
         }
-        
+
         sum += solutions[i][j][k].real();
-        
+
         printf(precisionFormat, k, solutions[i][j][k].real());
       }
-  
+
       if (FFTBOR_DEBUG) {
       	printf("Scaling factor (Z{%d, %d}): %.15f\n", j, j + WINDOW_SIZE(i) - 1, scalingFactor);
         std::cout << "Sum: " << sum << std::endl << std::endl;
       }
     }
   }
-  
+
   fftw_destroy_plan(plan);
 }
 
@@ -350,17 +359,17 @@ int jPairedIn(int i, int j, int *basePairs) {
 void populateRemainingRoots(dcomplex ***solutions, int sequenceLength, int runLength, int lastRoot) {
   // Optimization leveraging complementarity of roots of unity.
   int i, j, k, root;
-  
+
   for (i = 0; i < NUM_WINDOWS; ++i) {
     for (j = 1; j <= sequenceLength - WINDOW_SIZE(i) + 1; ++j) {
       root = lastRoot;
-  
+
       if (runLength % 2) {
         k = root - 2;
       } else {
         k = root - 1;
       }
-  
+
       for (; root <= runLength && k > 0; --k, ++root) {
         solutions[i][j][root] = dcomplex(solutions[i][j][k].real(), -solutions[i][j][k].imag());
       }
@@ -370,21 +379,21 @@ void populateRemainingRoots(dcomplex ***solutions, int sequenceLength, int runLe
 
 void populateMatrices(dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex ***solutions, dcomplex *rootsOfUnity, int sequenceLength, int runLength) {
   int i, j;
-  
+
   for (i = 0; i < NUM_WINDOWS; ++i) {
     solutions[i] = new dcomplex*[sequenceLength - WINDOW_SIZE(i) + 2];
-    
+
     for (j = 1; j <= sequenceLength - WINDOW_SIZE(i) + 1; ++j) {
       solutions[i][j] = new dcomplex[runLength + 1];
     }
   }
-  
+
   for (i = 0; i <= sequenceLength; ++i) {
     Z[i]   = new dcomplex[sequenceLength + 1];
     ZB[i]  = new dcomplex[sequenceLength + 1];
     ZM[i]  = new dcomplex[sequenceLength + 1];
     ZM1[i] = new dcomplex[sequenceLength + 1];
-    
+
     if (i <= runLength) {
       rootsOfUnity[i] = dcomplex(cos(2 * M_PI * i / (runLength + 1)), sin(2 * M_PI * i / (runLength + 1)));
     }
@@ -393,7 +402,7 @@ void populateMatrices(dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1
 
 void flushMatrices(dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, int sequenceLength) {
   int i, j;
-  
+
   for (i = 0; i <= sequenceLength; ++i) {
     for (j = 0; j <= sequenceLength; ++j) {
       if (i > 0 && j > 0 && abs(j - i) <= MIN_PAIR_DIST) {
@@ -401,7 +410,7 @@ void flushMatrices(dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, i
       } else {
         Z[i][j] = ZERO_C;
       }
-				
+
       ZB[i][j]  = ZERO_C;
       ZM[i][j]  = ZERO_C;
       ZM1[i][j] = ZERO_C;
