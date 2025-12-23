@@ -72,34 +72,33 @@ make install
 - `neighbours()`: Main algorithm entry point
   - Initializes energy parameters
   - Manages roots of unity for FFT computation
-  - Calls `evaluateZ()` for each root of unity
-  - Performs inverse DFT via `solveSystem()`
-- `evaluateZ()`: Computes partition function matrices (Z, ZB, ZM, ZM1)
-- `hairpinloop()`: Calculates hairpin loop energy
-- `interiorloop()`: Calculates interior loop/bulge/stack energy
-- `solveSystem()`: Uses FFTW for DFT computation
+  - Calls `evaluate_z()` for each root of unity
+  - Performs inverse DFT via `solve_system()`
+- `evaluate_z()`: Computes partition function matrices (Z, ZB, ZM, ZM1)
+- `hairpin_loop()`: Calculates hairpin loop energy
+- `interior_loop()`: Calculates interior loop/bulge/stack energy
+- `solve_system()`: Uses FFTW for DFT computation
 
 ### misc.cpp (Utilities)
 - `xcalloc()`: Safe memory allocation wrapper
-- `getBasePairList()`: Converts secondary structure notation to base pair list
-- `min2()`, `max2()`: Comparison utilities
+- `get_base_pair_list()`: Converts secondary structure notation to base pair list
 
 ## Code Conventions
 
 ### Naming
 - **Global variables:** UPPERCASE (e.g., `N`, `PRECISION`, `WINDOW_SIZE`)
-- **Functions:** snake_case (e.g., `read_input()`, `getBasePairList()`)
-- **Local variables:** lowercase (e.g., `i`, `j`, `energy`, `sequence`)
+- **Functions:** snake_case (e.g., `read_input()`, `get_base_pair_list()`)
+- **Local variables:** snake_case (e.g., `bp_list`, `sequence_length`, `run_length`)
 - **Constants:** UPPERCASE with underscore (e.g., `MAX_INTERIOR_DIST`)
 - **Types/structs:** Suffix with `T` (e.g., `paramT`, `model_detailsT`)
 
 ### Memory Management
-- Use `xcalloc()` wrapper for safe allocation
-- Manual memory management with `free()` (no RAII/smart pointers)
-- Dynamic 2D arrays frequently used
+- Smart pointers used for automatic memory management (RAII pattern)
+- `xcalloc()` wrapper still available for allocation
+- Custom smart pointer types in `memory_types.h` (e.g., `CharSequencePtr`, `BasePairListPtr`)
 
 ### Data Representations
-- **Base pair list:** Array where `bpList[i]` = position paired with i (-1 if unpaired)
+- **Base pair list:** Array where `bp_list[i]` = position paired with i (-1 if unpaired)
 - **Sequence encoding:** 1=A, 2=C, 3=G, 4=U, 0=undefined
 - **Complex numbers:** `std::complex<double>` (typedef `dcomplex`)
 
@@ -114,7 +113,7 @@ make install
 The FFTbor algorithm uses FFT to efficiently compute partition function coefficients:
 
 1. **Roots of Unity:** Computes partition function at multiple roots of unity (e^(2πik/(n+1)))
-2. **Symmetry Optimization:** Only computes ceil(runLength/2) roots due to complex conjugate symmetry
+2. **Symmetry Optimization:** Only computes ceil(run_length/2) roots due to complex conjugate symmetry
 3. **Dynamic Programming:** Maintains four matrices:
    - `Z[i][j]`: Partition function for unpaired region [i,j]
    - `ZB[i][j]`: Partition function for region [i,j] with (i,j) base-paired

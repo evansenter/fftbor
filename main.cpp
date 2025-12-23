@@ -1,8 +1,8 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
 #include <unistd.h>
-#include <ctype.h>
+#include <cctype>
 #include <new>  // for std::bad_alloc
 #include "delta.h"
 #include "misc.h"
@@ -56,12 +56,12 @@ void usage() {
   exit(1);
 }
 
-void read_input(int argc, char *argv[], fftbor::CharSequencePtr& mainSeq, fftbor::BasePairListPtr& bps) {
+void read_input(int argc, char *argv[], fftbor::CharSequencePtr& main_seq, fftbor::BasePairListPtr& bps) {
   FILE *infile;
   char line[MAX_SEQ_LENGTH];
   int i, k;
   char *seq = NULL;
-  fftbor::CharSequencePtr strPtr;  // Structure string (local, auto-freed)
+  fftbor::CharSequencePtr str_ptr;  // Structure string (local, auto-freed)
 
   PF              = 0;
   PRECISION       = 4;
@@ -123,14 +123,14 @@ void read_input(int argc, char *argv[], fftbor::CharSequencePtr& mainSeq, fftbor
           usage();
         }
         N = strlen(argv[i]);
-        mainSeq.reset((char *)xcalloc(N + 1, sizeof(char)));
-        seq = mainSeq.get();
-        strPtr.reset((char *)xcalloc(N + 1, sizeof(char)));
+        main_seq.reset((char *)xcalloc(N + 1, sizeof(char)));
+        seq = main_seq.get();
+        str_ptr.reset((char *)xcalloc(N + 1, sizeof(char)));
         (void)sscanf(argv[i++], "%s", seq);
-        (void)sscanf(argv[i], "%s", strPtr.get());
+        (void)sscanf(argv[i], "%s", str_ptr.get());
         N = strlen(seq);
 
-        if (strlen(seq) != strlen(strPtr.get())) {
+        if (strlen(seq) != strlen(str_ptr.get())) {
           fprintf(stderr,"Length of RNA sequence and structure must be equal\n");
           exit(1);
         }
@@ -142,7 +142,7 @@ void read_input(int argc, char *argv[], fftbor::CharSequencePtr& mainSeq, fftbor
             seq[k] = 'U';
           }
         }
-        strPtr.get()[N] = '\0';
+        str_ptr.get()[N] = '\0';
         seq[N] = '\0';
       }
       else { 
@@ -165,8 +165,8 @@ void read_input(int argc, char *argv[], fftbor::CharSequencePtr& mainSeq, fftbor
         }
         
         N = strlen(line);
-        mainSeq.reset((char *)xcalloc(N+1,sizeof(char)));
-        seq = mainSeq.get();
+        main_seq.reset((char *)xcalloc(N+1,sizeof(char)));
+        seq = main_seq.get();
         (void)sscanf(line,"%s",seq);
         
         for (k = 0; k < N; k++) {
@@ -181,11 +181,11 @@ void read_input(int argc, char *argv[], fftbor::CharSequencePtr& mainSeq, fftbor
           exit(1);
         }
 
-        strPtr.reset((char *)xcalloc(N + 1, sizeof(char)));
-        (void)sscanf(line, "%s", strPtr.get());
+        str_ptr.reset((char *)xcalloc(N + 1, sizeof(char)));
+        (void)sscanf(line, "%s", str_ptr.get());
 
-        if (strlen(seq) != strlen(strPtr.get())) {
-          printf("%s\n%s\n", seq, strPtr.get());
+        if (strlen(seq) != strlen(str_ptr.get())) {
+          printf("%s\n%s\n", seq, str_ptr.get());
           fprintf(stderr, "Length of RNA sequence and structure must be equal\n");
           exit(1);
         }
@@ -201,7 +201,7 @@ void read_input(int argc, char *argv[], fftbor::CharSequencePtr& mainSeq, fftbor
   }
   
   /* Post-sequence / structure validations */
-  if (seq == NULL || !strPtr) {
+  if (seq == NULL || !str_ptr) {
     usage();
   }
   
@@ -231,9 +231,9 @@ void read_input(int argc, char *argv[], fftbor::CharSequencePtr& mainSeq, fftbor
   }
   
   /* Print sequence length, sequence and starting structure */
-  printf("%d %s %s\n", N, seq, strPtr.get());
+  printf("%d %s %s\n", N, seq, str_ptr.get());
 
-  bps = getBasePairList(strPtr.get());
+  bps = get_base_pair_list(str_ptr.get());
 
   /* Check for unbalanced parentheses in structure */
   if (bps[0] < 0) {
@@ -248,5 +248,5 @@ void read_input(int argc, char *argv[], fftbor::CharSequencePtr& mainSeq, fftbor
     exit(1);
   }
 
-  // strPtr automatically freed when function returns
+  // str_ptr automatically freed when function returns
 } 
