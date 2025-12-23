@@ -9,6 +9,8 @@
 #include <vector>
 #include <algorithm>
 #include <memory>
+#include <stdexcept>
+#include <string>
 #include "delta.h"
 #include "misc.h"
 #include "energy_par.h"
@@ -17,22 +19,31 @@
 
 // Constants
 constexpr int STRUCTURE_COUNT = 1;
-constexpr int MIN_PAIR_DIST = 3;
-constexpr int MAX_INTERIOR_DIST = 30;
 constexpr int FFTW_REAL = 0;
 constexpr int FFTW_IMAG = 1;
 constexpr bool FFTBOR_DEBUG = false;
+constexpr bool ENERGY_DEBUG_FLAG = false;
+
+// Import constants from fftbor namespace
+using fftbor::MIN_PAIR_DIST;
+using fftbor::MAX_INTERIOR_DIST;
+using fftbor::GAS_CONSTANT_KCAL_PER_MOL_K;
+using fftbor::KELVIN_OFFSET;
 
 // Complex number constants
 const dcomplex ZERO_C(0.0, 0.0);
 const dcomplex ONE_C(1.0, 0.0);
 
-// Function-like macros (kept as macros due to external variable dependencies)
-#define WINDOW_SIZE(i) (MIN_WINDOW_SIZE + i)
-#define NUM_WINDOWS (WINDOW_SIZE - MIN_WINDOW_SIZE + 1)
-#define ROOT_POW(i, pow, n) (roots_of_unity[(i * pow) % (n + 1)])
-#define ENERGY_DEBUG (0 && !root)
+// Inline helper functions (replacing macros)
+inline int window_size_at(int i, int min_window_size) {
+    return min_window_size + i;
+}
 
+inline int num_windows(int window_size, int min_window_size) {
+    return window_size - min_window_size + 1;
+}
+
+// Global variables (kept for backward compatibility, to be migrated to Context)
 extern int    PF, N, PRECISION, WINDOW_SIZE, MIN_WINDOW_SIZE;
 extern double temperature;
 extern char   *ENERGY;
@@ -41,7 +52,8 @@ extern fftbor::ParamPtr P;
 void neighbours(const char* input_sequence, const int* bp_list) {
   int i, root, run_length = 0;
   const int sequence_length = strlen(input_sequence);
-  const double RT = 0.0019872370936902486 * (temperature + 273.15) * 100;
+  // RT = R * T_kelvin, scaled by 100 for internal energy units
+  const double RT = GAS_CONSTANT_KCAL_PER_MOL_K * (temperature + KELVIN_OFFSET) * 100;
 
   const char* energyfile = ENERGY;
 
@@ -51,7 +63,7 @@ void neighbours(const char* input_sequence, const int* bp_list) {
 
   // Load energy parameters
   read_parameter_file(energyfile);
-  P = scale_parameters();
+  P = scale_parameters(temperature);
   P->model_details.special_hp = 1;
 
   // Make necessary versions of the sequence for efficient processing
@@ -81,10 +93,11 @@ void neighbours(const char* input_sequence, const int* bp_list) {
   auto ZM1 = fftbor::make_complex_matrix_2d(sequence_length + 1, sequence_length + 1);
 
   // 3D solutions array
-  fftbor::ComplexMatrix3D solutions(NUM_WINDOWS);
-  for (i = 0; i < NUM_WINDOWS; ++i) {
-    solutions[i].resize(sequence_length - WINDOW_SIZE(i) + 2);
-    for (int j = 1; j <= sequence_length - WINDOW_SIZE(i) + 1; ++j) {
+  const int n_windows = num_windows(WINDOW_SIZE, MIN_WINDOW_SIZE);
+  fftbor::ComplexMatrix3D solutions(n_windows);
+  for (i = 0; i < n_windows; ++i) {
+    solutions[i].resize(sequence_length - window_size_at(i, MIN_WINDOW_SIZE) + 2);
+    for (int j = 1; j <= sequence_length - window_size_at(i, MIN_WINDOW_SIZE) + 1; ++j) {
       solutions[i][j].resize(run_length + 1, ZERO_C);
     }
   }
@@ -125,7 +138,7 @@ void evaluate_z(int root,
 
   flush_matrices(Z, ZB, ZM, ZM1, sequence_length);
 
-  if (ENERGY_DEBUG) {
+  if (ENERGY_DEBUG_FLAG) {
     printf("RT: %f\n", RT / 100);
   }
 
@@ -141,9 +154,9 @@ void evaluate_z(int root,
         // Pass pointer to position i-1 (0-indexed) so hairpin_loop can read the correct loop motif
         energy    = hairpin_loop(i, j, can_base_pair[int_sequence[i]][int_sequence[j]], int_sequence[i + 1], int_sequence[j - 1], input_sequence + i - 1);
         delta     = num_base_pairs[i][j] + j_paired_to(i, j, bp_list);
-        ZB[i][j] += ROOT_POW(root, delta, run_length) * exp(-energy / RT);
+        ZB[i][j] += fftbor::root_pow(root, delta, run_length, roots_of_unity) * exp(-energy / RT);
 
-        if (ENERGY_DEBUG) {
+        if (ENERGY_DEBUG_FLAG) {
           printf("%+f: GetHairpinEnergy(%c (%d), %c (%d));\n", energy / 100, sequence[i], i, sequence[j], j);
         }
 
@@ -157,9 +170,9 @@ void evaluate_z(int root,
             if (can_base_pair[int_sequence[k]][int_sequence[l]]) {
               energy    = interior_loop(i, j, k, l, can_base_pair[int_sequence[i]][int_sequence[j]], can_base_pair[int_sequence[l]][int_sequence[k]], int_sequence[i + 1], int_sequence[l + 1], int_sequence[j - 1], int_sequence[k - 1]);
               delta     = num_base_pairs[i][j] - num_base_pairs[k][l] + j_paired_to(i, j, bp_list);
-              ZB[i][j] += ZB[k][l] * ROOT_POW(root, delta, run_length) * exp(-energy / RT);
+              ZB[i][j] += ZB[k][l] * fftbor::root_pow(root, delta, run_length, roots_of_unity) * exp(-energy / RT);
 
-              if (ENERGY_DEBUG) {
+              if (ENERGY_DEBUG_FLAG) {
                 printf("%+f: GetInteriorStackingAndBulgeEnergy(%c (%d), %c (%d), %c (%d), %c (%d));\n", energy / 100, sequence[i], i, sequence[j], j, sequence[k], k, sequence[l], l);
               }
 
@@ -173,9 +186,9 @@ void evaluate_z(int root,
         for (k = i + MIN_PAIR_DIST + 3; k < j - MIN_PAIR_DIST - 1; ++k) {
           energy    = P->MLclosing + P->MLintern[can_base_pair[int_sequence[i]][int_sequence[j]]];
           delta     = num_base_pairs[i][j] - num_base_pairs[i + 1][k - 1] - num_base_pairs[k][j - 1] + j_paired_to(i, j, bp_list);
-          ZB[i][j] += ZM[i + 1][k - 1] * ZM1[k][j - 1] * ROOT_POW(root, delta, run_length) * exp(-energy / RT);
+          ZB[i][j] += ZM[i + 1][k - 1] * ZM1[k][j - 1] * fftbor::root_pow(root, delta, run_length, roots_of_unity) * exp(-energy / RT);
 
-          if (ENERGY_DEBUG) {
+          if (ENERGY_DEBUG_FLAG) {
             printf("%+f: MultiloopA + MultiloopB;\n", energy / 100);
           }
 
@@ -194,7 +207,7 @@ void evaluate_z(int root,
           delta      = num_base_pairs[i][j] - num_base_pairs[i][k];
           ZM1[i][j] += ZB[i][k] * exp(-energy / RT);
 
-          if (ENERGY_DEBUG) {
+          if (ENERGY_DEBUG_FLAG) {
             printf("%+f: MultiloopB + MultiloopC * (%d - %d);\n", energy / 100, j, k);
           }
 
@@ -210,9 +223,9 @@ void evaluate_z(int root,
       for (k = i; k < j - MIN_PAIR_DIST; ++k) {
         energy    = P->MLbase * (k - i);
         delta     = num_base_pairs[i][j] - num_base_pairs[k][j];
-        ZM[i][j] += ZM1[k][j] * ROOT_POW(root, delta, run_length) * exp(-energy / RT);
+        ZM[i][j] += ZM1[k][j] * fftbor::root_pow(root, delta, run_length, roots_of_unity) * exp(-energy / RT);
 
-        if (ENERGY_DEBUG) {
+        if (ENERGY_DEBUG_FLAG) {
           printf("%+f: MultiloopC * (%d - %d);\n", energy / 100, k, i);
         }
 
@@ -223,9 +236,9 @@ void evaluate_z(int root,
         if (k > i + MIN_PAIR_DIST + 1) {
           energy    = P->MLintern[can_base_pair[int_sequence[k]][int_sequence[j]]];
           delta     = num_base_pairs[i][j] - num_base_pairs[i][k - 1] - num_base_pairs[k][j];
-          ZM[i][j] += ZM[i][k - 1] * ZM1[k][j] * ROOT_POW(root, delta, run_length) * exp(-energy / RT);
+          ZM[i][j] += ZM[i][k - 1] * ZM1[k][j] * fftbor::root_pow(root, delta, run_length, roots_of_unity) * exp(-energy / RT);
 
-          if (ENERGY_DEBUG) {
+          if (ENERGY_DEBUG_FLAG) {
             printf("%+f: MultiloopB;\n", energy / 100);
           }
 
@@ -239,7 +252,7 @@ void evaluate_z(int root,
       // Solve Z
       // **************************************************************************
       delta    = j_paired_in(i, j, bp_list);
-      Z[i][j] += Z[i][j - 1] * ROOT_POW(root, delta, run_length);
+      Z[i][j] += Z[i][j - 1] * fftbor::root_pow(root, delta, run_length, roots_of_unity);
 
       if (STRUCTURE_COUNT) {
         Z[j][i] += Z[j - 1][i];
@@ -249,20 +262,20 @@ void evaluate_z(int root,
         if (can_base_pair[int_sequence[k]][int_sequence[j]]) {
           energy = can_base_pair[int_sequence[k]][int_sequence[j]] > 2 ? P->TerminalAU : 0;
 
-          if (ENERGY_DEBUG) {
+          if (ENERGY_DEBUG_FLAG) {
             printf("%+f: %c-%c == (2 || 3) ? 0 : GUAU_penalty;\n", energy / 100, sequence[k], sequence[j]);
           }
 
           if (k == i) {
             delta    = num_base_pairs[i][j] - num_base_pairs[k][j];
-            Z[i][j] += ZB[k][j] * ROOT_POW(root, delta, run_length) * exp(-energy / RT);
+            Z[i][j] += ZB[k][j] * fftbor::root_pow(root, delta, run_length, roots_of_unity) * exp(-energy / RT);
 
             if (STRUCTURE_COUNT) {
               Z[j][i] += ZB[j][k];
             }
           } else {
             delta    = num_base_pairs[i][j] - num_base_pairs[i][k - 1] - num_base_pairs[k][j];
-            Z[i][j] += Z[i][k - 1] * ZB[k][j] * ROOT_POW(root, delta, run_length) * exp(-energy / RT);
+            Z[i][j] += Z[i][k - 1] * ZB[k][j] * fftbor::root_pow(root, delta, run_length, roots_of_unity) * exp(-energy / RT);
 
             if (STRUCTURE_COUNT) {
               Z[j][i] += Z[k - 1][i] * ZB[j][k];
@@ -273,9 +286,9 @@ void evaluate_z(int root,
     }
   }
 
-  for (i = 0; i < NUM_WINDOWS; ++i) {
-    for (j = 1; j <= sequence_length - WINDOW_SIZE(i) + 1; ++j) {
-      solutions[i][j][root] = Z[j][j + WINDOW_SIZE(i) - 1];
+  for (i = 0; i < num_windows(WINDOW_SIZE, MIN_WINDOW_SIZE); ++i) {
+    for (j = 1; j <= sequence_length - window_size_at(i, MIN_WINDOW_SIZE) + 1; ++j) {
+      solutions[i][j][root] = Z[j][j + window_size_at(i, MIN_WINDOW_SIZE) - 1];
     }
   }
 
@@ -299,34 +312,32 @@ void solve_system(fftbor::ComplexMatrix3D& solutions, const char* sequence, cons
   std::unique_ptr<fftw_complex[], FftwDeleter> result(fftw_alloc_complex(run_length + 1));
 
   if (!signal || !result) {
-    fprintf(stderr, "Error: Failed to allocate FFTW arrays (size: %d)\n", run_length + 1);
-    exit(1);
+    throw std::runtime_error("Failed to allocate FFTW arrays (size: " + std::to_string(run_length + 1) + ")");
   }
 
   fftw_plan plan = fftw_plan_dft_1d(run_length + 1, signal.get(), result.get(), FFTW_FORWARD, FFTW_ESTIMATE);
 
   if (!plan) {
-    fprintf(stderr, "Error: FFTW plan creation failed for size %d\n", run_length + 1);
-    exit(1);
+    throw std::runtime_error("FFTW plan creation failed for size " + std::to_string(run_length + 1));
   }
 
-  for (i = 0; i < NUM_WINDOWS; ++i) {
-    for (j = 1; j <= sequence_length - WINDOW_SIZE(i) + 1; ++j) {
+  for (i = 0; i < num_windows(WINDOW_SIZE, MIN_WINDOW_SIZE); ++i) {
+    for (j = 1; j <= sequence_length - window_size_at(i, MIN_WINDOW_SIZE) + 1; ++j) {
       sum           = 0;
       scaling_factor = solutions[i][j][0].real();
 
       if (!(MIN_WINDOW_SIZE == WINDOW_SIZE && WINDOW_SIZE == N)) {
-        printf("Window size:           %d\n", WINDOW_SIZE(i));
+        printf("Window size:           %d\n", window_size_at(i, MIN_WINDOW_SIZE));
         printf("Window starting index: %d\n", j);
 
-        printf("Sequence  (%d, %d): ", j, j + WINDOW_SIZE(i) - 1);
-        for (k = j; k <= j + WINDOW_SIZE(i) - 1; k++) {
+        printf("Sequence  (%d, %d): ", j, j + window_size_at(i, MIN_WINDOW_SIZE) - 1);
+        for (k = j; k <= j + window_size_at(i, MIN_WINDOW_SIZE) - 1; k++) {
           printf("%c", sequence[k]);
         }
         printf("\n");
 
-        printf("Structure (%d, %d): ", j, j + WINDOW_SIZE(i) - 1);
-        for (k = j; k <= j + WINDOW_SIZE(i) - 1; k++) {
+        printf("Structure (%d, %d): ", j, j + window_size_at(i, MIN_WINDOW_SIZE) - 1);
+        for (k = j; k <= j + window_size_at(i, MIN_WINDOW_SIZE) - 1; k++) {
           printf("%c", structure[k] < 0 ? '.' : (structure[k] > k ? '(' : ')'));
         }
         printf("\n");
@@ -354,7 +365,7 @@ void solve_system(fftbor::ComplexMatrix3D& solutions, const char* sequence, cons
       }
 
       if (FFTBOR_DEBUG) {
-        printf("Scaling factor (Z{%d, %d}): %.15f\n", j, j + WINDOW_SIZE(i) - 1, scaling_factor);
+        printf("Scaling factor (Z{%d, %d}): %.15f\n", j, j + window_size_at(i, MIN_WINDOW_SIZE) - 1, scaling_factor);
         std::cout << "Sum: " << sum << std::endl << std::endl;
       }
     }
@@ -374,8 +385,8 @@ int j_paired_in(int i, int j, const int* base_pairs) {
 void populate_remaining_roots(fftbor::ComplexMatrix3D& solutions, int sequence_length, int run_length, int last_root) {
   int i, j, k, root;
 
-  for (i = 0; i < NUM_WINDOWS; ++i) {
-    for (j = 1; j <= sequence_length - WINDOW_SIZE(i) + 1; ++j) {
+  for (i = 0; i < num_windows(WINDOW_SIZE, MIN_WINDOW_SIZE); ++i) {
+    for (j = 1; j <= sequence_length - window_size_at(i, MIN_WINDOW_SIZE) + 1; ++j) {
       root = last_root;
 
       if (run_length % 2) {
@@ -391,11 +402,16 @@ void populate_remaining_roots(fftbor::ComplexMatrix3D& solutions, int sequence_l
   }
 }
 
-void populate_matrices(fftbor::ComplexMatrix2D& Z, fftbor::ComplexMatrix2D& ZB,
-                      fftbor::ComplexMatrix2D& ZM, fftbor::ComplexMatrix2D& ZM1,
-                      fftbor::ComplexMatrix3D& solutions, std::vector<dcomplex>& roots_of_unity,
-                      int sequence_length, int run_length) {
-  // Matrices are already sized correctly - just initialize roots_of_unity
+void populate_matrices([[maybe_unused]] fftbor::ComplexMatrix2D& Z,
+                      [[maybe_unused]] fftbor::ComplexMatrix2D& ZB,
+                      [[maybe_unused]] fftbor::ComplexMatrix2D& ZM,
+                      [[maybe_unused]] fftbor::ComplexMatrix2D& ZM1,
+                      [[maybe_unused]] fftbor::ComplexMatrix3D& solutions,
+                      std::vector<dcomplex>& roots_of_unity,
+                      [[maybe_unused]] int sequence_length,
+                      int run_length) {
+  // Note: Most parameters unused - kept for API consistency with other matrix functions.
+  // Only roots_of_unity and run_length are needed for initialization.
   for (int i = 0; i <= run_length; ++i) {
     roots_of_unity[i] = dcomplex(cos(2 * M_PI * i / (run_length + 1)), sin(2 * M_PI * i / (run_length + 1)));
   }

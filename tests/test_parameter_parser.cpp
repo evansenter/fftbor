@@ -22,7 +22,7 @@ TEST_F(ParameterParserTest, LoadTurner2004Parameters) {
     // This test verifies that we can load the Turner 2004 parameters
     read_parameter_file("rna_turner2004.par");
 
-    auto P = scale_parameters();
+    auto P = scale_parameters(temperature);
     ASSERT_NE(P.get(), nullptr);
 
     // Check that some key parameters are loaded correctly
@@ -45,7 +45,7 @@ TEST_F(ParameterParserTest, LoadTurner1999Parameters) {
     // This test verifies that we can load the Turner 1999 parameters
     read_parameter_file("rna_turner1999.par");
 
-    auto P = scale_parameters();
+    auto P = scale_parameters(temperature);
     ASSERT_NE(P.get(), nullptr);
 
     // Check that parameters were loaded
@@ -60,14 +60,14 @@ TEST_F(ParameterParserTest, TemperatureScaling) {
 
     // Get parameters at 37C
     temperature = 37.0;
-    auto P37 = scale_parameters();
+    auto P37 = scale_parameters(temperature);
     ASSERT_NE(P37.get(), nullptr);
 
     int stack_37 = P37->stack[1][1];
 
     // Get parameters at 25C (should be slightly different)
     temperature = 25.0;
-    auto P25 = scale_parameters();
+    auto P25 = scale_parameters(temperature);
     ASSERT_NE(P25.get(), nullptr);
 
     int stack_25 = P25->stack[1][1];
@@ -79,7 +79,7 @@ TEST_F(ParameterParserTest, TemperatureScaling) {
 
     // Get parameters at 50C
     temperature = 50.0;
-    auto P50 = scale_parameters();
+    auto P50 = scale_parameters(temperature);
     ASSERT_NE(P50.get(), nullptr);
 
     int stack_50 = P50->stack[1][1];
@@ -99,7 +99,7 @@ TEST_F(ParameterParserTest, SpecialLoopsLoaded) {
     // Test that special loop sequences are loaded
     read_parameter_file("rna_turner2004.par");
 
-    auto P = scale_parameters();
+    auto P = scale_parameters(temperature);
     ASSERT_NE(P.get(), nullptr);
 
     // Check that Tetraloops string is not empty
@@ -115,7 +115,7 @@ TEST_F(ParameterParserTest, ModelDetailsInitialized) {
     // Test that model details are properly initialized
     read_parameter_file("rna_turner2004.par");
 
-    auto P = scale_parameters();
+    auto P = scale_parameters(temperature);
     ASSERT_NE(P.get(), nullptr);
 
     // Check default model details
@@ -130,7 +130,7 @@ TEST_F(ParameterParserTest, ModelDetailsInitialized) {
 TEST_F(ParameterParserTest, BulgeAndInternalLoopParameters) {
     read_parameter_file("rna_turner2004.par");
 
-    auto P = scale_parameters();
+    auto P = scale_parameters(temperature);
     ASSERT_NE(P.get(), nullptr);
 
     // Bulge of size 1 should have a specific energy

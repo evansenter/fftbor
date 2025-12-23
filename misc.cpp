@@ -17,13 +17,15 @@ NOTES:
 #include <cmath>
 #include <climits>
 #include <cctype>
+#include <stdexcept>
+#include <string>
 #include "misc.h"
 
 void* xcalloc(size_t n, size_t s) {
   void* out = calloc(n, s);
   if (!out) {
-    perror("calloc error");
-    exit(1);
+    throw std::runtime_error("Memory allocation failed: requested " +
+                             std::to_string(n) + " x " + std::to_string(s) + " bytes");
   }
   return out;
 }
