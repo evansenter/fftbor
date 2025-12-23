@@ -21,3 +21,6 @@ MODULE.bazel.lock
 
 # macOS
 .DS_Store
+
+# Claude Code local settings (not shared)
+.claude/settings.local.json
