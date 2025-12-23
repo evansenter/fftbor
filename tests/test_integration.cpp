@@ -47,7 +47,7 @@ TEST_F(IntegrationTest, SimpleHairpinPartitionFunction) {
     read_parameter_file("rna_turner2004.par");
 
     // Get base pair list
-    auto bpList = getBasePairList(structure);
+    auto bpList = get_base_pair_list(structure);
     ASSERT_NE(bpList.get(), nullptr);
     EXPECT_GE(bpList[0], 0);
 
@@ -84,7 +84,7 @@ TEST_F(IntegrationTest, AllUnpairedStructure) {
 
     read_parameter_file("rna_turner2004.par");
 
-    auto bpList = getBasePairList(structure);
+    auto bpList = get_base_pair_list(structure);
     ASSERT_NE(bpList.get(), nullptr);
     EXPECT_EQ(bpList[0], 0);  // No base pairs
 
@@ -114,7 +114,7 @@ TEST_F(IntegrationTest, TwoHairpinsStructure) {
 
     read_parameter_file("rna_turner2004.par");
 
-    auto bpList = getBasePairList(structure);
+    auto bpList = get_base_pair_list(structure);
     ASSERT_NE(bpList.get(), nullptr);
     EXPECT_GE(bpList[0], 0);
 
@@ -149,7 +149,7 @@ TEST_F(IntegrationTest, DifferentTemperatures) {
     temperature = 37.0;
     read_parameter_file("rna_turner2004.par");
 
-    auto bpList1 = getBasePairList(structure);
+    auto bpList1 = get_base_pair_list(structure);
     char seq1[20];
     strcpy(seq1, sequence);
 
@@ -162,7 +162,7 @@ TEST_F(IntegrationTest, DifferentTemperatures) {
     read_parameter_file("rna_turner2004.par");
 
     char structure2[] = "((((....))))";
-    auto bpList2 = getBasePairList(structure2);
+    auto bpList2 = get_base_pair_list(structure2);
     char seq2[20];
     strcpy(seq2, sequence);
 
@@ -195,7 +195,7 @@ TEST_F(IntegrationTest, ConsistentResults) {
 
     // First run
     char structure1[] = "((((....))))";
-    auto bpList1 = getBasePairList(structure1);
+    auto bpList1 = get_base_pair_list(structure1);
     char seq1[20];
     strcpy(seq1, sequence);
 
@@ -205,7 +205,7 @@ TEST_F(IntegrationTest, ConsistentResults) {
 
     // Second run
     char structure2[] = "((((....))))";
-    auto bpList2 = getBasePairList(structure2);
+    auto bpList2 = get_base_pair_list(structure2);
     char seq2[20];
     strcpy(seq2, sequence);
 

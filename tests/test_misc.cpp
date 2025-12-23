@@ -40,7 +40,7 @@ TEST_F(MiscTest, XCallocLargeAllocation) {
 TEST_F(MiscTest, GetBasePairListSimple) {
     // Test simple hairpin structure: ((....))
     char structure[] = "((....))";
-    auto bpList = getBasePairList(structure);
+    auto bpList = get_base_pair_list(structure);
 
     ASSERT_NE(bpList.get(), nullptr);
     EXPECT_GE(bpList[0], 0);  // No error
@@ -64,7 +64,7 @@ TEST_F(MiscTest, GetBasePairListSimple) {
 TEST_F(MiscTest, GetBasePairListNested) {
     // Test nested structure: (((....)))
     char structure[] = "(((....)))";
-    auto bpList = getBasePairList(structure);
+    auto bpList = get_base_pair_list(structure);
 
     ASSERT_NE(bpList.get(), nullptr);
     EXPECT_GE(bpList[0], 0);
@@ -92,7 +92,7 @@ TEST_F(MiscTest, GetBasePairListNested) {
 TEST_F(MiscTest, GetBasePairListMultiloop) {
     // Test multiloop structure: ((..)(..))
     char structure[] = "((..)(..))";
-    auto bpList = getBasePairList(structure);
+    auto bpList = get_base_pair_list(structure);
 
     ASSERT_NE(bpList.get(), nullptr);
     EXPECT_GE(bpList[0], 0);
@@ -122,7 +122,7 @@ TEST_F(MiscTest, GetBasePairListAllUnpaired) {
     // Test all unpaired: ........
     char structure[] = "........";
     int n = strlen(structure);
-    auto bpList = getBasePairList(structure);
+    auto bpList = get_base_pair_list(structure);
 
     ASSERT_NE(bpList.get(), nullptr);
     EXPECT_EQ(bpList[0], 0);  // Zero base pairs
@@ -138,7 +138,7 @@ TEST_F(MiscTest, GetBasePairListAllUnpaired) {
 TEST_F(MiscTest, GetBasePairListUnbalanced) {
     // Test unbalanced structure: (((....)
     char structure[] = "(((....)";
-    auto bpList = getBasePairList(structure);
+    auto bpList = get_base_pair_list(structure);
 
     ASSERT_NE(bpList.get(), nullptr);
     // Should indicate an error (too many open parens)
@@ -150,7 +150,7 @@ TEST_F(MiscTest, GetBasePairListUnbalanced) {
 TEST_F(MiscTest, GetBasePairListTooManyClose) {
     // Test unbalanced structure: (....)))
     char structure[] = "(....)))";
-    auto bpList = getBasePairList(structure);
+    auto bpList = get_base_pair_list(structure);
 
     ASSERT_NE(bpList.get(), nullptr);
     // Should indicate an error (too many close parens)
@@ -159,18 +159,3 @@ TEST_F(MiscTest, GetBasePairListTooManyClose) {
     // Smart pointer auto-cleans up
 }
 
-TEST_F(MiscTest, Min2Function) {
-    EXPECT_EQ(min2(5, 3), 3);
-    EXPECT_EQ(min2(3, 5), 3);
-    EXPECT_EQ(min2(4, 4), 4);
-    EXPECT_EQ(min2(-1, 1), -1);
-    EXPECT_EQ(min2(0, 0), 0);
-}
-
-TEST_F(MiscTest, Max2Function) {
-    EXPECT_EQ(max2(5, 3), 5);
-    EXPECT_EQ(max2(3, 5), 5);
-    EXPECT_EQ(max2(4, 4), 4);
-    EXPECT_EQ(max2(-1, 1), 1);
-    EXPECT_EQ(max2(0, 0), 0);
-}

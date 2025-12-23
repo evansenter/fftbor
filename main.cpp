@@ -1,8 +1,8 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
 #include <unistd.h>
-#include <ctype.h>
+#include <cctype>
 #include <new>  // for std::bad_alloc
 #include "delta.h"
 #include "misc.h"
@@ -233,7 +233,7 @@ void read_input(int argc, char *argv[], fftbor::CharSequencePtr& mainSeq, fftbor
   /* Print sequence length, sequence and starting structure */
   printf("%d %s %s\n", N, seq, strPtr.get());
 
-  bps = getBasePairList(strPtr.get());
+  bps = get_base_pair_list(strPtr.get());
 
   /* Check for unbalanced parentheses in structure */
   if (bps[0] < 0) {
