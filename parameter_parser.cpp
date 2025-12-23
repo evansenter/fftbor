@@ -562,26 +562,26 @@ paramT* scale_parameters(void) {
     for (int i = 0; i <= NBPAIRS; i++) {
         for (int j = 0; j <= NBPAIRS; j++) {
             P->stack[i][j] = scale_energy(raw_params.stack[i][j],
-                                          raw_params.stack_enthalpies[i][j], temp_k);
+                                          raw_params.stack_enthalpies[i][j], temp_c);
         }
     }
 
     // Scale hairpin
     for (int i = 0; i < 31; i++) {
         P->hairpin[i] = scale_energy(raw_params.hairpin[i],
-                                     raw_params.hairpin_enthalpies[i], temp_k);
+                                     raw_params.hairpin_enthalpies[i], temp_c);
     }
 
     // Scale bulge
     for (int i = 0; i <= MAXLOOP; i++) {
         P->bulge[i] = scale_energy(raw_params.bulge[i],
-                                   raw_params.bulge_enthalpies[i], temp_k);
+                                   raw_params.bulge_enthalpies[i], temp_c);
     }
 
     // Scale internal loop
     for (int i = 0; i <= MAXLOOP; i++) {
         P->internal_loop[i] = scale_energy(raw_params.internal_loop[i],
-                                           raw_params.internal_loop_enthalpies[i], temp_k);
+                                           raw_params.internal_loop_enthalpies[i], temp_c);
     }
 
     // Scale mismatch matrices
@@ -589,17 +589,17 @@ paramT* scale_parameters(void) {
         for (int j = 0; j < 5; j++) {
             for (int k = 0; k < 5; k++) {
                 P->mismatchH[i][j][k] = scale_energy(raw_params.mismatchH[i][j][k],
-                                                     raw_params.mismatchH_enthalpies[i][j][k], temp_k);
+                                                     raw_params.mismatchH_enthalpies[i][j][k], temp_c);
                 P->mismatchI[i][j][k] = scale_energy(raw_params.mismatchI[i][j][k],
-                                                     raw_params.mismatchI_enthalpies[i][j][k], temp_k);
+                                                     raw_params.mismatchI_enthalpies[i][j][k], temp_c);
                 P->mismatch1nI[i][j][k] = scale_energy(raw_params.mismatch1nI[i][j][k],
-                                                       raw_params.mismatch1nI_enthalpies[i][j][k], temp_k);
+                                                       raw_params.mismatch1nI_enthalpies[i][j][k], temp_c);
                 P->mismatch23I[i][j][k] = scale_energy(raw_params.mismatch23I[i][j][k],
-                                                       raw_params.mismatch23I_enthalpies[i][j][k], temp_k);
+                                                       raw_params.mismatch23I_enthalpies[i][j][k], temp_c);
                 P->mismatchM[i][j][k] = scale_energy(raw_params.mismatchM[i][j][k],
-                                                     raw_params.mismatchM_enthalpies[i][j][k], temp_k);
+                                                     raw_params.mismatchM_enthalpies[i][j][k], temp_c);
                 P->mismatchExt[i][j][k] = scale_energy(raw_params.mismatchExt[i][j][k],
-                                                       raw_params.mismatchExt_enthalpies[i][j][k], temp_k);
+                                                       raw_params.mismatchExt_enthalpies[i][j][k], temp_c);
             }
         }
     }
@@ -608,9 +608,9 @@ paramT* scale_parameters(void) {
     for (int i = 0; i <= NBPAIRS; i++) {
         for (int j = 0; j < 5; j++) {
             P->dangle5[i][j] = scale_energy(raw_params.dangle5[i][j],
-                                            raw_params.dangle5_enthalpies[i][j], temp_k);
+                                            raw_params.dangle5_enthalpies[i][j], temp_c);
             P->dangle3[i][j] = scale_energy(raw_params.dangle3[i][j],
-                                            raw_params.dangle3_enthalpies[i][j], temp_k);
+                                            raw_params.dangle3_enthalpies[i][j], temp_c);
         }
     }
 
@@ -620,7 +620,7 @@ paramT* scale_parameters(void) {
             for (int k = 0; k < 5; k++) {
                 for (int l = 0; l < 5; l++) {
                     P->int11[i][j][k][l] = scale_energy(raw_params.int11[i][j][k][l],
-                                                        raw_params.int11_enthalpies[i][j][k][l], temp_k);
+                                                        raw_params.int11_enthalpies[i][j][k][l], temp_c);
                 }
             }
         }
@@ -633,7 +633,7 @@ paramT* scale_parameters(void) {
                 for (int l = 0; l < 5; l++) {
                     for (int m = 0; m < 5; m++) {
                         P->int21[i][j][k][l][m] = scale_energy(raw_params.int21[i][j][k][l][m],
-                                                               raw_params.int21_enthalpies[i][j][k][l][m], temp_k);
+                                                               raw_params.int21_enthalpies[i][j][k][l][m], temp_c);
                     }
                 }
             }
@@ -648,7 +648,7 @@ paramT* scale_parameters(void) {
                     for (int m = 0; m < 5; m++) {
                         for (int n = 0; n < 5; n++) {
                             P->int22[i][j][k][l][m][n] = scale_energy(raw_params.int22[i][j][k][l][m][n],
-                                                                      raw_params.int22_enthalpies[i][j][k][l][m][n], temp_k);
+                                                                      raw_params.int22_enthalpies[i][j][k][l][m][n], temp_c);
                         }
                     }
                 }
@@ -658,19 +658,19 @@ paramT* scale_parameters(void) {
 
     // Scale ninio
     for (int i = 0; i < 5; i++) {
-        P->ninio[i] = scale_energy(raw_params.ninio[i], raw_params.ninio_enthalpies[i], temp_k);
+        P->ninio[i] = scale_energy(raw_params.ninio[i], raw_params.ninio_enthalpies[i], temp_c);
     }
 
     // Scale ML parameters
-    P->MLbase = scale_energy(raw_params.MLbase, raw_params.MLbase_enthalpies, temp_k);
-    P->MLclosing = scale_energy(raw_params.MLclosing, raw_params.MLclosing_enthalpies, temp_k);
+    P->MLbase = scale_energy(raw_params.MLbase, raw_params.MLbase_enthalpies, temp_c);
+    P->MLclosing = scale_energy(raw_params.MLclosing, raw_params.MLclosing_enthalpies, temp_c);
     for (int i = 0; i <= NBPAIRS; i++) {
-        P->MLintern[i] = scale_energy(raw_params.MLintern[i], raw_params.MLintern_enthalpies[i], temp_k);
+        P->MLintern[i] = scale_energy(raw_params.MLintern[i], raw_params.MLintern_enthalpies[i], temp_c);
     }
 
     // Scale misc
-    P->TerminalAU = scale_energy(raw_params.TerminalAU, raw_params.TerminalAU_enthalpies, temp_k);
-    P->DuplexInit = scale_energy(raw_params.DuplexInit, raw_params.DuplexInit_enthalpies, temp_k);
+    P->TerminalAU = scale_energy(raw_params.TerminalAU, raw_params.TerminalAU_enthalpies, temp_c);
+    P->DuplexInit = scale_energy(raw_params.DuplexInit, raw_params.DuplexInit_enthalpies, temp_c);
 
     // Copy special loops (these are not temperature-scaled in the same way)
     memcpy(P->Tetraloops, raw_params.Tetraloops, sizeof(P->Tetraloops));
