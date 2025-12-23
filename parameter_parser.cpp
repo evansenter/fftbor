@@ -505,20 +505,38 @@ void read_parameter_file(const char* filename) {
                 }
             } else if (strcmp(section, "END") == 0) {
                 break;
+            } else {
+                // Unknown section - issue a warning but continue parsing
+                fprintf(stderr, "Warning: Unknown parameter file section '%s' - skipping\n", section);
             }
         }
     }
 
     fclose(fp);
+
+    // Validate that critical parameters were loaded
+    // Stack energies should be non-zero for valid parameter files
+    if (raw_params.stack[1][1] == 0 && raw_params.stack[2][2] == 0) {
+        fprintf(stderr, "Error: Stack energies not loaded. Parameter file may be invalid or empty.\n");
+        exit(1);
+    }
+
+    // Hairpin energies should have values for common sizes
+    if (raw_params.hairpin[3] == 0 && raw_params.hairpin[4] == 0 && raw_params.hairpin[5] == 0) {
+        fprintf(stderr, "Error: Hairpin loop energies not loaded. Parameter file may be invalid.\n");
+        exit(1);
+    }
+
     raw_params.loaded = 1;
 }
 
-// Temperature scaling: E(T) = H - T*S, where S = (H - E(37)) / 310.15
-static int scale_energy(int energy37, int enthalpy, double temp_k) {
+// Temperature scaling using linear interpolation: E(T) = H - (H - E_37) * (T_K / 310.15)
+// where T_K is temperature in Kelvin and 310.15 = 37C + 273.15
+static int scale_energy(int energy37, int enthalpy, double temp_c) {
     if (energy37 == INF || enthalpy == INF) return INF;
     if (energy37 == FORBIDDEN || enthalpy == FORBIDDEN) return FORBIDDEN;
 
-    double TT = (temp_k + K0) / (37.0 + K0);
+    double TT = (temp_c + K0) / (37.0 + K0);
     return (int)(enthalpy - (enthalpy - energy37) * TT + 0.5);
 }
 
@@ -534,8 +552,8 @@ paramT* scale_parameters(void) {
         exit(1);
     }
 
-    double temp_k = temperature; // Temperature in Celsius
-    double TT = (temp_k + K0) / (37.0 + K0);
+    double temp_c = temperature; // Temperature in Celsius
+    double TT = (temp_c + K0) / (37.0 + K0);
 
     P->temperature = temperature;
     P->lxc = raw_params.lxc * TT;

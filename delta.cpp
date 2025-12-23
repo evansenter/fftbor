@@ -39,7 +39,7 @@ extern paramT *P;
 
 void neighbours(char *inputSequence, int *bpList) {
   int i, root, runLength = 0, sequenceLength = strlen(inputSequence);
-  double RT = 0.0019872370936902486 * (temperature + 273.15) * 100; // 0.01 * (kcal K) / mol
+  double RT = 0.0019872370936902486 * (temperature + 273.15) * 100; // RT in units of 0.01 kcal/mol (10 cal/mol) to match parameter file units
 
   char *energyfile  = ENERGY;
   char *sequence    = new char[sequenceLength + 1];
@@ -99,8 +99,50 @@ void neighbours(char *inputSequence, int *bpList) {
   // Convert point-value solutions to coefficient form w/ inverse DFT.
   populateRemainingRoots(solutions, sequenceLength, runLength, root);
   solveSystem(solutions, sequence, bpList, sequenceLength, runLength);
-  
+
+  // Cleanup: free all allocated memory
   free(intSequence);
+  delete[] sequence;
+
+  // Free canBasePair (5x5 matrix)
+  for (i = 0; i < 5; ++i) {
+    free(canBasePair[i]);
+  }
+  free(canBasePair);
+
+  // Free numBasePairs (sequenceLength+1 x sequenceLength+1 matrix)
+  for (i = 1; i <= sequenceLength; ++i) {
+    free(numBasePairs[i]);
+  }
+  free(numBasePairs);
+
+  // Free Z, ZB, ZM, ZM1 matrices
+  for (i = 0; i <= sequenceLength; ++i) {
+    delete[] Z[i];
+    delete[] ZB[i];
+    delete[] ZM[i];
+    delete[] ZM1[i];
+  }
+  delete[] Z;
+  delete[] ZB;
+  delete[] ZM;
+  delete[] ZM1;
+
+  // Free solutions 3D array
+  for (i = 0; i < NUM_WINDOWS; ++i) {
+    for (int j = 1; j <= sequenceLength - WINDOW_SIZE(i) + 1; ++j) {
+      delete[] solutions[i][j];
+    }
+    delete[] solutions[i];
+  }
+  delete[] solutions;
+
+  // Free rootsOfUnity
+  delete[] rootsOfUnity;
+
+  // Free parameter struct
+  free(P);
+  P = nullptr;
 }
 
 void evaluateZ(int root, dcomplex **Z, dcomplex **ZB, dcomplex **ZM, dcomplex **ZM1, dcomplex ***solutions, dcomplex *rootsOfUnity, char *inputSequence, char *sequence, int *intSequence, int *bpList, int *canBasePair[5], int **numBasePairs, int sequenceLength, int runLength, double RT) {
@@ -280,13 +322,18 @@ void solveSystem(dcomplex ***solutions, char *sequence, int *structure, int sequ
   int i, j, k;
   double scalingFactor, sum;
   
-  sprintf(precisionFormat, "%%d\t%%.0%df\n", PRECISION ? PRECISION : std::numeric_limits<double>::digits10);
+  snprintf(precisionFormat, sizeof(precisionFormat), "%%d\t%%.0%df\n", PRECISION ? PRECISION : std::numeric_limits<double>::digits10);
   
   std::vector<fftw_complex> signal(runLength + 1);
   std::vector<fftw_complex> result(runLength + 1);
 
   fftw_plan plan = fftw_plan_dft_1d(runLength + 1, signal.data(), result.data(), FFTW_FORWARD, FFTW_ESTIMATE);
-  
+
+  if (!plan) {
+    fprintf(stderr, "Error: FFTW plan creation failed for size %d\n", runLength + 1);
+    exit(1);
+  }
+
   for (i = 0; i < NUM_WINDOWS; ++i) {
     for (j = 1; j <= sequenceLength - WINDOW_SIZE(i) + 1; ++j) {
       sum           = 0;
@@ -469,7 +516,6 @@ void initializeBasePairCounts(int **numBasePairs, int *bpList, int n){
   }
 }
 
-// INLINE  PRIVATE int E_Hairpin(int size, int type, int si1, int sj1, const char *string, paramT *P){
 inline double hairpinloop(int i, int j, int type, short si1, short sj1, char *string){
   double energy;
   int size = j-i-1;
@@ -502,7 +548,6 @@ inline double hairpinloop(int i, int j, int type, short si1, short sj1, char *st
   return energy;
 }
 
-// INLINE  PRIVATE int E_IntLoop(int n1, int n2, int type, int type_2, int si1, int sj1, int sp1, int sq1, paramT *P){
 inline double interiorloop(int i, int j, int k, int l, int type, int type_2, short si1, short sq1, short sj1, short sp1){
   /* compute energy of degree 2 loop (stack bulge or interior) */
   int nl, ns;

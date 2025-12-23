@@ -110,9 +110,9 @@ void read_input(int argc,char *argv[], char **maina, int **bps) {
     } else {
       /* File as input? */
       infile = fopen(argv[i], "r");
-      if (infile == NULL) { 
+      if (infile == NULL) {
         /* Input is not a file */
-	      /* arMAX_SEQ_LENGTH[i] should be the sequence and argv[i+1] should be the structure */
+	      /* argv[i] should be the sequence and argv[i+1] should be the structure */
         if (argc <= i + 1) {
           usage();
         }
@@ -226,5 +226,20 @@ void read_input(int argc,char *argv[], char **maina, int **bps) {
   printf("%d %s %s\n", N, seq, str);
 
   *bps = getBasePairList(str);
+
+  /* Check for unbalanced parentheses in structure */
+  if ((*bps)[0] < 0) {
+    if ((*bps)[0] == -1) {
+      fprintf(stderr, "Error: Unbalanced structure - too many ')' parentheses\n");
+    } else if ((*bps)[0] == -2) {
+      fprintf(stderr, "Error: Unbalanced structure - too many '(' parentheses\n");
+    } else {
+      fprintf(stderr, "Error: Invalid structure notation\n");
+    }
+    free(*bps);
+    free(str);
+    exit(1);
+  }
+
   free(str);
 } 
