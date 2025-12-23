@@ -6,31 +6,30 @@
 #include "delta.h"
 #include "misc.h"
 #include "params.h"
+#include "memory_types.h"
 
 // Global variables - defined in globals.cpp
 extern int    PF, N, PRECISION, WINDOW_SIZE, MIN_WINDOW_SIZE;
 extern double temperature;
 extern char   *ENERGY;
-extern paramT *P;
+extern fftbor::ParamPtr P;
 
-void read_input(int, char **, char **, int**);
+void read_input(int argc, char *argv[], fftbor::CharSequencePtr& seq, fftbor::BasePairListPtr& bps);
 void usage();
 
 int main(int argc, char *argv[]) {
-  char *a;  /* a points to array a[0],...,a[n] where a[0]=n, and a[1],...,a[n] are RNA nucleotides and where n <= Nseq - 2 */
-  int *bps; /* bps is an array of basepairs, where a base pair is defined by two integers */
-  
+  fftbor::CharSequencePtr seq;  // RNA sequence
+  fftbor::BasePairListPtr bps;  // Base pair list
+
   if (argc == 1) {
     usage();
     exit(1);
   }
-  
-  read_input(argc, argv, &a, &bps);
-  neighbours(a, bps);
 
-  free(a);
-  free(bps);
+  read_input(argc, argv, seq, bps);
+  neighbours(seq.get(), bps.get());
 
+  // Smart pointers automatically clean up - no manual free() needed
   return 0;
 }
 
@@ -51,12 +50,13 @@ void usage() {
   exit(1);
 }
 
-void read_input(int argc,char *argv[], char **maina, int **bps) {
+void read_input(int argc, char *argv[], fftbor::CharSequencePtr& mainSeq, fftbor::BasePairListPtr& bps) {
   FILE *infile;
   char line[MAX_SEQ_LENGTH];
   int i, k;
-  char *seq = NULL, *str = NULL;
-  
+  char *seq = NULL;
+  fftbor::CharSequencePtr strPtr;  // Structure string (local, auto-freed)
+
   PF              = 0;
   PRECISION       = 4;
   WINDOW_SIZE     = 0;
@@ -116,19 +116,19 @@ void read_input(int argc,char *argv[], char **maina, int **bps) {
         if (argc <= i + 1) {
           usage();
         }
-        N        = strlen(argv[i]);
-        (*maina) = (char *)xcalloc(N + 1, sizeof(char));
-	      seq      = *maina;
-	      str      = (char *)xcalloc(N + 1, sizeof(char));
-	      (void)sscanf(argv[i++], "%s", seq);
-	      (void)sscanf(argv[i], "%s", str);
-	      N = strlen(seq);
-        
-        if (strlen(seq) != strlen(str)) {
+        N = strlen(argv[i]);
+        mainSeq.reset((char *)xcalloc(N + 1, sizeof(char)));
+        seq = mainSeq.get();
+        strPtr.reset((char *)xcalloc(N + 1, sizeof(char)));
+        (void)sscanf(argv[i++], "%s", seq);
+        (void)sscanf(argv[i], "%s", strPtr.get());
+        N = strlen(seq);
+
+        if (strlen(seq) != strlen(strPtr.get())) {
           fprintf(stderr,"Length of RNA sequence and structure must be equal\n");
           exit(1);
         }
-        
+
         /* Convert RNA sequence to uppercase and make sure there are no Ts in the sequence (replace by U) */
         for (k = 0; k < N; k++) {
           seq[k] = toupper(seq[k]);
@@ -136,7 +136,7 @@ void read_input(int argc,char *argv[], char **maina, int **bps) {
             seq[k] = 'U';
           }
         }
-        str[N] = '\0';
+        strPtr.get()[N] = '\0';
         seq[N] = '\0';
       }
       else { 
@@ -156,9 +156,9 @@ void read_input(int argc,char *argv[], char **maina, int **bps) {
           usage();
         }
         
-        N        = strlen(line);
-        (*maina) = (char *)xcalloc(N+1,sizeof(char));
-        seq      = *maina;
+        N = strlen(line);
+        mainSeq.reset((char *)xcalloc(N+1,sizeof(char)));
+        seq = mainSeq.get();
         (void)sscanf(line,"%s",seq);
         
         for (k = 0; k < N; k++) {
@@ -173,11 +173,11 @@ void read_input(int argc,char *argv[], char **maina, int **bps) {
           exit(1);
         }
 
-        str = (char *)xcalloc(N + 1, sizeof(char));
-        (void)sscanf(line, "%s", str);
+        strPtr.reset((char *)xcalloc(N + 1, sizeof(char)));
+        (void)sscanf(line, "%s", strPtr.get());
 
-        if (strlen(seq) != strlen(str)) {
-          printf("%s\n%s\n", seq, str);
+        if (strlen(seq) != strlen(strPtr.get())) {
+          printf("%s\n%s\n", seq, strPtr.get());
           fprintf(stderr, "Length of RNA sequence and structure must be equal\n");
           exit(1);
         }
@@ -193,7 +193,7 @@ void read_input(int argc,char *argv[], char **maina, int **bps) {
   }
   
   /* Post-sequence / structure validations */
-  if (seq == NULL || str == NULL) {
+  if (seq == NULL || !strPtr) {
     usage();
   }
   
@@ -223,23 +223,22 @@ void read_input(int argc,char *argv[], char **maina, int **bps) {
   }
   
   /* Print sequence length, sequence and starting structure */
-  printf("%d %s %s\n", N, seq, str);
+  printf("%d %s %s\n", N, seq, strPtr.get());
 
-  *bps = getBasePairList(str);
+  bps = getBasePairList(strPtr.get());
 
   /* Check for unbalanced parentheses in structure */
-  if ((*bps)[0] < 0) {
-    if ((*bps)[0] == -1) {
+  if (bps[0] < 0) {
+    if (bps[0] == -1) {
       fprintf(stderr, "Error: Unbalanced structure - too many ')' parentheses\n");
-    } else if ((*bps)[0] == -2) {
+    } else if (bps[0] == -2) {
       fprintf(stderr, "Error: Unbalanced structure - too many '(' parentheses\n");
     } else {
       fprintf(stderr, "Error: Invalid structure notation\n");
     }
-    free(*bps);
-    free(str);
+    // Smart pointers automatically clean up - no manual free() needed
     exit(1);
   }
 
-  free(str);
+  // strPtr automatically freed when function returns
 } 

@@ -3,6 +3,7 @@
 
 #include "energy_const.h"
 #include "params.h"
+#include "memory_types.h"
 
 // FFTbor algorithm global variables
 int PF = 0;
@@ -11,7 +12,7 @@ int PRECISION = 4;
 int WINDOW_SIZE = 0;
 int MIN_WINDOW_SIZE = 0;
 char* ENERGY = nullptr;
-paramT* P = nullptr;
+fftbor::ParamPtr P = nullptr;
 
 // Temperature in Celsius (default 37)
 double temperature = 37.0;

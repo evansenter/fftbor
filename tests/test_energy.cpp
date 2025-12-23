@@ -8,9 +8,10 @@
 #include "energy_const.h"
 #include "delta.h"
 #include "misc.h"
+#include "memory_types.h"
 
 extern double temperature;
-extern paramT* P;
+extern fftbor::ParamPtr P;
 
 class EnergyTest : public ::testing::Test {
 protected:
@@ -21,10 +22,8 @@ protected:
     }
 
     void TearDown() override {
-        if (P) {
-            free(P);
-            P = nullptr;
-        }
+        // Smart pointer auto-cleans up, just reset to release
+        P.reset();
     }
 };
 

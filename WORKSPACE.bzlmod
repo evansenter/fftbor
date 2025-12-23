@@ -1,0 +1,15 @@
+# WORKSPACE.bzlmod - for external dependencies not yet in Bazel Central Registry
+
+new_local_repository(
+    name = "fftw",
+    path = "/opt/homebrew/opt/fftw",
+    build_file_content = """
+cc_library(
+    name = "fftw3",
+    hdrs = glob(["include/*.h"]),
+    srcs = glob(["lib/libfftw3.dylib", "lib/libfftw3.a"]),
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+)
+""",
+)

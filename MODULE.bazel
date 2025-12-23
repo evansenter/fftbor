@@ -1,0 +1,10 @@
+module(
+    name = "fftbor",
+    version = "1.0.0",
+)
+
+# GoogleTest for testing
+bazel_dep(name = "googletest", version = "1.15.2")
+
+# rules_cc for C++ compilation
+bazel_dep(name = "rules_cc", version = "0.0.17")

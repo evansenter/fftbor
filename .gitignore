@@ -14,3 +14,10 @@ debug*.txt
 bin/
 lib/
 build/
+
+# Bazel
+bazel-*
+MODULE.bazel.lock
+
+# macOS
+.DS_Store

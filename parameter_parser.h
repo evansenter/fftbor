@@ -2,6 +2,7 @@
 #define PARAMETER_PARSER_H
 
 #include "params.h"
+#include "memory_types.h"
 
 /**
  * Read energy parameters from a ViennaRNA-format parameter file.
@@ -15,9 +16,9 @@ void read_parameter_file(const char* filename);
  * Scale the energy parameters for the current temperature.
  * Temperature is expected to be set via the global 'temperature' variable.
  *
- * @return Pointer to newly allocated paramT structure with scaled parameters
+ * @return Smart pointer to newly allocated paramT structure with scaled parameters
  */
-paramT* scale_parameters(void);
+fftbor::ParamPtr scale_parameters();
 
 /**
  * Initialize model details with default values.

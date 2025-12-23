@@ -14,7 +14,7 @@ constexpr int VRNA_GQUAD_MAX_BOX_SIZE = (4 * VRNA_GQUAD_MAX_STACK_SIZE) + (3 * V
  *  \brief The data structure that contains the complete model details used throughout the calculations
  *
  */
-typedef struct{
+struct model_detailsT {
   int     dangles;      /**<  \brief  Specifies the dangle model used in any energy evaluation (0,1,2 or 3)
                               \note   Some function do not implement all dangle model but only a subset of
                                       (0,1,2,3). Read the documentaion of the particular recurrences or
@@ -28,14 +28,14 @@ typedef struct{
   int     logML;        /**<  \brief  Use logarithmic scaling for multi loops */
   int     circ;         /**<  \brief  Assume molecule to be circular */
   int     gquad;        /**<  \brief  Include G-quadruplexes in structure prediction */
-} model_detailsT;
+};
 
 
 
 /**
  *  \brief The datastructure that contains temperature scaled energy parameters.
  */
-typedef struct{
+struct paramT {
   int id;
   int stack[NBPAIRS+1][NBPAIRS+1];
   int hairpin[31];
@@ -75,7 +75,7 @@ typedef struct{
 
   model_detailsT model_details;   /**<  \brief  Model details to be used in the recursions */
 
-}  paramT;
+};
 
 // These functions are now provided by parameter_parser.h
 // void set_model_details(model_detailsT*);

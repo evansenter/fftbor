@@ -8,9 +8,10 @@
 #include "params.h"
 #include "delta.h"
 #include "misc.h"
+#include "memory_types.h"
 
 extern double temperature;
-extern paramT* P;
+extern fftbor::ParamPtr P;
 extern int N, PRECISION, WINDOW_SIZE, MIN_WINDOW_SIZE;
 extern char* ENERGY;
 
@@ -46,14 +47,14 @@ TEST_F(IntegrationTest, SimpleHairpinPartitionFunction) {
     read_parameter_file("rna_turner2004.par");
 
     // Get base pair list
-    int* bpList = getBasePairList(structure);
-    ASSERT_NE(bpList, nullptr);
+    auto bpList = getBasePairList(structure);
+    ASSERT_NE(bpList.get(), nullptr);
     EXPECT_GE(bpList[0], 0);
 
     // Call the main algorithm
     // Note: This will print output to stdout
     testing::internal::CaptureStdout();
-    neighbours(sequence, bpList);
+    neighbours(sequence, bpList.get());
     std::string output = testing::internal::GetCapturedStdout();
 
     // The output should contain probability values
@@ -68,7 +69,7 @@ TEST_F(IntegrationTest, SimpleHairpinPartitionFunction) {
     EXPECT_TRUE(output.find("0.") != std::string::npos ||
                 output.find("1.") != std::string::npos);
 
-    free(bpList);
+    // Smart pointer auto-cleans up
 }
 
 TEST_F(IntegrationTest, AllUnpairedStructure) {
@@ -83,8 +84,8 @@ TEST_F(IntegrationTest, AllUnpairedStructure) {
 
     read_parameter_file("rna_turner2004.par");
 
-    int* bpList = getBasePairList(structure);
-    ASSERT_NE(bpList, nullptr);
+    auto bpList = getBasePairList(structure);
+    ASSERT_NE(bpList.get(), nullptr);
     EXPECT_EQ(bpList[0], 0);  // No base pairs
 
     // All positions should be unpaired
@@ -93,12 +94,12 @@ TEST_F(IntegrationTest, AllUnpairedStructure) {
     }
 
     testing::internal::CaptureStdout();
-    neighbours(sequence, bpList);
+    neighbours(sequence, bpList.get());
     std::string output = testing::internal::GetCapturedStdout();
 
     EXPECT_FALSE(output.empty());
 
-    free(bpList);
+    // Smart pointer auto-cleans up
 }
 
 TEST_F(IntegrationTest, TwoHairpinsStructure) {
@@ -113,8 +114,8 @@ TEST_F(IntegrationTest, TwoHairpinsStructure) {
 
     read_parameter_file("rna_turner2004.par");
 
-    int* bpList = getBasePairList(structure);
-    ASSERT_NE(bpList, nullptr);
+    auto bpList = getBasePairList(structure);
+    ASSERT_NE(bpList.get(), nullptr);
     EXPECT_GE(bpList[0], 0);
 
     // Check first hairpin base pairs
@@ -126,12 +127,12 @@ TEST_F(IntegrationTest, TwoHairpinsStructure) {
     EXPECT_EQ(bpList[24], 13);
 
     testing::internal::CaptureStdout();
-    neighbours(sequence, bpList);
+    neighbours(sequence, bpList.get());
     std::string output = testing::internal::GetCapturedStdout();
 
     EXPECT_FALSE(output.empty());
 
-    free(bpList);
+    // Smart pointer auto-cleans up
 }
 
 TEST_F(IntegrationTest, DifferentTemperatures) {
@@ -148,12 +149,12 @@ TEST_F(IntegrationTest, DifferentTemperatures) {
     temperature = 37.0;
     read_parameter_file("rna_turner2004.par");
 
-    int* bpList1 = getBasePairList(structure);
+    auto bpList1 = getBasePairList(structure);
     char seq1[20];
     strcpy(seq1, sequence);
 
     testing::internal::CaptureStdout();
-    neighbours(seq1, bpList1);
+    neighbours(seq1, bpList1.get());
     std::string output37 = testing::internal::GetCapturedStdout();
 
     // Test at 25C
@@ -161,12 +162,12 @@ TEST_F(IntegrationTest, DifferentTemperatures) {
     read_parameter_file("rna_turner2004.par");
 
     char structure2[] = "((((....))))";
-    int* bpList2 = getBasePairList(structure2);
+    auto bpList2 = getBasePairList(structure2);
     char seq2[20];
     strcpy(seq2, sequence);
 
     testing::internal::CaptureStdout();
-    neighbours(seq2, bpList2);
+    neighbours(seq2, bpList2.get());
     std::string output25 = testing::internal::GetCapturedStdout();
 
     // Results should be different at different temperatures
@@ -175,8 +176,7 @@ TEST_F(IntegrationTest, DifferentTemperatures) {
     EXPECT_FALSE(output37.empty());
     EXPECT_FALSE(output25.empty());
 
-    free(bpList1);
-    free(bpList2);
+    // Smart pointers auto-clean up
 
     // Reset temperature
     temperature = 37.0;
@@ -195,27 +195,26 @@ TEST_F(IntegrationTest, ConsistentResults) {
 
     // First run
     char structure1[] = "((((....))))";
-    int* bpList1 = getBasePairList(structure1);
+    auto bpList1 = getBasePairList(structure1);
     char seq1[20];
     strcpy(seq1, sequence);
 
     testing::internal::CaptureStdout();
-    neighbours(seq1, bpList1);
+    neighbours(seq1, bpList1.get());
     std::string output1 = testing::internal::GetCapturedStdout();
 
     // Second run
     char structure2[] = "((((....))))";
-    int* bpList2 = getBasePairList(structure2);
+    auto bpList2 = getBasePairList(structure2);
     char seq2[20];
     strcpy(seq2, sequence);
 
     testing::internal::CaptureStdout();
-    neighbours(seq2, bpList2);
+    neighbours(seq2, bpList2.get());
     std::string output2 = testing::internal::GetCapturedStdout();
 
     // Results should be identical
     EXPECT_EQ(output1, output2);
 
-    free(bpList1);
-    free(bpList2);
+    // Smart pointers auto-clean up
 }

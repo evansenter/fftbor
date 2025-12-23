@@ -540,7 +540,7 @@ static int scale_energy(int energy37, int enthalpy, double temp_c) {
     return (int)(enthalpy - (enthalpy - energy37) * TT + 0.5);
 }
 
-paramT* scale_parameters(void) {
+fftbor::ParamPtr scale_parameters() {
     if (!raw_params.loaded) {
         fprintf(stderr, "Error: Parameters not loaded. Call read_parameter_file first.\n");
         exit(1);
@@ -683,7 +683,7 @@ paramT* scale_parameters(void) {
     // Initialize model details
     set_model_details(&P->model_details);
 
-    return P;
+    return fftbor::make_param_ptr(P);
 }
 
 void set_model_details(model_detailsT* md) {

@@ -6,6 +6,7 @@
 #include "parameter_parser.h"
 #include "params.h"
 #include "energy_const.h"
+#include "memory_types.h"
 
 extern double temperature;
 
@@ -21,8 +22,8 @@ TEST_F(ParameterParserTest, LoadTurner2004Parameters) {
     // This test verifies that we can load the Turner 2004 parameters
     read_parameter_file("rna_turner2004.par");
 
-    paramT* P = scale_parameters();
-    ASSERT_NE(P, nullptr);
+    auto P = scale_parameters();
+    ASSERT_NE(P.get(), nullptr);
 
     // Check that some key parameters are loaded correctly
     // Stack energies for CG-CG should be negative (stabilizing)
@@ -37,20 +38,20 @@ TEST_F(ParameterParserTest, LoadTurner2004Parameters) {
     // MLclosing is defined (can be positive or negative in Turner 2004)
     EXPECT_NE(P->MLclosing, INF);
 
-    free(P);
+    // Smart pointer auto-cleans up
 }
 
 TEST_F(ParameterParserTest, LoadTurner1999Parameters) {
     // This test verifies that we can load the Turner 1999 parameters
     read_parameter_file("rna_turner1999.par");
 
-    paramT* P = scale_parameters();
-    ASSERT_NE(P, nullptr);
+    auto P = scale_parameters();
+    ASSERT_NE(P.get(), nullptr);
 
     // Check that parameters were loaded
     EXPECT_LT(P->stack[1][1], 0);  // CG-CG stack should be stabilizing
 
-    free(P);
+    // Smart pointer auto-cleans up
 }
 
 TEST_F(ParameterParserTest, TemperatureScaling) {
@@ -59,15 +60,15 @@ TEST_F(ParameterParserTest, TemperatureScaling) {
 
     // Get parameters at 37C
     temperature = 37.0;
-    paramT* P37 = scale_parameters();
-    ASSERT_NE(P37, nullptr);
+    auto P37 = scale_parameters();
+    ASSERT_NE(P37.get(), nullptr);
 
     int stack_37 = P37->stack[1][1];
 
     // Get parameters at 25C (should be slightly different)
     temperature = 25.0;
-    paramT* P25 = scale_parameters();
-    ASSERT_NE(P25, nullptr);
+    auto P25 = scale_parameters();
+    ASSERT_NE(P25.get(), nullptr);
 
     int stack_25 = P25->stack[1][1];
 
@@ -78,8 +79,8 @@ TEST_F(ParameterParserTest, TemperatureScaling) {
 
     // Get parameters at 50C
     temperature = 50.0;
-    paramT* P50 = scale_parameters();
-    ASSERT_NE(P50, nullptr);
+    auto P50 = scale_parameters();
+    ASSERT_NE(P50.get(), nullptr);
 
     int stack_50 = P50->stack[1][1];
 
@@ -88,9 +89,7 @@ TEST_F(ParameterParserTest, TemperatureScaling) {
     // At minimum, they should all be different
     EXPECT_NE(stack_37, stack_50);
 
-    free(P37);
-    free(P25);
-    free(P50);
+    // Smart pointers auto-clean up
 
     // Reset temperature
     temperature = 37.0;
@@ -100,8 +99,8 @@ TEST_F(ParameterParserTest, SpecialLoopsLoaded) {
     // Test that special loop sequences are loaded
     read_parameter_file("rna_turner2004.par");
 
-    paramT* P = scale_parameters();
-    ASSERT_NE(P, nullptr);
+    auto P = scale_parameters();
+    ASSERT_NE(P.get(), nullptr);
 
     // Check that Tetraloops string is not empty
     EXPECT_GT(strlen(P->Tetraloops), 0);
@@ -109,15 +108,15 @@ TEST_F(ParameterParserTest, SpecialLoopsLoaded) {
     // Check that Triloops string is not empty
     EXPECT_GT(strlen(P->Triloops), 0);
 
-    free(P);
+    // Smart pointer auto-cleans up
 }
 
 TEST_F(ParameterParserTest, ModelDetailsInitialized) {
     // Test that model details are properly initialized
     read_parameter_file("rna_turner2004.par");
 
-    paramT* P = scale_parameters();
-    ASSERT_NE(P, nullptr);
+    auto P = scale_parameters();
+    ASSERT_NE(P.get(), nullptr);
 
     // Check default model details
     EXPECT_EQ(P->model_details.dangles, 2);
@@ -125,14 +124,14 @@ TEST_F(ParameterParserTest, ModelDetailsInitialized) {
     EXPECT_EQ(P->model_details.noLP, 0);
     EXPECT_EQ(P->model_details.noGU, 0);
 
-    free(P);
+    // Smart pointer auto-cleans up
 }
 
 TEST_F(ParameterParserTest, BulgeAndInternalLoopParameters) {
     read_parameter_file("rna_turner2004.par");
 
-    paramT* P = scale_parameters();
-    ASSERT_NE(P, nullptr);
+    auto P = scale_parameters();
+    ASSERT_NE(P.get(), nullptr);
 
     // Bulge of size 1 should have a specific energy
     EXPECT_GT(P->bulge[1], 0);
@@ -144,5 +143,5 @@ TEST_F(ParameterParserTest, BulgeAndInternalLoopParameters) {
     // Larger loops should have higher energies (more destabilizing)
     EXPECT_LE(P->internal_loop[4], P->internal_loop[6]);
 
-    free(P);
+    // Smart pointer auto-cleans up
 }
