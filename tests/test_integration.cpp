@@ -47,14 +47,14 @@ TEST_F(IntegrationTest, SimpleHairpinPartitionFunction) {
     read_parameter_file("rna_turner2004.par");
 
     // Get base pair list
-    auto bpList = get_base_pair_list(structure);
-    ASSERT_NE(bpList.get(), nullptr);
-    EXPECT_GE(bpList[0], 0);
+    auto bp_list = get_base_pair_list(structure);
+    ASSERT_NE(bp_list.get(), nullptr);
+    EXPECT_GE(bp_list[0], 0);
 
     // Call the main algorithm
     // Note: This will print output to stdout
     testing::internal::CaptureStdout();
-    neighbours(sequence, bpList.get());
+    neighbours(sequence, bp_list.get());
     std::string output = testing::internal::GetCapturedStdout();
 
     // The output should contain probability values
@@ -84,17 +84,17 @@ TEST_F(IntegrationTest, AllUnpairedStructure) {
 
     read_parameter_file("rna_turner2004.par");
 
-    auto bpList = get_base_pair_list(structure);
-    ASSERT_NE(bpList.get(), nullptr);
-    EXPECT_EQ(bpList[0], 0);  // No base pairs
+    auto bp_list = get_base_pair_list(structure);
+    ASSERT_NE(bp_list.get(), nullptr);
+    EXPECT_EQ(bp_list[0], 0);  // No base pairs
 
     // All positions should be unpaired
     for (int i = 1; i <= n; i++) {
-        EXPECT_EQ(bpList[i], -1);
+        EXPECT_EQ(bp_list[i], -1);
     }
 
     testing::internal::CaptureStdout();
-    neighbours(sequence, bpList.get());
+    neighbours(sequence, bp_list.get());
     std::string output = testing::internal::GetCapturedStdout();
 
     EXPECT_FALSE(output.empty());
@@ -114,20 +114,20 @@ TEST_F(IntegrationTest, TwoHairpinsStructure) {
 
     read_parameter_file("rna_turner2004.par");
 
-    auto bpList = get_base_pair_list(structure);
-    ASSERT_NE(bpList.get(), nullptr);
-    EXPECT_GE(bpList[0], 0);
+    auto bp_list = get_base_pair_list(structure);
+    ASSERT_NE(bp_list.get(), nullptr);
+    EXPECT_GE(bp_list[0], 0);
 
     // Check first hairpin base pairs
-    EXPECT_EQ(bpList[1], 12);
-    EXPECT_EQ(bpList[12], 1);
+    EXPECT_EQ(bp_list[1], 12);
+    EXPECT_EQ(bp_list[12], 1);
 
     // Check second hairpin base pairs
-    EXPECT_EQ(bpList[13], 24);
-    EXPECT_EQ(bpList[24], 13);
+    EXPECT_EQ(bp_list[13], 24);
+    EXPECT_EQ(bp_list[24], 13);
 
     testing::internal::CaptureStdout();
-    neighbours(sequence, bpList.get());
+    neighbours(sequence, bp_list.get());
     std::string output = testing::internal::GetCapturedStdout();
 
     EXPECT_FALSE(output.empty());
@@ -149,12 +149,12 @@ TEST_F(IntegrationTest, DifferentTemperatures) {
     temperature = 37.0;
     read_parameter_file("rna_turner2004.par");
 
-    auto bpList1 = get_base_pair_list(structure);
+    auto bp_list1 = get_base_pair_list(structure);
     char seq1[20];
     strcpy(seq1, sequence);
 
     testing::internal::CaptureStdout();
-    neighbours(seq1, bpList1.get());
+    neighbours(seq1, bp_list1.get());
     std::string output37 = testing::internal::GetCapturedStdout();
 
     // Test at 25C
@@ -162,12 +162,12 @@ TEST_F(IntegrationTest, DifferentTemperatures) {
     read_parameter_file("rna_turner2004.par");
 
     char structure2[] = "((((....))))";
-    auto bpList2 = get_base_pair_list(structure2);
+    auto bp_list2 = get_base_pair_list(structure2);
     char seq2[20];
     strcpy(seq2, sequence);
 
     testing::internal::CaptureStdout();
-    neighbours(seq2, bpList2.get());
+    neighbours(seq2, bp_list2.get());
     std::string output25 = testing::internal::GetCapturedStdout();
 
     // Results should be different at different temperatures
@@ -195,22 +195,22 @@ TEST_F(IntegrationTest, ConsistentResults) {
 
     // First run
     char structure1[] = "((((....))))";
-    auto bpList1 = get_base_pair_list(structure1);
+    auto bp_list1 = get_base_pair_list(structure1);
     char seq1[20];
     strcpy(seq1, sequence);
 
     testing::internal::CaptureStdout();
-    neighbours(seq1, bpList1.get());
+    neighbours(seq1, bp_list1.get());
     std::string output1 = testing::internal::GetCapturedStdout();
 
     // Second run
     char structure2[] = "((((....))))";
-    auto bpList2 = get_base_pair_list(structure2);
+    auto bp_list2 = get_base_pair_list(structure2);
     char seq2[20];
     strcpy(seq2, sequence);
 
     testing::internal::CaptureStdout();
-    neighbours(seq2, bpList2.get());
+    neighbours(seq2, bp_list2.get());
     std::string output2 = testing::internal::GetCapturedStdout();
 
     // Results should be identical

@@ -40,22 +40,22 @@ TEST_F(MiscTest, XCallocLargeAllocation) {
 TEST_F(MiscTest, GetBasePairListSimple) {
     // Test simple hairpin structure: ((....))
     char structure[] = "((....))";
-    auto bpList = get_base_pair_list(structure);
+    auto bp_list = get_base_pair_list(structure);
 
-    ASSERT_NE(bpList.get(), nullptr);
-    EXPECT_GE(bpList[0], 0);  // No error
+    ASSERT_NE(bp_list.get(), nullptr);
+    EXPECT_GE(bp_list[0], 0);  // No error
 
     // Position 1 pairs with 8 (1-indexed)
-    EXPECT_EQ(bpList[1], 8);
-    EXPECT_EQ(bpList[8], 1);
+    EXPECT_EQ(bp_list[1], 8);
+    EXPECT_EQ(bp_list[8], 1);
 
     // Position 2 pairs with 7
-    EXPECT_EQ(bpList[2], 7);
-    EXPECT_EQ(bpList[7], 2);
+    EXPECT_EQ(bp_list[2], 7);
+    EXPECT_EQ(bp_list[7], 2);
 
     // Unpaired positions (3-6) should have -1
     for (int i = 3; i <= 6; i++) {
-        EXPECT_EQ(bpList[i], -1);
+        EXPECT_EQ(bp_list[i], -1);
     }
 
     // Smart pointer auto-cleans up
@@ -64,26 +64,26 @@ TEST_F(MiscTest, GetBasePairListSimple) {
 TEST_F(MiscTest, GetBasePairListNested) {
     // Test nested structure: (((....)))
     char structure[] = "(((....)))";
-    auto bpList = get_base_pair_list(structure);
+    auto bp_list = get_base_pair_list(structure);
 
-    ASSERT_NE(bpList.get(), nullptr);
-    EXPECT_GE(bpList[0], 0);
+    ASSERT_NE(bp_list.get(), nullptr);
+    EXPECT_GE(bp_list[0], 0);
 
     // Outermost pair: 1-10
-    EXPECT_EQ(bpList[1], 10);
-    EXPECT_EQ(bpList[10], 1);
+    EXPECT_EQ(bp_list[1], 10);
+    EXPECT_EQ(bp_list[10], 1);
 
     // Middle pair: 2-9
-    EXPECT_EQ(bpList[2], 9);
-    EXPECT_EQ(bpList[9], 2);
+    EXPECT_EQ(bp_list[2], 9);
+    EXPECT_EQ(bp_list[9], 2);
 
     // Inner pair: 3-8
-    EXPECT_EQ(bpList[3], 8);
-    EXPECT_EQ(bpList[8], 3);
+    EXPECT_EQ(bp_list[3], 8);
+    EXPECT_EQ(bp_list[8], 3);
 
     // Unpaired: 4-7
     for (int i = 4; i <= 7; i++) {
-        EXPECT_EQ(bpList[i], -1);
+        EXPECT_EQ(bp_list[i], -1);
     }
 
     // Smart pointer auto-cleans up
@@ -92,28 +92,28 @@ TEST_F(MiscTest, GetBasePairListNested) {
 TEST_F(MiscTest, GetBasePairListMultiloop) {
     // Test multiloop structure: ((..)(..))
     char structure[] = "((..)(..))";
-    auto bpList = get_base_pair_list(structure);
+    auto bp_list = get_base_pair_list(structure);
 
-    ASSERT_NE(bpList.get(), nullptr);
-    EXPECT_GE(bpList[0], 0);
+    ASSERT_NE(bp_list.get(), nullptr);
+    EXPECT_GE(bp_list[0], 0);
 
     // Outermost pair: 1-10
-    EXPECT_EQ(bpList[1], 10);
-    EXPECT_EQ(bpList[10], 1);
+    EXPECT_EQ(bp_list[1], 10);
+    EXPECT_EQ(bp_list[10], 1);
 
     // First internal pair: 2-5
-    EXPECT_EQ(bpList[2], 5);
-    EXPECT_EQ(bpList[5], 2);
+    EXPECT_EQ(bp_list[2], 5);
+    EXPECT_EQ(bp_list[5], 2);
 
     // Second internal pair: 6-9
-    EXPECT_EQ(bpList[6], 9);
-    EXPECT_EQ(bpList[9], 6);
+    EXPECT_EQ(bp_list[6], 9);
+    EXPECT_EQ(bp_list[9], 6);
 
     // Unpaired positions
-    EXPECT_EQ(bpList[3], -1);
-    EXPECT_EQ(bpList[4], -1);
-    EXPECT_EQ(bpList[7], -1);
-    EXPECT_EQ(bpList[8], -1);
+    EXPECT_EQ(bp_list[3], -1);
+    EXPECT_EQ(bp_list[4], -1);
+    EXPECT_EQ(bp_list[7], -1);
+    EXPECT_EQ(bp_list[8], -1);
 
     // Smart pointer auto-cleans up
 }
@@ -122,14 +122,14 @@ TEST_F(MiscTest, GetBasePairListAllUnpaired) {
     // Test all unpaired: ........
     char structure[] = "........";
     int n = strlen(structure);
-    auto bpList = get_base_pair_list(structure);
+    auto bp_list = get_base_pair_list(structure);
 
-    ASSERT_NE(bpList.get(), nullptr);
-    EXPECT_EQ(bpList[0], 0);  // Zero base pairs
+    ASSERT_NE(bp_list.get(), nullptr);
+    EXPECT_EQ(bp_list[0], 0);  // Zero base pairs
 
     // All positions should be unpaired
     for (int i = 1; i <= n; i++) {
-        EXPECT_EQ(bpList[i], -1);
+        EXPECT_EQ(bp_list[i], -1);
     }
 
     // Smart pointer auto-cleans up
@@ -138,11 +138,11 @@ TEST_F(MiscTest, GetBasePairListAllUnpaired) {
 TEST_F(MiscTest, GetBasePairListUnbalanced) {
     // Test unbalanced structure: (((....)
     char structure[] = "(((....)";
-    auto bpList = get_base_pair_list(structure);
+    auto bp_list = get_base_pair_list(structure);
 
-    ASSERT_NE(bpList.get(), nullptr);
+    ASSERT_NE(bp_list.get(), nullptr);
     // Should indicate an error (too many open parens)
-    EXPECT_EQ(bpList[0], -2);
+    EXPECT_EQ(bp_list[0], -2);
 
     // Smart pointer auto-cleans up
 }
@@ -150,11 +150,11 @@ TEST_F(MiscTest, GetBasePairListUnbalanced) {
 TEST_F(MiscTest, GetBasePairListTooManyClose) {
     // Test unbalanced structure: (....)))
     char structure[] = "(....)))";
-    auto bpList = get_base_pair_list(structure);
+    auto bp_list = get_base_pair_list(structure);
 
-    ASSERT_NE(bpList.get(), nullptr);
+    ASSERT_NE(bp_list.get(), nullptr);
     // Should indicate an error (too many close parens)
-    EXPECT_EQ(bpList[0], -1);
+    EXPECT_EQ(bp_list[0], -1);
 
     // Smart pointer auto-cleans up
 }
