@@ -108,15 +108,33 @@ concept BasePairSpan = requires(T bpl) {
 };
 
 // ============================================================================
+// Physical Constants
+// ============================================================================
+
+// Gas constant R in kcal/(mol·K), scaled for internal energy units (1/10 cal/mol)
+// R = 1.987204258 cal/(mol·K) = 0.001987204258 kcal/(mol·K)
+// Scaled by 100 for internal units: R_scaled = 0.0019872... * 100 = 0.19872...
+// Pre-multiplied with kelvin offset for efficiency
+constexpr double GAS_CONSTANT_KCAL_PER_MOL_K = 0.0019872370936902486;
+
+// Kelvin offset for converting Celsius to Kelvin
+constexpr double KELVIN_OFFSET = 273.15;
+
+// ============================================================================
 // Parameter File Constants
 // ============================================================================
 
 constexpr int MAX_TETRALOOPS = 200;
-constexpr int TETRALOOP_SEQ_SIZE = 1401;   // 200 * 7 + 1
+constexpr int TETRALOOP_SEQ_LENGTH = 6;  // nucleotides per tetraloop sequence
+constexpr int TETRALOOP_SEQ_SIZE = MAX_TETRALOOPS * (TETRALOOP_SEQ_LENGTH + 1) + 1;  // +1 for null terminator per seq, +1 for array
+
 constexpr int MAX_TRILOOPS = 40;
-constexpr int TRILOOP_SEQ_SIZE = 241;      // 40 * 6 + 1
+constexpr int TRILOOP_SEQ_LENGTH = 5;    // nucleotides per triloop sequence
+constexpr int TRILOOP_SEQ_SIZE = MAX_TRILOOPS * (TRILOOP_SEQ_LENGTH + 1) + 1;
+
 constexpr int MAX_HEXALOOPS = 40;
-constexpr int HEXALOOP_SEQ_SIZE = 1801;    // 200 * 9 + 1
+constexpr int HEXALOOP_SEQ_LENGTH = 8;   // nucleotides per hexaloop sequence
+constexpr int HEXALOOP_SEQ_SIZE = MAX_HEXALOOPS * (HEXALOOP_SEQ_LENGTH + 1) + 1;
 
 // ============================================================================
 // Algorithm Constants
@@ -139,14 +157,15 @@ struct Context {
 
     // Computed state
     int sequence_length = 0;
-    double rt = 0.0;  // Pre-computed RT = 0.0019872370936902486 * (T + 273.15) * 100
+    double rt = 0.0;  // Pre-computed RT = GAS_CONSTANT_KCAL_PER_MOL_K * (T + KELVIN_OFFSET) * 100
 
     // Energy parameters (owned)
     ParamPtr params = nullptr;
 
-    // Compute RT from temperature
+    // Compute RT from temperature (in Celsius)
+    // RT = R * T_kelvin, scaled by 100 for internal energy units
     void compute_rt() {
-        rt = 0.0019872370936902486 * (temperature + 273.15) * 100;
+        rt = GAS_CONSTANT_KCAL_PER_MOL_K * (temperature + KELVIN_OFFSET) * 100;
     }
 
     // Get number of windows

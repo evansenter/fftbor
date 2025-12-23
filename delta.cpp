@@ -27,6 +27,8 @@ constexpr bool ENERGY_DEBUG_FLAG = false;
 // Import constants from fftbor namespace
 using fftbor::MIN_PAIR_DIST;
 using fftbor::MAX_INTERIOR_DIST;
+using fftbor::GAS_CONSTANT_KCAL_PER_MOL_K;
+using fftbor::KELVIN_OFFSET;
 
 // Complex number constants
 const dcomplex ZERO_C(0.0, 0.0);
@@ -50,7 +52,8 @@ extern fftbor::ParamPtr P;
 void neighbours(const char* input_sequence, const int* bp_list) {
   int i, root, run_length = 0;
   const int sequence_length = strlen(input_sequence);
-  const double RT = 0.0019872370936902486 * (temperature + 273.15) * 100;
+  // RT = R * T_kelvin, scaled by 100 for internal energy units
+  const double RT = GAS_CONSTANT_KCAL_PER_MOL_K * (temperature + KELVIN_OFFSET) * 100;
 
   const char* energyfile = ENERGY;
 
