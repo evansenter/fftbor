@@ -18,7 +18,7 @@ protected:
     void SetUp() override {
         temperature = 37.0;
         read_parameter_file("rna_turner2004.par");
-        P = scale_parameters();
+        P = scale_parameters(temperature);
     }
 
     void TearDown() override {

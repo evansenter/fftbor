@@ -5,6 +5,11 @@
 #include <vector>
 #include <complex>
 #include <cstdlib>
+#include <string>
+#include <string_view>
+#include <span>
+#include <concepts>
+#include <cmath>
 
 // Forward declaration
 struct paramT;
@@ -82,6 +87,86 @@ inline ComplexMatrix2D make_complex_matrix_2d(size_t rows, size_t cols) {
 // Create a 2D int matrix initialized to a value
 inline IntMatrix2D make_int_matrix_2d(size_t rows, size_t cols, int init_val = 0) {
     return IntMatrix2D(rows, std::vector<int>(cols, init_val));
+}
+
+// ============================================================================
+// C++20 Concepts for Type Safety
+// ============================================================================
+
+template<typename T>
+concept SequenceView = requires(T seq) {
+    { seq.size() } -> std::convertible_to<size_t>;
+    { seq[0] } -> std::convertible_to<char>;
+    { seq.data() } -> std::convertible_to<const char*>;
+};
+
+template<typename T>
+concept BasePairSpan = requires(T bpl) {
+    { bpl.size() } -> std::convertible_to<size_t>;
+    { bpl[0] } -> std::convertible_to<int>;
+    { bpl.data() } -> std::convertible_to<const int*>;
+};
+
+// ============================================================================
+// Parameter File Constants
+// ============================================================================
+
+constexpr int MAX_TETRALOOPS = 200;
+constexpr int TETRALOOP_SEQ_SIZE = 1401;   // 200 * 7 + 1
+constexpr int MAX_TRILOOPS = 40;
+constexpr int TRILOOP_SEQ_SIZE = 241;      // 40 * 6 + 1
+constexpr int MAX_HEXALOOPS = 40;
+constexpr int HEXALOOP_SEQ_SIZE = 1801;    // 200 * 9 + 1
+
+// ============================================================================
+// Algorithm Constants
+// ============================================================================
+
+constexpr int MIN_PAIR_DIST = 3;
+constexpr int MAX_INTERIOR_DIST = 30;
+
+// ============================================================================
+// Context - Encapsulates all algorithm state (replaces globals)
+// ============================================================================
+
+struct Context {
+    // Configuration (set by user/CLI)
+    int precision = 4;
+    int window_size = 0;
+    int min_window_size = 0;
+    double temperature = 37.0;
+    std::string energy_file = "rna_turner2004.par";
+
+    // Computed state
+    int sequence_length = 0;
+    double rt = 0.0;  // Pre-computed RT = 0.0019872370936902486 * (T + 273.15) * 100
+
+    // Energy parameters (owned)
+    ParamPtr params = nullptr;
+
+    // Compute RT from temperature
+    void compute_rt() {
+        rt = 0.0019872370936902486 * (temperature + 273.15) * 100;
+    }
+
+    // Get number of windows
+    int num_windows() const {
+        return window_size - min_window_size + 1;
+    }
+
+    // Get window size at index i
+    int window_size_at(int i) const {
+        return min_window_size + i;
+    }
+};
+
+// ============================================================================
+// Inline Helper Functions (replacing macros)
+// ============================================================================
+
+// Get root of unity raised to power: roots[(i * pow) % (n + 1)]
+inline dcomplex root_pow(int i, int pow, int n, const std::vector<dcomplex>& roots) {
+    return roots[(i * pow) % (n + 1)];
 }
 
 } // namespace fftbor

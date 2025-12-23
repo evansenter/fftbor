@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <cctype>
 #include <new>  // for std::bad_alloc
+#include <stdexcept>
 #include "delta.h"
 #include "misc.h"
 #include "params.h"
@@ -16,7 +17,7 @@ extern char   *ENERGY;
 extern fftbor::ParamPtr P;
 
 void read_input(int argc, char *argv[], fftbor::CharSequencePtr& seq, fftbor::BasePairListPtr& bps);
-void usage();
+[[noreturn]] void usage();
 
 int main(int argc, char *argv[]) {
   try {
@@ -25,7 +26,6 @@ int main(int argc, char *argv[]) {
 
     if (argc == 1) {
       usage();
-      exit(1);
     }
 
     read_input(argc, argv, seq, bps);
@@ -33,27 +33,30 @@ int main(int argc, char *argv[]) {
 
     // Smart pointers automatically clean up - no manual free() needed
     return 0;
+  } catch (const std::runtime_error& e) {
+    fprintf(stderr, "Error: %s\n", e.what());
+    return 1;
   } catch (const std::bad_alloc& e) {
     fprintf(stderr, "Error: Memory allocation failed: %s\n", e.what());
     return 1;
   }
 }
 
-void usage() {
+[[noreturn]] void usage() {
   fprintf(stderr, "FFTbor [options] sequence structure [options]\n\n");
-  
+
   fprintf(stderr, "FFTbor [options] filename [options]\n");
   fprintf(stderr, "where filename is a file of the format:\n");
   fprintf(stderr, "\t>comment (optional line)\n");
   fprintf(stderr, "\tsequence\n");
   fprintf(stderr, "\tsecondary structure\n\n");
-  
+
   fprintf(stderr, "Options include the following:\n");
   fprintf(stderr, "-E\tenergyfile,  the default is rna_turner2004.par in this executable's directory. Must be the name of a file with all energy parameters (in the same format as used in Vienna RNA).\n");
   fprintf(stderr, "-T\ttemperature, the default is 37 degrees Celsius (unless an energyfile with parameters for a different temperature is used.\n");
   fprintf(stderr, "-P\tprecision,   the default is 4, indicates the precision of the probabilities Z_k / Z to be returned (0-9, 0 disables precision handling).\n");
-  
-  exit(1);
+
+  throw std::runtime_error("Invalid usage");
 }
 
 void read_input(int argc, char *argv[], fftbor::CharSequencePtr& main_seq, fftbor::BasePairListPtr& bps) {
@@ -131,8 +134,7 @@ void read_input(int argc, char *argv[], fftbor::CharSequencePtr& main_seq, fftbo
         N = strlen(seq);
 
         if (strlen(seq) != strlen(str_ptr.get())) {
-          fprintf(stderr,"Length of RNA sequence and structure must be equal\n");
-          exit(1);
+          throw std::runtime_error("Length of RNA sequence and structure must be equal");
         }
 
         /* Convert RNA sequence to uppercase and make sure there are no Ts in the sequence (replace by U) */
@@ -148,8 +150,7 @@ void read_input(int argc, char *argv[], fftbor::CharSequencePtr& main_seq, fftbo
       else { 
         /* Input is a file */
         if (fgets(line,sizeof(line),infile) == NULL) {
-          fprintf(stderr,"There was an error reading the file\n");
-          exit(1);
+          throw std::runtime_error("Error reading input file");
         }
 
         while ((*line == '*') || (*line == '\0') || (*line == '>')) {
@@ -177,22 +178,18 @@ void read_input(int argc, char *argv[], fftbor::CharSequencePtr& main_seq, fftbo
         }
 	
         if (fgets(line, sizeof(line), infile) == NULL) {
-          fprintf(stderr,"There was an error reading the file\n");
-          exit(1);
+          throw std::runtime_error("Error reading structure from input file");
         }
 
         str_ptr.reset((char *)xcalloc(N + 1, sizeof(char)));
         (void)sscanf(line, "%s", str_ptr.get());
 
         if (strlen(seq) != strlen(str_ptr.get())) {
-          printf("%s\n%s\n", seq, str_ptr.get());
-          fprintf(stderr, "Length of RNA sequence and structure must be equal\n");
-          exit(1);
+          throw std::runtime_error("Length of RNA sequence and structure must be equal");
         }
-        
+
         if (N < (int)strlen(seq)) {
-          fprintf(stderr,"Length of RNA exceeds array size %d\n",N);
-          exit(1);
+          throw std::runtime_error("Length of RNA exceeds array size");
         } 
         
         fclose(infile);
@@ -238,14 +235,12 @@ void read_input(int argc, char *argv[], fftbor::CharSequencePtr& main_seq, fftbo
   /* Check for unbalanced parentheses in structure */
   if (bps[0] < 0) {
     if (bps[0] == -1) {
-      fprintf(stderr, "Error: Unbalanced structure - too many ')' parentheses\n");
+      throw std::runtime_error("Unbalanced structure - too many ')' parentheses");
     } else if (bps[0] == -2) {
-      fprintf(stderr, "Error: Unbalanced structure - too many '(' parentheses\n");
+      throw std::runtime_error("Unbalanced structure - too many '(' parentheses");
     } else {
-      fprintf(stderr, "Error: Invalid structure notation\n");
+      throw std::runtime_error("Invalid structure notation");
     }
-    // Smart pointers automatically clean up - no manual free() needed
-    exit(1);
   }
 
   // str_ptr automatically freed when function returns

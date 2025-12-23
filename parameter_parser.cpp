@@ -5,6 +5,8 @@
 #include <cstring>
 #include <cmath>
 #include <cctype>
+#include <stdexcept>
+#include <string>
 
 // Global storage for raw (unscaled) energy parameters at 37C
 static struct {
@@ -69,8 +71,6 @@ static struct {
     int loaded;
 } raw_params;
 
-extern double temperature;
-
 // Helper: skip whitespace and comments
 static char* skip_whitespace(char* p) {
     while (*p && isspace((unsigned char)*p)) p++;
@@ -92,8 +92,7 @@ static int read_data_line(FILE* fp, char* buf, int size) {
         // Stop at section headers (# followed by non-#) and rewind
         if (*p == '#') {
             if (fseek(fp, pos, SEEK_SET) != 0) {
-                fprintf(stderr, "Error: fseek failed while parsing parameter file\n");
-                exit(1);
+                throw std::runtime_error("fseek failed while parsing parameter file");
             }
             return -1;
         }
@@ -101,8 +100,7 @@ static int read_data_line(FILE* fp, char* buf, int size) {
     }
     // ftell returned -1 (error) or fgets returned NULL (EOF)
     if (pos < 0) {
-        fprintf(stderr, "Error: ftell failed while parsing parameter file\n");
-        exit(1);
+        throw std::runtime_error("ftell failed while parsing parameter file");
     }
     return 0;  // EOF
 }
@@ -344,8 +342,7 @@ static void parse_misc(FILE* fp) {
 void read_parameter_file(const char* filename) {
     FILE* fp = fopen(filename, "r");
     if (!fp) {
-        fprintf(stderr, "Error: Cannot open parameter file: %s\n", filename);
-        exit(1);
+        throw std::runtime_error("Cannot open parameter file: " + std::string(filename));
     }
 
     // Initialize to zero
@@ -436,8 +433,8 @@ void read_parameter_file(const char* filename) {
                     p = skip_whitespace(line);
                     if (*p == '#') {
                         if (fseek(fp, pos, SEEK_SET) != 0) {
-                            fprintf(stderr, "Error: fseek failed while parsing Triloops\n");
-                            exit(1);
+                            fclose(fp);
+                            throw std::runtime_error("fseek failed while parsing Triloops");
                         }
                         break;
                     }
@@ -453,8 +450,8 @@ void read_parameter_file(const char* filename) {
                     }
                 }
                 if (pos < 0) {
-                    fprintf(stderr, "Error: ftell failed while parsing Triloops\n");
-                    exit(1);
+                    fclose(fp);
+                    throw std::runtime_error("ftell failed while parsing Triloops");
                 }
             } else if (strcmp(section, "Tetraloops") == 0) {
                 raw_params.num_tetraloops = 0;
@@ -463,8 +460,8 @@ void read_parameter_file(const char* filename) {
                     p = skip_whitespace(line);
                     if (*p == '#') {
                         if (fseek(fp, pos, SEEK_SET) != 0) {
-                            fprintf(stderr, "Error: fseek failed while parsing Tetraloops\n");
-                            exit(1);
+                            fclose(fp);
+                            throw std::runtime_error("fseek failed while parsing Tetraloops");
                         }
                         break;
                     }
@@ -480,8 +477,8 @@ void read_parameter_file(const char* filename) {
                     }
                 }
                 if (pos < 0) {
-                    fprintf(stderr, "Error: ftell failed while parsing Tetraloops\n");
-                    exit(1);
+                    fclose(fp);
+                    throw std::runtime_error("ftell failed while parsing Tetraloops");
                 }
             } else if (strcmp(section, "Hexaloops") == 0) {
                 raw_params.num_hexaloops = 0;
@@ -490,8 +487,8 @@ void read_parameter_file(const char* filename) {
                     p = skip_whitespace(line);
                     if (*p == '#') {
                         if (fseek(fp, pos, SEEK_SET) != 0) {
-                            fprintf(stderr, "Error: fseek failed while parsing Hexaloops\n");
-                            exit(1);
+                            fclose(fp);
+                            throw std::runtime_error("fseek failed while parsing Hexaloops");
                         }
                         break;
                     }
@@ -507,8 +504,8 @@ void read_parameter_file(const char* filename) {
                     }
                 }
                 if (pos < 0) {
-                    fprintf(stderr, "Error: ftell failed while parsing Hexaloops\n");
-                    exit(1);
+                    fclose(fp);
+                    throw std::runtime_error("ftell failed while parsing Hexaloops");
                 }
             } else if (strcmp(section, "END") == 0) {
                 break;
@@ -524,14 +521,12 @@ void read_parameter_file(const char* filename) {
     // Validate that critical parameters were loaded
     // Stack energies should be non-zero for valid parameter files
     if (raw_params.stack[1][1] == 0 && raw_params.stack[2][2] == 0) {
-        fprintf(stderr, "Error: Stack energies not loaded. Parameter file may be invalid or empty.\n");
-        exit(1);
+        throw std::runtime_error("Stack energies not loaded. Parameter file may be invalid or empty.");
     }
 
     // Hairpin energies should have values for common sizes
     if (raw_params.hairpin[3] == 0 && raw_params.hairpin[4] == 0 && raw_params.hairpin[5] == 0) {
-        fprintf(stderr, "Error: Hairpin loop energies not loaded. Parameter file may be invalid.\n");
-        exit(1);
+        throw std::runtime_error("Hairpin loop energies not loaded. Parameter file may be invalid.");
     }
 
     raw_params.loaded = 1;
@@ -547,16 +542,14 @@ static int scale_energy(int energy37, int enthalpy, double temp_c) {
     return (int)(enthalpy - (enthalpy - energy37) * TT + 0.5);
 }
 
-fftbor::ParamPtr scale_parameters() {
+fftbor::ParamPtr scale_parameters(double temperature) {
     if (!raw_params.loaded) {
-        fprintf(stderr, "Error: Parameters not loaded. Call read_parameter_file first.\n");
-        exit(1);
+        throw std::runtime_error("Parameters not loaded. Call read_parameter_file first.");
     }
 
     paramT* P = (paramT*)calloc(1, sizeof(paramT));
     if (!P) {
-        fprintf(stderr, "Error: Cannot allocate memory for parameters.\n");
-        exit(1);
+        throw std::runtime_error("Cannot allocate memory for parameters.");
     }
 
     double temp_c = temperature; // Temperature in Celsius
@@ -702,4 +695,10 @@ void set_model_details(model_detailsT* md) {
     md->logML = 0;
     md->circ = 0;
     md->gquad = 0;
+}
+
+void load_parameters(fftbor::Context& ctx) {
+    read_parameter_file(ctx.energy_file.c_str());
+    ctx.params = scale_parameters(ctx.temperature);
+    ctx.compute_rt();
 }
