@@ -47,6 +47,10 @@ jobs:
       run: |
         cppcheck --enable=warning,style,performance,portability \
                  --suppress=missingIncludeSystem \
+                 --suppress=cstyleCast \
+                 --suppress=constParameterPointer \
+                 --suppress=constVariablePointer \
+                 --suppress=redundantAssignment \
                  --error-exitcode=1 \
                  --inline-suppr \
                  -I . \

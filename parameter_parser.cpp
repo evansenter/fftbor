@@ -252,32 +252,28 @@ static void parse_loop_array(FILE* fp, int* arr, int size) {
 }
 
 // Parse ML_params
+// Format: MLbase MLbase_H MLintern MLintern_H MLclosing MLclosing_H (all on one line)
 static void parse_ml_params(FILE* fp) {
     char line[1024];
     int values[16];
 
-    // First line: ML unpaired, ML closing, ML intern
+    // ViennaRNA 2.0 format: all 6 values on one line (energy/enthalpy pairs)
     if (read_data_line(fp, line, sizeof(line)) > 0) {
         int n = parse_int_line(line, values, 8);
         if (n >= 1) raw_params.MLbase = values[0];
-        if (n >= 2) raw_params.MLclosing = values[1];
+        if (n >= 2) raw_params.MLbase_enthalpies = values[1];
         if (n >= 3) {
             for (int i = 0; i <= NBPAIRS; i++) {
                 raw_params.MLintern[i] = values[2];
             }
         }
-    }
-
-    // Second line: enthalpies
-    if (read_data_line(fp, line, sizeof(line)) > 0) {
-        int n = parse_int_line(line, values, 8);
-        if (n >= 1) raw_params.MLbase_enthalpies = values[0];
-        if (n >= 2) raw_params.MLclosing_enthalpies = values[1];
-        if (n >= 3) {
+        if (n >= 4) {
             for (int i = 0; i <= NBPAIRS; i++) {
-                raw_params.MLintern_enthalpies[i] = values[2];
+                raw_params.MLintern_enthalpies[i] = values[3];
             }
         }
+        if (n >= 5) raw_params.MLclosing = values[4];
+        if (n >= 6) raw_params.MLclosing_enthalpies = values[5];
     }
 }
 
