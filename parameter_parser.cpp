@@ -7,6 +7,13 @@
 #include <cctype>
 #include <stdexcept>
 #include <string>
+#include <memory>
+
+// RAII wrapper for FILE handles - ensures file is closed on scope exit or exception
+struct FileCloser {
+    void operator()(FILE* f) const { if (f) fclose(f); }
+};
+using FilePtr = std::unique_ptr<FILE, FileCloser>;
 
 // Global storage for raw (unscaled) energy parameters at 37C
 static struct {
@@ -340,7 +347,7 @@ static void parse_misc(FILE* fp) {
 }
 
 void read_parameter_file(const char* filename) {
-    FILE* fp = fopen(filename, "r");
+    FilePtr fp(fopen(filename, "r"));
     if (!fp) {
         throw std::runtime_error("Cannot open parameter file: " + std::string(filename));
     }
@@ -352,7 +359,7 @@ void read_parameter_file(const char* filename) {
     char line[1024];
     char section[256] = "";
 
-    while (fgets(line, sizeof(line), fp)) {
+    while (fgets(line, sizeof(line), fp.get())) {
         char* p = skip_whitespace(line);
 
         // Check for section header
@@ -360,80 +367,79 @@ void read_parameter_file(const char* filename) {
             sscanf(p + 1, "%255s", section);
 
             if (strcmp(section, "stack") == 0) {
-                parse_7x7_matrix(fp, raw_params.stack);
+                parse_7x7_matrix(fp.get(), raw_params.stack);
             } else if (strcmp(section, "stack_enthalpies") == 0) {
-                parse_7x7_matrix(fp, raw_params.stack_enthalpies);
+                parse_7x7_matrix(fp.get(), raw_params.stack_enthalpies);
             } else if (strcmp(section, "mismatch_hairpin") == 0) {
-                parse_mismatch_matrix(fp, raw_params.mismatchH);
+                parse_mismatch_matrix(fp.get(), raw_params.mismatchH);
             } else if (strcmp(section, "mismatch_hairpin_enthalpies") == 0) {
-                parse_mismatch_matrix(fp, raw_params.mismatchH_enthalpies);
+                parse_mismatch_matrix(fp.get(), raw_params.mismatchH_enthalpies);
             } else if (strcmp(section, "mismatch_interior") == 0) {
-                parse_mismatch_matrix(fp, raw_params.mismatchI);
+                parse_mismatch_matrix(fp.get(), raw_params.mismatchI);
             } else if (strcmp(section, "mismatch_interior_enthalpies") == 0) {
-                parse_mismatch_matrix(fp, raw_params.mismatchI_enthalpies);
+                parse_mismatch_matrix(fp.get(), raw_params.mismatchI_enthalpies);
             } else if (strcmp(section, "mismatch_interior_1n") == 0) {
-                parse_mismatch_matrix(fp, raw_params.mismatch1nI);
+                parse_mismatch_matrix(fp.get(), raw_params.mismatch1nI);
             } else if (strcmp(section, "mismatch_interior_1n_enthalpies") == 0) {
-                parse_mismatch_matrix(fp, raw_params.mismatch1nI_enthalpies);
+                parse_mismatch_matrix(fp.get(), raw_params.mismatch1nI_enthalpies);
             } else if (strcmp(section, "mismatch_interior_23") == 0) {
-                parse_mismatch_matrix(fp, raw_params.mismatch23I);
+                parse_mismatch_matrix(fp.get(), raw_params.mismatch23I);
             } else if (strcmp(section, "mismatch_interior_23_enthalpies") == 0) {
-                parse_mismatch_matrix(fp, raw_params.mismatch23I_enthalpies);
+                parse_mismatch_matrix(fp.get(), raw_params.mismatch23I_enthalpies);
             } else if (strcmp(section, "mismatch_multi") == 0) {
-                parse_mismatch_matrix(fp, raw_params.mismatchM);
+                parse_mismatch_matrix(fp.get(), raw_params.mismatchM);
             } else if (strcmp(section, "mismatch_multi_enthalpies") == 0) {
-                parse_mismatch_matrix(fp, raw_params.mismatchM_enthalpies);
+                parse_mismatch_matrix(fp.get(), raw_params.mismatchM_enthalpies);
             } else if (strcmp(section, "mismatch_exterior") == 0) {
-                parse_mismatch_matrix(fp, raw_params.mismatchExt);
+                parse_mismatch_matrix(fp.get(), raw_params.mismatchExt);
             } else if (strcmp(section, "mismatch_exterior_enthalpies") == 0) {
-                parse_mismatch_matrix(fp, raw_params.mismatchExt_enthalpies);
+                parse_mismatch_matrix(fp.get(), raw_params.mismatchExt_enthalpies);
             } else if (strcmp(section, "dangle5") == 0) {
-                parse_dangle(fp, raw_params.dangle5);
+                parse_dangle(fp.get(), raw_params.dangle5);
             } else if (strcmp(section, "dangle5_enthalpies") == 0) {
-                parse_dangle(fp, raw_params.dangle5_enthalpies);
+                parse_dangle(fp.get(), raw_params.dangle5_enthalpies);
             } else if (strcmp(section, "dangle3") == 0) {
-                parse_dangle(fp, raw_params.dangle3);
+                parse_dangle(fp.get(), raw_params.dangle3);
             } else if (strcmp(section, "dangle3_enthalpies") == 0) {
-                parse_dangle(fp, raw_params.dangle3_enthalpies);
+                parse_dangle(fp.get(), raw_params.dangle3_enthalpies);
             } else if (strcmp(section, "int11") == 0) {
-                parse_int11(fp, raw_params.int11);
+                parse_int11(fp.get(), raw_params.int11);
             } else if (strcmp(section, "int11_enthalpies") == 0) {
-                parse_int11(fp, raw_params.int11_enthalpies);
+                parse_int11(fp.get(), raw_params.int11_enthalpies);
             } else if (strcmp(section, "int21") == 0) {
-                parse_int21(fp, raw_params.int21);
+                parse_int21(fp.get(), raw_params.int21);
             } else if (strcmp(section, "int21_enthalpies") == 0) {
-                parse_int21(fp, raw_params.int21_enthalpies);
+                parse_int21(fp.get(), raw_params.int21_enthalpies);
             } else if (strcmp(section, "int22") == 0) {
-                parse_int22(fp, raw_params.int22);
+                parse_int22(fp.get(), raw_params.int22);
             } else if (strcmp(section, "int22_enthalpies") == 0) {
-                parse_int22(fp, raw_params.int22_enthalpies);
+                parse_int22(fp.get(), raw_params.int22_enthalpies);
             } else if (strcmp(section, "hairpin") == 0) {
-                parse_loop_array(fp, raw_params.hairpin, 31);
+                parse_loop_array(fp.get(), raw_params.hairpin, 31);
             } else if (strcmp(section, "hairpin_enthalpies") == 0) {
-                parse_loop_array(fp, raw_params.hairpin_enthalpies, 31);
+                parse_loop_array(fp.get(), raw_params.hairpin_enthalpies, 31);
             } else if (strcmp(section, "bulge") == 0) {
-                parse_loop_array(fp, raw_params.bulge, MAXLOOP + 1);
+                parse_loop_array(fp.get(), raw_params.bulge, MAXLOOP + 1);
             } else if (strcmp(section, "bulge_enthalpies") == 0) {
-                parse_loop_array(fp, raw_params.bulge_enthalpies, MAXLOOP + 1);
+                parse_loop_array(fp.get(), raw_params.bulge_enthalpies, MAXLOOP + 1);
             } else if (strcmp(section, "interior") == 0) {
-                parse_loop_array(fp, raw_params.internal_loop, MAXLOOP + 1);
+                parse_loop_array(fp.get(), raw_params.internal_loop, MAXLOOP + 1);
             } else if (strcmp(section, "interior_enthalpies") == 0) {
-                parse_loop_array(fp, raw_params.internal_loop_enthalpies, MAXLOOP + 1);
+                parse_loop_array(fp.get(), raw_params.internal_loop_enthalpies, MAXLOOP + 1);
             } else if (strcmp(section, "ML_params") == 0) {
-                parse_ml_params(fp);
+                parse_ml_params(fp.get());
             } else if (strcmp(section, "NINIO") == 0) {
-                parse_ninio(fp);
+                parse_ninio(fp.get());
             } else if (strcmp(section, "Misc") == 0) {
-                parse_misc(fp);
+                parse_misc(fp.get());
             } else if (strcmp(section, "Triloops") == 0) {
                 // Special loops need different parsing - they have sequence + energy format
                 raw_params.num_triloops = 0;
                 long pos;
-                while ((pos = ftell(fp)) >= 0 && fgets(line, sizeof(line), fp)) {
+                while ((pos = ftell(fp.get())) >= 0 && fgets(line, sizeof(line), fp.get())) {
                     p = skip_whitespace(line);
                     if (*p == '#') {
-                        if (fseek(fp, pos, SEEK_SET) != 0) {
-                            fclose(fp);
+                        if (fseek(fp.get(), pos, SEEK_SET) != 0) {
                             throw std::runtime_error("fseek failed while parsing Triloops");
                         }
                         break;
@@ -450,17 +456,15 @@ void read_parameter_file(const char* filename) {
                     }
                 }
                 if (pos < 0) {
-                    fclose(fp);
                     throw std::runtime_error("ftell failed while parsing Triloops");
                 }
             } else if (strcmp(section, "Tetraloops") == 0) {
                 raw_params.num_tetraloops = 0;
                 long pos;
-                while ((pos = ftell(fp)) >= 0 && fgets(line, sizeof(line), fp)) {
+                while ((pos = ftell(fp.get())) >= 0 && fgets(line, sizeof(line), fp.get())) {
                     p = skip_whitespace(line);
                     if (*p == '#') {
-                        if (fseek(fp, pos, SEEK_SET) != 0) {
-                            fclose(fp);
+                        if (fseek(fp.get(), pos, SEEK_SET) != 0) {
                             throw std::runtime_error("fseek failed while parsing Tetraloops");
                         }
                         break;
@@ -477,17 +481,15 @@ void read_parameter_file(const char* filename) {
                     }
                 }
                 if (pos < 0) {
-                    fclose(fp);
                     throw std::runtime_error("ftell failed while parsing Tetraloops");
                 }
             } else if (strcmp(section, "Hexaloops") == 0) {
                 raw_params.num_hexaloops = 0;
                 long pos;
-                while ((pos = ftell(fp)) >= 0 && fgets(line, sizeof(line), fp)) {
+                while ((pos = ftell(fp.get())) >= 0 && fgets(line, sizeof(line), fp.get())) {
                     p = skip_whitespace(line);
                     if (*p == '#') {
-                        if (fseek(fp, pos, SEEK_SET) != 0) {
-                            fclose(fp);
+                        if (fseek(fp.get(), pos, SEEK_SET) != 0) {
                             throw std::runtime_error("fseek failed while parsing Hexaloops");
                         }
                         break;
@@ -504,7 +506,6 @@ void read_parameter_file(const char* filename) {
                     }
                 }
                 if (pos < 0) {
-                    fclose(fp);
                     throw std::runtime_error("ftell failed while parsing Hexaloops");
                 }
             } else if (strcmp(section, "END") == 0) {
@@ -516,7 +517,7 @@ void read_parameter_file(const char* filename) {
         }
     }
 
-    fclose(fp);
+    // FilePtr RAII handles fclose automatically when fp goes out of scope
 
     // Validate that critical parameters were loaded
     // Stack energies should be non-zero for valid parameter files

@@ -399,11 +399,16 @@ void populate_remaining_roots(fftbor::ComplexMatrix3D& solutions, int sequence_l
   }
 }
 
-void populate_matrices(fftbor::ComplexMatrix2D& Z, fftbor::ComplexMatrix2D& ZB,
-                      fftbor::ComplexMatrix2D& ZM, fftbor::ComplexMatrix2D& ZM1,
-                      fftbor::ComplexMatrix3D& solutions, std::vector<dcomplex>& roots_of_unity,
-                      int sequence_length, int run_length) {
-  // Matrices are already sized correctly - just initialize roots_of_unity
+void populate_matrices([[maybe_unused]] fftbor::ComplexMatrix2D& Z,
+                      [[maybe_unused]] fftbor::ComplexMatrix2D& ZB,
+                      [[maybe_unused]] fftbor::ComplexMatrix2D& ZM,
+                      [[maybe_unused]] fftbor::ComplexMatrix2D& ZM1,
+                      [[maybe_unused]] fftbor::ComplexMatrix3D& solutions,
+                      std::vector<dcomplex>& roots_of_unity,
+                      [[maybe_unused]] int sequence_length,
+                      int run_length) {
+  // Note: Most parameters unused - kept for API consistency with other matrix functions.
+  // Only roots_of_unity and run_length are needed for initialization.
   for (int i = 0; i <= run_length; ++i) {
     roots_of_unity[i] = dcomplex(cos(2 * M_PI * i / (run_length + 1)), sin(2 * M_PI * i / (run_length + 1)));
   }
