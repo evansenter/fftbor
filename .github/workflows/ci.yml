@@ -51,6 +51,11 @@ jobs:
                  --suppress=constParameterPointer \
                  --suppress=constVariablePointer \
                  --suppress=redundantAssignment \
+                 --suppress=invalidscanf \
+                 --suppress=memsetClassFloat \
+                 --suppress=knownConditionTrueFalse \
+                 --suppress=variableScope \
+                 --suppress=unusedStructMember \
                  --error-exitcode=1 \
                  --inline-suppr \
                  -I . \

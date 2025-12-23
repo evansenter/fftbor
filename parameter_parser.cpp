@@ -87,6 +87,8 @@ static int read_data_line(FILE* fp, char* buf, int size) {
         if (*p == '\0') continue;
         // Skip ## comments
         if (*p == '#' && p[1] == '#') continue;
+        // Skip C-style comment lines (/* ... */)
+        if (*p == '/' && p[1] == '*') continue;
         // Stop at section headers (# followed by non-#) and rewind
         if (*p == '#') {
             if (fseek(fp, pos, SEEK_SET) != 0) {
@@ -104,7 +106,7 @@ static int read_data_line(FILE* fp, char* buf, int size) {
     return 0;  // EOF or error
 }
 
-// Helper: parse integers from a line (handles INF values)
+// Helper: parse integers from a line (handles INF and DEF values)
 static int parse_int_line(char* line, int* values, int max_values) {
     int count = 0;
     char* p = line;
@@ -117,6 +119,12 @@ static int parse_int_line(char* line, int* values, int max_values) {
             (p[1] == 'N' || p[1] == 'n') &&
             (p[2] == 'F' || p[2] == 'f')) {
             values[count++] = INF;
+            p += 3;
+        // Check for DEF (default value, treat as 0)
+        } else if ((p[0] == 'D' || p[0] == 'd') &&
+                   (p[1] == 'E' || p[1] == 'e') &&
+                   (p[2] == 'F' || p[2] == 'f')) {
+            values[count++] = 0;  // DEF means use default (0)
             p += 3;
         } else if (*p == '-' || isdigit((unsigned char)*p)) {
             values[count++] = atoi(p);
