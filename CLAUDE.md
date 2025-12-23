@@ -15,7 +15,10 @@ fftbor/
 ├── delta.h               # Algorithm interface/declarations
 ├── misc.cpp              # Utility functions (memory, parsing)
 ├── misc.h                # Utility function declarations
-├── params.h              # Parameter structures (from ViennaRNA)
+├── parameter_parser.cpp  # Native ViennaRNA parameter file parser
+├── parameter_parser.h    # Parameter parser declarations
+├── globals.cpp           # Global variable definitions
+├── params.h              # Parameter structures
 ├── energy_const.h        # Energy calculation constants
 ├── energy_par.h          # Energy parameter declarations
 ├── rna_turner1999.par    # Turner 1999 energy parameters
@@ -23,6 +26,14 @@ fftbor/
 ├── CMakeLists.txt        # CMake build configuration
 ├── cmake_modules/        # Custom CMake modules
 │   └── FindFFTW.cmake    # FFTW library finder
+├── tests/                # GoogleTest test suite
+│   ├── test_main.cpp
+│   ├── test_misc.cpp
+│   ├── test_parameter_parser.cpp
+│   ├── test_energy.cpp
+│   └── test_integration.cpp
+├── .github/workflows/    # CI/CD configuration
+│   └── ci.yml
 └── build/                # Build output directory
 ```
 
@@ -30,10 +41,9 @@ fftbor/
 
 ### Dependencies
 
-1. **C++ compiler** with OpenMP support (C++98 standard)
-2. **CMake** (>= 2.6)
+1. **C++ compiler** with OpenMP support (C++20 standard)
+2. **CMake** (>= 3.16)
 3. **FFTW** (= 3.3.x) - Fast Fourier Transform library
-4. **libRNA.a** from ViennaRNA package (= 2.x)
 
 ### Build Commands
 
@@ -44,7 +54,6 @@ make
 make install
 ```
 
-If `libRNA.a` is in a non-standard location, use `-DCMAKE_LIBRARY_PATH=/path/to/lib`.
 
 ### Build Configurations
 
@@ -143,9 +152,9 @@ Compile-time flags:
 ## Guidelines for AI Assistants
 
 ### When Modifying Code
-1. Maintain C++98 compatibility - avoid C++11+ features
+1. Use modern C++20 features where appropriate (concepts, ranges, std::span, etc.)
 2. Use the established naming conventions
-3. Preserve manual memory management patterns
+3. Prefer RAII and smart pointers for new code
 4. Keep energy calculation precision in mind
 5. Test with both Turner 1999 and 2004 parameters
 
@@ -157,7 +166,7 @@ Compile-time flags:
 
 ### Common Tasks
 - **Build:** `cd build && cmake .. && make`
-- **Run tests:** No formal test suite; verify with sample RNA sequences
+- **Run tests:** `cd build && ctest` or `./bin/fftbor_tests`
 - **Clean build:** `cd build && rm -rf *`
 
 ### Energy Parameters
@@ -167,7 +176,8 @@ Compile-time flags:
 - Installed to `bin/` directory alongside executable
 
 ### Important Notes
-- The code uses Variable Length Arrays (VLAs) which are a C99/GCC extension
-- OpenMP is required for parallel execution
+- The code uses Variable Length Arrays (VLAs) which are a GCC extension (should be replaced with std::vector)
+- OpenMP is optional but recommended for parallel execution
 - FFTW library handles the core FFT computations
-- ViennaRNA library provides energy parameter handling functions
+- Native parameter parser included (no external ViennaRNA dependency)
+- GoogleTest is used for unit and integration testing

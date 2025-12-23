@@ -11,7 +11,7 @@ option(FFTBOR_BUILD_TESTS "Build the test suite" ON)
 option(FFTBOR_USE_OPENMP "Use OpenMP for parallelization" ON)
 
 # Set C++ standard
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 

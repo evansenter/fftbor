@@ -19,9 +19,9 @@ This document tracks the modernization effort for FFTbor.
 - [x] Write end-to-end integration tests with known inputs/outputs
 - [ ] Fix failing parameter parser tests (values showing as 0)
 
-## Phase 3: Modernize C++ (C++98 → C++17) ✅ MOSTLY COMPLETE
+## Phase 3: Modernize C++ (C++98 → C++20) ✅ MOSTLY COMPLETE
 
-- [x] Update to C++17 standard
+- [x] Update to C++20 standard
 - [ ] Replace VLAs with `std::vector` (currently using GCC extension)
 - [ ] Replace raw pointers with smart pointers (`std::unique_ptr`)
 - [ ] Replace `#define` macros with `constexpr`
@@ -47,7 +47,7 @@ This document tracks the modernization effort for FFTbor.
 ## Current Status
 
 The project now builds successfully with:
-- C++17 standard
+- C++20 standard
 - Modern CMake (3.16+)
 - Native parameter parser (no ViennaRNA dependency)
 - GoogleTest integration
