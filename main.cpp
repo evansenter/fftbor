@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <new>  // for std::bad_alloc
 #include "delta.h"
 #include "misc.h"
 #include "params.h"
@@ -18,19 +19,24 @@ void read_input(int argc, char *argv[], fftbor::CharSequencePtr& seq, fftbor::Ba
 void usage();
 
 int main(int argc, char *argv[]) {
-  fftbor::CharSequencePtr seq;  // RNA sequence
-  fftbor::BasePairListPtr bps;  // Base pair list
+  try {
+    fftbor::CharSequencePtr seq;  // RNA sequence
+    fftbor::BasePairListPtr bps;  // Base pair list
 
-  if (argc == 1) {
-    usage();
-    exit(1);
+    if (argc == 1) {
+      usage();
+      exit(1);
+    }
+
+    read_input(argc, argv, seq, bps);
+    neighbours(seq.get(), bps.get());
+
+    // Smart pointers automatically clean up - no manual free() needed
+    return 0;
+  } catch (const std::bad_alloc& e) {
+    fprintf(stderr, "Error: Memory allocation failed: %s\n", e.what());
+    return 1;
   }
-
-  read_input(argc, argv, seq, bps);
-  neighbours(seq.get(), bps.get());
-
-  // Smart pointers automatically clean up - no manual free() needed
-  return 0;
 }
 
 void usage() {
@@ -150,9 +156,11 @@ void read_input(int argc, char *argv[], fftbor::CharSequencePtr& mainSeq, fftbor
           if (fgets(line, sizeof(line), infile) == NULL) {
             break;
           }
-        } 
-        
-        if ((line == NULL)) {
+        }
+
+        // Check if line is empty (fgets exhausted or only whitespace/comments)
+        if (*line == '\0' || *line == '*' || *line == '>') {
+          fprintf(stderr, "Error: No sequence found in input file\n");
           usage();
         }
         

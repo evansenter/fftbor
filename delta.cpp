@@ -138,7 +138,8 @@ void evaluateZ(int root,
         // Solve ZB
         // ****************************************************************************
         // In a hairpin, [i + 1, j - 1] unpaired.
-        energy    = hairpinloop(i, j, canBasePair[intSequence[i]][intSequence[j]], intSequence[i + 1], intSequence[j - 1], inputSequence);
+        // Pass pointer to position i-1 (0-indexed) so hairpinloop can read the correct loop motif
+        energy    = hairpinloop(i, j, canBasePair[intSequence[i]][intSequence[j]], intSequence[i + 1], intSequence[j - 1], inputSequence + i - 1);
         delta     = numBasePairs[i][j] + jPairedTo(i, j, bpList);
         ZB[i][j] += ROOT_POW(root, delta, runLength) * exp(-energy / RT);
 
@@ -296,6 +297,11 @@ void solveSystem(fftbor::ComplexMatrix3D& solutions, const char* sequence, const
   };
   std::unique_ptr<fftw_complex[], FftwDeleter> signal(fftw_alloc_complex(runLength + 1));
   std::unique_ptr<fftw_complex[], FftwDeleter> result(fftw_alloc_complex(runLength + 1));
+
+  if (!signal || !result) {
+    fprintf(stderr, "Error: Failed to allocate FFTW arrays (size: %d)\n", runLength + 1);
+    exit(1);
+  }
 
   fftw_plan plan = fftw_plan_dft_1d(runLength + 1, signal.get(), result.get(), FFTW_FORWARD, FFTW_ESTIMATE);
 
@@ -463,6 +469,13 @@ void initializeBasePairCounts(fftbor::IntMatrix2D& numBasePairs, const int* bpLi
   }
 }
 
+// Calculate hairpin loop energy.
+// Parameters:
+//   i, j: 1-indexed positions of the closing base pair
+//   type: base pair type (1-6 for valid pairs)
+//   si1, sj1: integer encodings of bases at i+1 and j-1
+//   string: pointer to the START of the hairpin loop in the sequence (position i-1 in 0-indexed)
+//           The caller must ensure string points to at least (size + 2) valid characters.
 double hairpinloop(int i, int j, int type, short si1, short sj1, const char* string) {
   double energy;
   int size = j - i - 1;
@@ -470,22 +483,28 @@ double hairpinloop(int i, int j, int type, short si1, short sj1, const char* str
   energy = (size <= 30) ? P->hairpin[size] : P->hairpin[30] + (int)(P->lxc * log((size) / 30.));
   if (P->model_details.special_hp) {
     if (size == 4) {
+      // Tetraloop: 6 characters (closing pair + 4 loop bases)
       char tl[7] = {0};
       strncpy(tl, string, 6);
+      tl[6] = '\0';  // Ensure null termination
       char* ts = strstr(P->Tetraloops, tl);
       if (ts) {
         return P->Tetraloop_E[(ts - P->Tetraloops) / 7];
       }
     } else if (size == 6) {
+      // Hexaloop: 8 characters (closing pair + 6 loop bases)
       char tl[9] = {0};
       strncpy(tl, string, 8);
+      tl[8] = '\0';  // Ensure null termination
       char* ts = strstr(P->Hexaloops, tl);
       if (ts) {
         return P->Hexaloop_E[(ts - P->Hexaloops) / 9];
       }
     } else if (size == 3) {
-      char tl[6] = {0, 0, 0, 0, 0, 0};
+      // Triloop: 5 characters (closing pair + 3 loop bases)
+      char tl[6] = {0};
       strncpy(tl, string, 5);
+      tl[5] = '\0';  // Ensure null termination
       char* ts = strstr(P->Triloops, tl);
       if (ts) {
         return P->Triloop_E[(ts - P->Triloops) / 6];

@@ -39,7 +39,9 @@ fftbor::BasePairListPtr getBasePairList(const char* secStr) {
    * If -1,-2 not returned, then return (possibly empty) list */
 
   int len = strlen(secStr);
-  int *S = (int *) xcalloc(len/2, sizeof(int));  // temporary stack
+  // Stack needs len+1 entries: worst case is all opening parens (though unbalanced)
+  // Using len+1 ensures we never overflow even with malformed input
+  int *S = (int *) xcalloc(len + 1, sizeof(int));  // temporary stack
   int *L = (int *) xcalloc(2*len*(len-1)/2+1, sizeof(int));
   int j, k = 0;
   char ch;

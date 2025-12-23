@@ -5,7 +5,9 @@
 #include <vector>
 #include "memory_types.h"
 
-using dcomplex = std::complex<double>;
+// Use the dcomplex type from fftbor namespace (defined in memory_types.h)
+// Provide a global alias for backward compatibility
+using dcomplex = fftbor::dcomplex;
 
 void neighbours(const char* inputSequence, const int* bpList);
 

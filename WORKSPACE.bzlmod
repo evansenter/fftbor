@@ -1,13 +1,25 @@
 # WORKSPACE.bzlmod - for external dependencies not yet in Bazel Central Registry
+#
+# PLATFORM-SPECIFIC CONFIGURATION:
+# This file currently configures FFTW for macOS with Homebrew.
+#
+# To use on other platforms, modify the FFTW path below:
+#   - macOS (Apple Silicon with Homebrew): /opt/homebrew/opt/fftw
+#   - macOS (Intel with Homebrew): /usr/local/opt/fftw
+#   - Linux (apt): /usr (headers in /usr/include, libs in /usr/lib)
+#   - Linux (custom): Set to your FFTW installation prefix
+#
+# Alternatively, install FFTW via Homebrew: brew install fftw
 
+# Detect platform and set FFTW path (defaults to Homebrew on macOS Apple Silicon)
 new_local_repository(
     name = "fftw",
-    path = "/opt/homebrew/opt/fftw",
+    path = "/opt/homebrew/opt/fftw",  # Change this path for your platform
     build_file_content = """
 cc_library(
     name = "fftw3",
     hdrs = glob(["include/*.h"]),
-    srcs = glob(["lib/libfftw3.dylib", "lib/libfftw3.a"]),
+    srcs = glob(["lib/libfftw3.dylib", "lib/libfftw3.a", "lib/libfftw3.so*"]),
     includes = ["include"],
     visibility = ["//visibility:public"],
 )
