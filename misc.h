@@ -1,9 +1,9 @@
 #ifndef MISC_H
 #define MISC_H
 
-#include <stdbool.h>
+#include <cstddef>  // for size_t
 
-#define MAX_SEQ_LENGTH 610
+constexpr int MAX_SEQ_LENGTH = 610;
 
 void *xcalloc(size_t, size_t);
 int *getBasePairList(char *);

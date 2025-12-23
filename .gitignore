@@ -9,3 +9,8 @@ rna.ps
 *.o
 test*.txt
 debug*.txt
+
+# Build directories
+bin/
+lib/
+build/

@@ -11,13 +11,14 @@
 #ifndef _ENERGY_CONST_H
 #define _ENERGY_CONST_H 1
 
-#define GASCONST 1.98717  /* in [cal/K] */
-#define K0  273.15
-#define INF 1000000
-#define FORBIDDEN 9999
-#define BONUS 10000
-#define NBPAIRS 7
-#define TURN 3
-#define MAXLOOP 30
+// Energy calculation constants
+constexpr double GASCONST = 1.98717;  // in [cal/K]
+constexpr double K0 = 273.15;
+constexpr int INF = 1000000;
+constexpr int FORBIDDEN = 9999;
+constexpr int BONUS = 10000;
+constexpr int NBPAIRS = 7;
+constexpr int TURN = 3;
+constexpr int MAXLOOP = 30;
 
 #endif
