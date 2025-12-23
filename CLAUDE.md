@@ -34,7 +34,10 @@ fftbor/
 │   └── test_integration.cpp
 ├── .github/workflows/    # CI/CD configuration
 │   └── ci.yml
-└── build/                # Build output directory
+├── BUILD.bazel           # Bazel build configuration
+├── MODULE.bazel          # Bazel module definition
+├── TODO.md               # Remaining modernization tasks
+└── build/                # Build output directory (CMake)
 ```
 
 ## Building the Project
@@ -45,7 +48,15 @@ fftbor/
 2. **CMake** (>= 3.16)
 3. **FFTW** (= 3.3.x) - Fast Fourier Transform library
 
-### Build Commands
+### Build with Bazel (Recommended)
+
+```bash
+bazel build //...
+bazel test //tests:fftbor_tests
+./bazel-bin/FFTbor -E rna_turner2004.par "GCGCAAAAGCGC" "((((....))))"
+```
+
+### Build with CMake
 
 ```bash
 cd build
@@ -54,8 +65,7 @@ make
 make install
 ```
 
-
-### Build Configurations
+### Build Configurations (CMake)
 
 - **Default:** Optimized build with `-Ofast`, `-funroll-loops`, `-ffast-math`
 - **Debug:** `cmake -DCMAKE_BUILD_TYPE=Debug ..` (enables `-g`)
@@ -96,6 +106,17 @@ make install
 - Smart pointers used for automatic memory management (RAII pattern)
 - `xcalloc()` wrapper still available for allocation
 - Custom smart pointer types in `memory_types.h` (e.g., `CharSequencePtr`, `BasePairListPtr`)
+
+### Error Handling
+- Exception-based error handling using `std::runtime_error`
+- All `exit(1)` calls replaced with exceptions
+- `main()` catches and handles exceptions gracefully
+
+### Modern C++ Features
+- **Context struct:** `fftbor::Context` in `memory_types.h` for state encapsulation
+- **Concepts:** `SequenceView`, `BasePairSpan` for type safety
+- **Inline functions:** `window_size_at()`, `num_windows()`, `fftbor::root_pow()` replace macros
+- **Named constants:** `MIN_PAIR_DIST`, `MAX_INTERIOR_DIST`, etc. in `fftbor` namespace
 
 ### Data Representations
 - **Base pair list:** Array where `bp_list[i]` = position paired with i (-1 if unpaired)
