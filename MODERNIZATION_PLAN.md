@@ -44,6 +44,13 @@ This document tracks the modernization effort for FFTbor.
 - [x] Add code coverage reporting (lcov + Codecov)
 - [x] Add linting/static analysis (cppcheck)
 
+## Phase 6: Error Handling Improvements ✅ COMPLETE
+
+- [x] Add fseek return value checks in parameter_parser.cpp
+- [x] Add ftell error handling (check for -1 return)
+- [x] Add warning messages for file I/O failures
+- [x] Upgrade codecov-action from v3 to v4
+
 ## Current Status
 
 The project now builds successfully with:
@@ -51,13 +58,14 @@ The project now builds successfully with:
 - Modern CMake (3.16+)
 - Native parameter parser (no ViennaRNA dependency)
 - GoogleTest integration
-- GitHub Actions CI
+- GitHub Actions CI with linting and coverage
+- Robust error handling in parameter parser
 
 ### Test Results
 - **Misc tests**: 10/10 passing
 - **Integration tests**: 5/5 passing
 - **Parameter parser tests**: Fixed (section header parsing bug resolved)
-- **Energy tests**: Should now pass (depended on parameter parsing fix)
+- **Energy tests**: Passing (depended on parameter parsing fix)
 
 ### Remaining Work
 1. Replace raw pointers with smart pointers (requires significant API refactoring)
@@ -65,7 +73,8 @@ The project now builds successfully with:
 
 ## Notes
 
-- Original code was C++98 compatible
-- Uses VLAs (GCC extension) - working but not standard C++
-- Manual memory management throughout
+- Original code was C++98 compatible, now uses C++20
+- VLAs replaced with std::vector for standard C++ compliance
+- Manual memory management in legacy code; new code uses modern patterns
 - Energy parameter files (Turner 2004/1999) are bundled
+- No external dependencies beyond FFTW and standard library

@@ -78,7 +78,7 @@ static char* skip_whitespace(char* p) {
 }
 
 // Helper: read a data line, skipping comments but stopping at section headers
-// Returns: 1 = got data line, 0 = EOF, -1 = hit section header (file position rewound)
+// Returns: 1 = got data line, 0 = EOF or error, -1 = hit section header (file position rewound)
 static int read_data_line(FILE* fp, char* buf, int size) {
     long pos;
     while ((pos = ftell(fp)) >= 0 && fgets(buf, size, fp)) {
@@ -89,12 +89,19 @@ static int read_data_line(FILE* fp, char* buf, int size) {
         if (*p == '#' && p[1] == '#') continue;
         // Stop at section headers (# followed by non-#) and rewind
         if (*p == '#') {
-            fseek(fp, pos, SEEK_SET);  // Put back the section header
+            if (fseek(fp, pos, SEEK_SET) != 0) {
+                fprintf(stderr, "Warning: fseek failed while parsing parameter file\n");
+                return 0;  // Treat as EOF on seek failure
+            }
             return -1;
         }
         return 1;  // Valid data line
     }
-    return 0;  // EOF
+    // ftell returned -1 (error) or fgets returned NULL (EOF)
+    if (pos < 0) {
+        fprintf(stderr, "Warning: ftell failed while parsing parameter file\n");
+    }
+    return 0;  // EOF or error
 }
 
 // Helper: parse integers from a line (handles INF values)
@@ -423,7 +430,9 @@ void read_parameter_file(const char* filename) {
                 while ((pos = ftell(fp)) >= 0 && fgets(line, sizeof(line), fp)) {
                     p = skip_whitespace(line);
                     if (*p == '#') {
-                        fseek(fp, pos, SEEK_SET);  // Put back the section header
+                        if (fseek(fp, pos, SEEK_SET) != 0) {
+                            fprintf(stderr, "Warning: fseek failed while parsing Triloops\n");
+                        }
                         break;
                     }
                     char seq[16];
@@ -437,13 +446,18 @@ void read_parameter_file(const char* filename) {
                         }
                     }
                 }
+                if (pos < 0) {
+                    fprintf(stderr, "Warning: ftell failed while parsing Triloops\n");
+                }
             } else if (strcmp(section, "Tetraloops") == 0) {
                 raw_params.num_tetraloops = 0;
                 long pos;
                 while ((pos = ftell(fp)) >= 0 && fgets(line, sizeof(line), fp)) {
                     p = skip_whitespace(line);
                     if (*p == '#') {
-                        fseek(fp, pos, SEEK_SET);  // Put back the section header
+                        if (fseek(fp, pos, SEEK_SET) != 0) {
+                            fprintf(stderr, "Warning: fseek failed while parsing Tetraloops\n");
+                        }
                         break;
                     }
                     char seq[16];
@@ -457,13 +471,18 @@ void read_parameter_file(const char* filename) {
                         }
                     }
                 }
+                if (pos < 0) {
+                    fprintf(stderr, "Warning: ftell failed while parsing Tetraloops\n");
+                }
             } else if (strcmp(section, "Hexaloops") == 0) {
                 raw_params.num_hexaloops = 0;
                 long pos;
                 while ((pos = ftell(fp)) >= 0 && fgets(line, sizeof(line), fp)) {
                     p = skip_whitespace(line);
                     if (*p == '#') {
-                        fseek(fp, pos, SEEK_SET);  // Put back the section header
+                        if (fseek(fp, pos, SEEK_SET) != 0) {
+                            fprintf(stderr, "Warning: fseek failed while parsing Hexaloops\n");
+                        }
                         break;
                     }
                     char seq[16];
@@ -476,6 +495,9 @@ void read_parameter_file(const char* filename) {
                             raw_params.num_hexaloops++;
                         }
                     }
+                }
+                if (pos < 0) {
+                    fprintf(stderr, "Warning: ftell failed while parsing Hexaloops\n");
                 }
             } else if (strcmp(section, "END") == 0) {
                 break;
