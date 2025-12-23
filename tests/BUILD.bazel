@@ -1,0 +1,27 @@
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
+cc_test(
+    name = "fftbor_tests",
+    srcs = [
+        "test_energy.cpp",
+        "test_integration.cpp",
+        "test_main.cpp",
+        "test_misc.cpp",
+        "test_parameter_parser.cpp",
+    ],
+    copts = [
+        "-std=c++17",
+        "-Wall",
+        "-Wextra",
+        "-Wno-write-strings",
+    ],
+    data = [
+        "//:rna_turner1999.par",
+        "//:rna_turner2004.par",
+    ],
+    deps = [
+        "//:fftbor_core",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
