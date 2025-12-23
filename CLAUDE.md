@@ -176,7 +176,7 @@ Compile-time flags:
 - Installed to `bin/` directory alongside executable
 
 ### Important Notes
-- The code uses Variable Length Arrays (VLAs) which are a GCC extension (should be replaced with std::vector)
+- VLAs replaced with `std::vector` for standard C++ compliance
 - OpenMP is optional but recommended for parallel execution
 - FFTW library handles the core FFT computations
 - Native parameter parser included (no external ViennaRNA dependency)

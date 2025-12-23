@@ -6,25 +6,31 @@
 #include <fftw3.h>
 #include <iostream>
 #include <limits>
+#include <vector>
+#include <algorithm>
 #include "delta.h"
 #include "misc.h"
 #include "energy_par.h"
 #include "params.h"
 #include "parameter_parser.h"
 
-#define STRUCTURE_COUNT 1
-#define MIN_PAIR_DIST 3
-#define MAX_INTERIOR_DIST 30
-#define ZERO_C dcomplex(0.0, 0.0)
-#define ONE_C dcomplex(1.0, 0.0)
-#define FFTW_REAL 0
-#define FFTW_IMAG 1
+// Constants
+constexpr int STRUCTURE_COUNT = 1;
+constexpr int MIN_PAIR_DIST = 3;
+constexpr int MAX_INTERIOR_DIST = 30;
+constexpr int FFTW_REAL = 0;
+constexpr int FFTW_IMAG = 1;
+constexpr bool FFTBOR_DEBUG = false;
+
+// Complex number constants (initialized at runtime due to dcomplex constructor)
+const dcomplex ZERO_C(0.0, 0.0);
+const dcomplex ONE_C(1.0, 0.0);
+
+// Function-like macros (kept as macros due to external variable dependencies)
 #define WINDOW_SIZE(i) (MIN_WINDOW_SIZE + i)
 #define NUM_WINDOWS (WINDOW_SIZE - MIN_WINDOW_SIZE + 1)
 #define ROOT_POW(i, pow, n) (rootsOfUnity[(i * pow) % (n + 1)])
-#define FFTBOR_DEBUG 0
 #define ENERGY_DEBUG (0 && !root)
-#define MIN2(A, B) ((A) < (B) ? (A) : (B))
 
 extern int    PF, N, PRECISION, WINDOW_SIZE, MIN_WINDOW_SIZE;
 extern double temperature;
@@ -276,10 +282,10 @@ void solveSystem(dcomplex ***solutions, char *sequence, int *structure, int sequ
   
   sprintf(precisionFormat, "%%d\t%%.0%df\n", PRECISION ? PRECISION : std::numeric_limits<double>::digits10);
   
-  fftw_complex signal[runLength + 1];
-  fftw_complex result[runLength + 1];
-  
-  fftw_plan plan = fftw_plan_dft_1d(runLength + 1, signal, result, FFTW_FORWARD, FFTW_ESTIMATE);
+  std::vector<fftw_complex> signal(runLength + 1);
+  std::vector<fftw_complex> result(runLength + 1);
+
+  fftw_plan plan = fftw_plan_dft_1d(runLength + 1, signal.data(), result.data(), FFTW_FORWARD, FFTW_ESTIMATE);
   
   for (i = 0; i < NUM_WINDOWS; ++i) {
     for (j = 1; j <= sequenceLength - WINDOW_SIZE(i) + 1; ++j) {
@@ -534,7 +540,7 @@ inline double interiorloop(int i, int j, int k, int l, int type, int type_2, sho
       }
       else {  /* 1xn loop */
         energy = (nl+1<=MAXLOOP)?(P->internal_loop[nl+1]) : (P->internal_loop[30]+(int)(P->lxc*log((nl+1)/30.)));
-        energy += MIN2(MAX_NINIO, (nl-ns)*P->ninio[2]);
+        energy += std::min(MAX_NINIO, (nl-ns)*P->ninio[2]);
         energy += P->mismatch1nI[type][si1][sj1] + P->mismatch1nI[type_2][sq1][sp1];
         return energy;
       }
@@ -552,7 +558,7 @@ inline double interiorloop(int i, int j, int k, int l, int type, int type_2, sho
     { /* generic interior loop (no else here!)*/
       energy = (n1+n2<=MAXLOOP)?(P->internal_loop[n1+n2]) : (P->internal_loop[30]+(int)(P->lxc*log((n1+n2)/30.)));
 
-      energy += MIN2(MAX_NINIO, (nl-ns)*P->ninio[2]);
+      energy += std::min(MAX_NINIO, (nl-ns)*P->ninio[2]);
 
       energy += P->mismatchI[type][si1][sj1] + P->mismatchI[type_2][sq1][sp1];
     }

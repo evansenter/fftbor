@@ -77,16 +77,24 @@ static char* skip_whitespace(char* p) {
     return p;
 }
 
-// Helper: read a line, skipping comments
-static int read_line(FILE* fp, char* buf, int size) {
-    while (fgets(buf, size, fp)) {
+// Helper: read a data line, skipping comments but stopping at section headers
+// Returns: 1 = got data line, 0 = EOF, -1 = hit section header (file position rewound)
+static int read_data_line(FILE* fp, char* buf, int size) {
+    long pos;
+    while ((pos = ftell(fp)) >= 0 && fgets(buf, size, fp)) {
         char* p = skip_whitespace(buf);
-        // Skip empty lines and comment-only lines (but not section headers)
+        // Skip empty lines
         if (*p == '\0') continue;
-        if (*p == '#' && p[1] == '#') continue; // Skip ## comments
-        return 1;
+        // Skip ## comments
+        if (*p == '#' && p[1] == '#') continue;
+        // Stop at section headers (# followed by non-#) and rewind
+        if (*p == '#') {
+            fseek(fp, pos, SEEK_SET);  // Put back the section header
+            return -1;
+        }
+        return 1;  // Valid data line
     }
-    return 0;
+    return 0;  // EOF
 }
 
 // Helper: parse integers from a line (handles INF values)
@@ -120,7 +128,8 @@ static void parse_7x7_matrix(FILE* fp, int matrix[NBPAIRS+1][NBPAIRS+1]) {
     char line[1024];
     int values[8];
     for (int i = 1; i <= NBPAIRS; i++) {
-        if (!read_line(fp, line, sizeof(line))) break;
+        int result = read_data_line(fp, line, sizeof(line));
+        if (result <= 0) break;  // EOF or section header
         int n = parse_int_line(line, values, 7);
         for (int j = 0; j < n && j < NBPAIRS; j++) {
             matrix[i][j+1] = values[j];
@@ -135,7 +144,8 @@ static void parse_mismatch_matrix(FILE* fp, int matrix[NBPAIRS+1][5][5]) {
     // 7 base pair types * 5 rows each = 35 lines
     for (int bp = 1; bp <= NBPAIRS; bp++) {
         for (int i = 0; i < 5; i++) {
-            if (!read_line(fp, line, sizeof(line))) break;
+            int result = read_data_line(fp, line, sizeof(line));
+            if (result <= 0) return;  // EOF or section header
             int n = parse_int_line(line, values, 5);
             for (int j = 0; j < n && j < 5; j++) {
                 matrix[bp][i][j] = values[j];
@@ -149,7 +159,8 @@ static void parse_dangle(FILE* fp, int dangle[NBPAIRS+1][5]) {
     char line[1024];
     int values[8];
     for (int bp = 1; bp <= NBPAIRS; bp++) {
-        if (!read_line(fp, line, sizeof(line))) break;
+        int result = read_data_line(fp, line, sizeof(line));
+        if (result <= 0) break;  // EOF or section header
         int n = parse_int_line(line, values, 5);
         for (int j = 0; j < n && j < 5; j++) {
             dangle[bp][j] = values[j];
@@ -164,7 +175,8 @@ static void parse_int11(FILE* fp, int int11[NBPAIRS+1][NBPAIRS+1][5][5]) {
     for (int i = 1; i <= NBPAIRS; i++) {
         for (int j = 1; j <= NBPAIRS; j++) {
             for (int k = 0; k < 5; k++) {
-                if (!read_line(fp, line, sizeof(line))) return;
+                int result = read_data_line(fp, line, sizeof(line));
+                if (result <= 0) return;  // EOF or section header
                 int n = parse_int_line(line, values, 5);
                 for (int l = 0; l < n && l < 5; l++) {
                     int11[i][j][k][l] = values[l];
@@ -182,7 +194,8 @@ static void parse_int21(FILE* fp, int int21[NBPAIRS+1][NBPAIRS+1][5][5][5]) {
         for (int j = 1; j <= NBPAIRS; j++) {
             for (int k = 0; k < 5; k++) {
                 for (int l = 0; l < 5; l++) {
-                    if (!read_line(fp, line, sizeof(line))) return;
+                    int result = read_data_line(fp, line, sizeof(line));
+                    if (result <= 0) return;  // EOF or section header
                     int n = parse_int_line(line, values, 5);
                     for (int m = 0; m < n && m < 5; m++) {
                         int21[i][j][k][l][m] = values[m];
@@ -203,7 +216,8 @@ static void parse_int22(FILE* fp, int int22[NBPAIRS+1][NBPAIRS+1][5][5][5][5]) {
             for (int k = 0; k < 5; k++) {
                 for (int l = 0; l < 5; l++) {
                     for (int m = 0; m < 5; m++) {
-                        if (!read_line(fp, line, sizeof(line))) return;
+                        int result = read_data_line(fp, line, sizeof(line));
+                        if (result <= 0) return;  // EOF or section header
                         int n = parse_int_line(line, values, 5);
                         for (int o = 0; o < n && o < 5; o++) {
                             int22[i][j][k][l][m][o] = values[o];
@@ -221,7 +235,8 @@ static void parse_loop_array(FILE* fp, int* arr, int size) {
     int values[32];
     int total = 0;
     while (total < size) {
-        if (!read_line(fp, line, sizeof(line))) break;
+        int result = read_data_line(fp, line, sizeof(line));
+        if (result <= 0) break;  // EOF or section header
         int n = parse_int_line(line, values, size - total);
         for (int i = 0; i < n && total < size; i++) {
             arr[total++] = values[i];
@@ -235,7 +250,7 @@ static void parse_ml_params(FILE* fp) {
     int values[16];
 
     // First line: ML unpaired, ML closing, ML intern
-    if (read_line(fp, line, sizeof(line))) {
+    if (read_data_line(fp, line, sizeof(line)) > 0) {
         int n = parse_int_line(line, values, 8);
         if (n >= 1) raw_params.MLbase = values[0];
         if (n >= 2) raw_params.MLclosing = values[1];
@@ -247,7 +262,7 @@ static void parse_ml_params(FILE* fp) {
     }
 
     // Second line: enthalpies
-    if (read_line(fp, line, sizeof(line))) {
+    if (read_data_line(fp, line, sizeof(line)) > 0) {
         int n = parse_int_line(line, values, 8);
         if (n >= 1) raw_params.MLbase_enthalpies = values[0];
         if (n >= 2) raw_params.MLclosing_enthalpies = values[1];
@@ -264,13 +279,13 @@ static void parse_ninio(FILE* fp) {
     char line[1024];
     int values[8];
 
-    if (read_line(fp, line, sizeof(line))) {
+    if (read_data_line(fp, line, sizeof(line)) > 0) {
         int n = parse_int_line(line, values, 5);
         for (int i = 0; i < n && i < 5; i++) {
             raw_params.ninio[i] = values[i];
         }
     }
-    if (read_line(fp, line, sizeof(line))) {
+    if (read_data_line(fp, line, sizeof(line)) > 0) {
         int n = parse_int_line(line, values, 5);
         for (int i = 0; i < n && i < 5; i++) {
             raw_params.ninio_enthalpies[i] = values[i];
@@ -284,7 +299,7 @@ static void parse_misc(FILE* fp) {
     int values[8];
 
     // First line: DuplexInit, TerminalAU, lxc
-    if (read_line(fp, line, sizeof(line))) {
+    if (read_data_line(fp, line, sizeof(line)) > 0) {
         int n = parse_int_line(line, values, 3);
         if (n >= 1) raw_params.DuplexInit = values[0];
         if (n >= 2) raw_params.TerminalAU = values[1];
@@ -307,33 +322,10 @@ static void parse_misc(FILE* fp) {
     }
 
     // Second line: enthalpies
-    if (read_line(fp, line, sizeof(line))) {
+    if (read_data_line(fp, line, sizeof(line)) > 0) {
         int n = parse_int_line(line, values, 2);
         if (n >= 1) raw_params.DuplexInit_enthalpies = values[0];
         if (n >= 2) raw_params.TerminalAU_enthalpies = values[1];
-    }
-}
-
-// Parse special loops (Triloops, Tetraloops, Hexaloops)
-static void parse_special_loops(FILE* fp, char* loops, int* energies, int* enthalpies,
-                                 int loop_size, int max_loops, int* count) {
-    char line[1024];
-    *count = 0;
-
-    while (read_line(fp, line, sizeof(line))) {
-        char* p = skip_whitespace(line);
-        if (*p == '#') break; // Next section
-
-        // Format: SEQUENCE ENERGY [ENTHALPY]
-        char seq[16];
-        int energy = 0, enthalpy = 0;
-        int n = sscanf(line, "%15s %d %d", seq, &energy, &enthalpy);
-        if (n >= 2 && *count < max_loops) {
-            strncpy(loops + (*count) * (loop_size + 1), seq, loop_size + 1);
-            energies[*count] = energy;
-            if (n >= 3) enthalpies[*count] = enthalpy;
-            (*count)++;
-        }
     }
 }
 
@@ -427,9 +419,13 @@ void read_parameter_file(const char* filename) {
             } else if (strcmp(section, "Triloops") == 0) {
                 // Special loops need different parsing - they have sequence + energy format
                 raw_params.num_triloops = 0;
-                while (fgets(line, sizeof(line), fp)) {
+                long pos;
+                while ((pos = ftell(fp)) >= 0 && fgets(line, sizeof(line), fp)) {
                     p = skip_whitespace(line);
-                    if (*p == '#') break;
+                    if (*p == '#') {
+                        fseek(fp, pos, SEEK_SET);  // Put back the section header
+                        break;
+                    }
                     char seq[16];
                     int energy = 0;
                     if (sscanf(line, "%15s %d", seq, &energy) >= 2) {
@@ -443,9 +439,13 @@ void read_parameter_file(const char* filename) {
                 }
             } else if (strcmp(section, "Tetraloops") == 0) {
                 raw_params.num_tetraloops = 0;
-                while (fgets(line, sizeof(line), fp)) {
+                long pos;
+                while ((pos = ftell(fp)) >= 0 && fgets(line, sizeof(line), fp)) {
                     p = skip_whitespace(line);
-                    if (*p == '#') break;
+                    if (*p == '#') {
+                        fseek(fp, pos, SEEK_SET);  // Put back the section header
+                        break;
+                    }
                     char seq[16];
                     int energy = 0;
                     if (sscanf(line, "%15s %d", seq, &energy) >= 2) {
@@ -459,9 +459,13 @@ void read_parameter_file(const char* filename) {
                 }
             } else if (strcmp(section, "Hexaloops") == 0) {
                 raw_params.num_hexaloops = 0;
-                while (fgets(line, sizeof(line), fp)) {
+                long pos;
+                while ((pos = ftell(fp)) >= 0 && fgets(line, sizeof(line), fp)) {
                     p = skip_whitespace(line);
-                    if (*p == '#') break;
+                    if (*p == '#') {
+                        fseek(fp, pos, SEEK_SET);  // Put back the section header
+                        break;
+                    }
                     char seq[16];
                     int energy = 0;
                     if (sscanf(line, "%15s %d", seq, &energy) >= 2) {
