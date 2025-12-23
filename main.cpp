@@ -7,10 +7,11 @@
 #include "misc.h"
 #include "params.h"
 
-int           PF, N, PRECISION, WINDOW_SIZE, MIN_WINDOW_SIZE;
+// Global variables - defined in globals.cpp
+extern int    PF, N, PRECISION, WINDOW_SIZE, MIN_WINDOW_SIZE;
 extern double temperature;
-char          *ENERGY;
-paramT        *P;
+extern char   *ENERGY;
+extern paramT *P;
 
 void read_input(int, char **, char **, int**);
 void usage();

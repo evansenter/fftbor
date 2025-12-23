@@ -10,6 +10,7 @@
 #include "misc.h"
 #include "energy_par.h"
 #include "params.h"
+#include "parameter_parser.h"
 
 #define STRUCTURE_COUNT 1
 #define MIN_PAIR_DIST 3
@@ -29,8 +30,6 @@ extern int    PF, N, PRECISION, WINDOW_SIZE, MIN_WINDOW_SIZE;
 extern double temperature;
 extern char   *ENERGY;
 extern paramT *P;
-
-extern "C" void read_parameter_file(const char energyfile[]);
 
 void neighbours(char *inputSequence, int *bpList) {
   int i, root, runLength = 0, sequenceLength = strlen(inputSequence);

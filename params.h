@@ -1,3 +1,6 @@
+#ifndef PARAMS_H
+#define PARAMS_H
+
 #include "energy_const.h"
 
 #define   VRNA_GQUAD_MAX_STACK_SIZE     7
@@ -74,6 +77,8 @@ typedef struct{
 
 }  paramT;
 
-extern "C" void set_model_details(model_detailsT*);
-extern "C" paramT *get_scaled_parameters(double,model_detailsT);
-extern "C" paramT *scale_parameters(void);
+// These functions are now provided by parameter_parser.h
+// void set_model_details(model_detailsT*);
+// paramT *scale_parameters(void);
+
+#endif /* PARAMS_H */
